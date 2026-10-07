@@ -64,3 +64,4 @@ Thumbs.db
 Desktop.ini
 supabase/.temp/
 supabase/.branches/
+.codegraph/

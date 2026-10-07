@@ -1,0 +1,4117 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CobranzaPro - Administración y Cobranza de Préstamos</title>
+  <style>
+/* ==========================================================================
+   SISTEMA DE ADMINISTRACIÓN Y COBRANZA DE PRÉSTAMOS - DESIGN SYSTEM
+   Modern Fintech / Mobile-First Design System (Light & Dark Mode)
+   ========================================================================== */
+
+:root {
+  /* Light Theme Variables */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  
+  --bg-app: #F8FAFC;
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #FFFFFF;
+  --bg-subtle: #F1F5F9;
+  --bg-hover: #E2E8F0;
+  
+  --border: #E2E8F0;
+  --border-focus: #3B82F6;
+  
+  --text-main: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  --text-white: #FFFFFF;
+
+  /* Brand / Primary */
+  --primary: #2563EB;
+  --primary-hover: #1D4ED8;
+  --primary-light: #EFF6FF;
+  --primary-border: #BFDBFE;
+
+  /* Financial Status Colors */
+  --status-green-bg: #DCFCE7;
+  --status-green-text: #166534;
+  --status-green-border: #86EFAC;
+  
+  --status-yellow-bg: #FEF9C3;
+  --status-yellow-text: #854D0E;
+  --status-yellow-border: #FDE047;
+  
+  --status-orange-bg: #FFEDD5;
+  --status-orange-text: #9A3412;
+  --status-orange-border: #FDBA74;
+  
+  --status-red-bg: #FEE2E2;
+  --status-red-text: #991B1B;
+  --status-red-border: #FCA5A5;
+
+  --status-gray-bg: #F1F5F9;
+  --status-gray-text: #475569;
+  --status-gray-border: #CBD5E1;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+  
+  --bottom-bar-height: 64px;
+  --top-nav-height: 60px;
+  --sidebar-width: 260px;
+}
+
+/* Dark Theme Variables */
+[data-theme="dark"] {
+  --bg-app: #0F172A;
+  --bg-surface: #1E293B;
+  --bg-surface-elevated: #111827;
+  --bg-subtle: #0B1329;
+  --bg-hover: #334155;
+  
+  --border: #334155;
+  --border-focus: #60A5FA;
+  
+  --text-main: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --text-muted: #94A3B8;
+
+  --primary: #3B82F6;
+  --primary-hover: #60A5FA;
+  --primary-light: rgba(59, 130, 246, 0.15);
+  --primary-border: #1E40AF;
+
+  --status-green-bg: rgba(34, 197, 94, 0.15);
+  --status-green-text: #4ADE80;
+  --status-green-border: rgba(34, 197, 94, 0.3);
+  
+  --status-yellow-bg: rgba(234, 179, 8, 0.15);
+  --status-yellow-text: #FDE047;
+  --status-yellow-border: rgba(234, 179, 8, 0.3);
+  
+  --status-orange-bg: rgba(249, 115, 22, 0.15);
+  --status-orange-text: #FB923C;
+  --status-orange-border: rgba(249, 115, 22, 0.3);
+  
+  --status-red-bg: rgba(239, 68, 68, 0.15);
+  --status-red-text: #F87171;
+  --status-red-border: rgba(239, 68, 68, 0.3);
+
+  --status-gray-bg: rgba(148, 163, 184, 0.15);
+  --status-gray-text: #94A3B8;
+  --status-gray-border: rgba(148, 163, 184, 0.3);
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+}
+
+/* ==========================================================================
+   Reset & Base Elements
+   ========================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+input, button, select, textarea {
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  outline: none;
+  touch-action: manipulation;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* ==========================================================================
+   Typography & Utilities
+   ========================================================================== */
+h1, h2, h3, h4, h5 {
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text-main);
+}
+
+.text-xs { font-size: 0.75rem; }
+.text-sm { font-size: 0.875rem; }
+.text-base { font-size: 1rem; }
+.text-lg { font-size: 1.125rem; }
+.text-xl { font-size: 1.25rem; }
+.text-2xl { font-size: 1.5rem; }
+
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+
+.text-muted { color: var(--text-muted); }
+.text-secondary { color: var(--text-secondary); }
+.text-primary { color: var(--primary); }
+.text-danger { color: var(--status-red-text); }
+.text-success { color: var(--status-green-text); }
+
+/* Financial Amounts Typography */
+.currency-amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* ==========================================================================
+   Layout Containers
+   ========================================================================== */
+#app {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.main-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+}
+
+.content-container {
+  flex: 1;
+  padding: 1rem;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Header / Navbar */
+.top-nav {
+  height: var(--top-nav-height);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 800;
+  font-size: 1.125rem;
+  color: var(--primary);
+}
+
+.brand-icon-box {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Demo Switcher Pill */
+.demo-role-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.theme-toggle-btn, .icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.theme-toggle-btn:hover, .icon-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-main);
+}
+
+/* ==========================================================================
+   Navigation: Desktop Sidebar vs Mobile Bottom Bar
+   ========================================================================== */
+.sidebar {
+  display: none; /* hidden on mobile, block on desktop */
+  width: var(--sidebar-width);
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+  flex-direction: column;
+  padding: 1.25rem 0.75rem;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 50;
+}
+
+.sidebar-brand {
+  padding: 0.5rem 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.15s ease;
+}
+
+.nav-item:hover {
+  background: var(--bg-subtle);
+  color: var(--text-main);
+}
+
+.nav-item.active {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.sidebar-footer {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Mobile Bottom Navigation */
+.mobile-bottom-nav {
+  display: flex;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--bottom-bar-height);
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  z-index: 45;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  justify-content: space-around;
+  align-items: center;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.mobile-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  flex: 1;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.mobile-nav-btn.active {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.mobile-nav-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Padding compensation for mobile content so bottom bar doesn't overlap */
+@media (max-width: 768px) {
+  .content-container {
+    padding-bottom: calc(var(--bottom-bar-height) + 1.5rem);
+  }
+}
+
+@media (min-width: 769px) {
+  .sidebar {
+    display: flex;
+  }
+  .mobile-bottom-nav {
+    display: none;
+  }
+  .content-container {
+    padding: 1.5rem 2rem;
+  }
+}
+
+/* ==========================================================================
+   UI Components: Cards, Badges, Buttons, Inputs
+   ========================================================================== */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--border-focus);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+/* KPI Cards Grid */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .kpi-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+}
+
+.kpi-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.kpi-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.kpi-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.kpi-subtext {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Financial Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+
+.badge-green {
+  background: var(--status-green-bg);
+  color: var(--status-green-text);
+  border-color: var(--status-green-border);
+}
+
+.badge-yellow {
+  background: var(--status-yellow-bg);
+  color: var(--status-yellow-text);
+  border-color: var(--status-yellow-border);
+}
+
+.badge-orange {
+  background: var(--status-orange-bg);
+  color: var(--status-orange-text);
+  border-color: var(--status-orange-border);
+}
+
+.badge-red {
+  background: var(--status-red-bg);
+  color: var(--status-red-text);
+  border-color: var(--status-red-border);
+  animation: pulse-danger 2s infinite;
+}
+
+.badge-gray {
+  background: var(--status-gray-bg);
+  color: var(--status-gray-text);
+  border-color: var(--status-gray-border);
+}
+
+@keyframes pulse-danger {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+/* ==========================================================================
+   Buttons (Touch Target >= 44px)
+   ========================================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.6rem 1.25rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--text-white);
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25);
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-success {
+  background: #16A34A;
+  color: var(--text-white);
+  box-shadow: 0 2px 4px rgba(22, 163, 74, 0.25);
+}
+
+.btn-success:hover {
+  background: #15803D;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-main);
+}
+
+.btn-outline:hover {
+  background: var(--bg-subtle);
+  border-color: var(--text-muted);
+}
+
+.btn-subtle {
+  background: var(--bg-subtle);
+  color: var(--text-main);
+}
+
+.btn-subtle:hover {
+  background: var(--bg-hover);
+}
+
+.btn-danger {
+  background: #DC2626;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #B91C1C;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.btn-lg {
+  min-height: 50px;
+  font-size: 1.05rem;
+  border-radius: var(--radius-md);
+}
+
+/* Big "REGISTRAR PAGO" Action Button for Field Collectors */
+.btn-pay-action {
+  min-height: 48px;
+  background: #16A34A;
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 1rem;
+  border-radius: var(--radius-md);
+  box-shadow: 0 3px 6px rgba(22, 163, 74, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.btn-pay-action:hover {
+  background: #15803D;
+}
+
+.btn-pay-action:active {
+  transform: scale(0.98);
+}
+
+/* ==========================================================================
+   Form Controls
+   ========================================================================== */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.form-input, .form-select, .form-textarea {
+  min-height: 46px;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.form-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* Search Input with Icon */
+.search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.85rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding-left: 2.5rem;
+  padding-right: 2rem;
+  min-height: 44px;
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 0.75rem;
+  color: var(--text-muted);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+}
+
+/* Filter Chips (Horizontal Scrolling on Mobile) */
+.filter-chips-container {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.25rem 0;
+  margin-bottom: 1rem;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.filter-chips-container::-webkit-scrollbar {
+  display: none;
+}
+
+.chip-btn {
+  white-space: nowrap;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+  min-height: 38px;
+}
+
+.chip-btn:hover {
+  background: var(--bg-subtle);
+  color: var(--text-main);
+}
+
+.chip-btn.active {
+  background: var(--primary);
+  color: var(--text-white);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ==========================================================================
+   Collector Client Cards (Field-optimized)
+   ========================================================================== */
+.client-collection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.client-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.15rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  position: relative;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.client-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Visual border indicators for risk level */
+.client-card.risk-green {
+  border-left: 5px solid #22C55E;
+}
+
+.client-card.risk-yellow {
+  border-left: 5px solid #EAB308;
+}
+
+.client-card.risk-orange {
+  border-left: 5px solid #F97316;
+}
+
+.client-card.risk-red {
+  border-left: 6px solid #EF4444;
+  background: var(--bg-surface);
+}
+
+.client-card.risk-red .client-card-name {
+  color: #DC2626 !important;
+}
+
+.client-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.client-card-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.client-card-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.15rem;
+}
+
+.client-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.8rem;
+  gap: 0.5rem;
+}
+
+.client-metric-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.client-metric-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.client-metric-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.client-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+/* ==========================================================================
+   Modals & Bottom Sheets
+   ========================================================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-container {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-xl);
+  transform: translateY(20px);
+  transition: transform 0.2s ease;
+}
+
+.modal-overlay.active .modal-container {
+  transform: translateY(0);
+}
+
+/* Bottom Sheet behavior on mobile for Payment Modal */
+@media (max-width: 640px) {
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  
+  .modal-container.bottom-sheet {
+    max-width: 100%;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: none;
+    transform: translateY(100%);
+  }
+
+  .modal-overlay.active .modal-container.bottom-sheet {
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-body {
+  padding: 1.25rem;
+}
+
+.modal-footer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+/* Quick Amount Chips in Payment Modal */
+.quick-amounts {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+  flex-wrap: wrap;
+}
+
+.quick-amount-btn {
+  flex: 1;
+  min-width: 65px;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-main);
+  transition: all 0.15s ease;
+}
+
+.quick-amount-btn:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.stepper-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.stepper-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  font-size: 1.3rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-main);
+}
+
+.stepper-btn:active {
+  background: var(--bg-hover);
+}
+
+.stepper-input {
+  flex: 1;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 800;
+  min-height: 48px;
+}
+
+/* ==========================================================================
+   Responsive Tables vs Mobile Cards (Requirement 26)
+   ========================================================================== */
+.table-responsive-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+.fintech-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.fintech-table th {
+  background: var(--bg-subtle);
+  padding: 0.85rem 1rem;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.fintech-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+.fintech-table tr:last-child td {
+  border-bottom: none;
+}
+
+.fintech-table tr:hover td {
+  background: var(--bg-subtle);
+}
+
+/* Red Highlight for Clients with >10 days delay */
+.row-delinquent-critical {
+  background-color: rgba(239, 68, 68, 0.08) !important;
+}
+
+.row-delinquent-critical td:first-child {
+  border-left: 4px solid #DC2626;
+  font-weight: 700;
+  color: #DC2626;
+}
+
+/* ==========================================================================
+   SVG Charts & Visual Dashboard
+   ========================================================================== */
+.chart-container {
+  width: 100%;
+  padding: 0.5rem 0;
+}
+
+.chart-svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* ==========================================================================
+   Toast Notifications
+   ========================================================================== */
+.toast-container {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1.2rem;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  pointer-events: auto;
+  animation: slide-in 0.25s ease-out;
+  max-width: 380px;
+}
+
+.toast-success {
+  border-left: 5px solid #16A34A;
+}
+
+.toast-error {
+  border-left: 5px solid #DC2626;
+}
+
+.toast-warning {
+  border-left: 5px solid #EAB308;
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ==========================================================================
+   Empty States
+   ========================================================================== */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: var(--bg-surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  margin: 1rem 0;
+}
+
+.empty-state-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==========================================================================
+   Login Screen Container
+   ========================================================================== */
+.login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--bg-app);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2rem 1.5rem;
+  box-shadow: var(--shadow-xl);
+}
+
+.login-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+.login-logo .brand-icon-box {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 0.75rem;
+}
+
+/* Payment Success Animation Card in Modal */
+.payment-success-card {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.success-check-circle {
+  width: 64px;
+  height: 64px;
+  background: #DCFCE7;
+  color: #16A34A;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+  animation: scale-up 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+[data-theme="dark"] .success-check-circle {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ADE80;
+}
+
+@keyframes scale-up {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.payment-success-amount {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #16A34A;
+}
+
+.payment-success-balance {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1.25rem;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+}
+
+/* Mobile Table Adaptation: convert rows to cards on mobile screens */
+@media (max-width: 640px) {
+  .table-cards-mobile thead {
+    display: none;
+  }
+  .table-cards-mobile tbody, 
+  .table-cards-mobile tr, 
+  .table-cards-mobile td {
+    display: block;
+    width: 100%;
+  }
+  .table-cards-mobile tr {
+    margin-bottom: 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.75rem;
+    background: var(--bg-surface);
+  }
+  .table-cards-mobile td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .table-cards-mobile td:last-child {
+    border-bottom: none;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+  }
+  .table-cards-mobile td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+}
+
+</style>
+  <script>
+    // Inmediata detección y aplicación de tema para evitar FOUC
+    const savedTheme = localStorage.getItem('cobranzapro_theme') || 
+      (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  </script>
+</head>
+<body>
+  <div id="app">
+    <!-- El contenido se inyectará dinámicamente mediante app.js -->
+  </div>
+
+  <!-- Contenedor global de Toasts -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Contenedor para Modales Dinámicos -->
+  <div id="modalContainer"></div>
+
+  <!-- Script principal de la aplicación -->
+  <script>
+/**
+ * COBRANZAPRO - SISTEMA DE ADMINISTRACIÓN Y COBRANZA DE PRÉSTAMOS
+ * Frontend Móvil y de Escritorio (Fintech Mobile-First)
+ * Moneda: Sol Peruano (S/) | Zona Horaria: America/Lima
+ */
+
+// =============================================================================
+// 1. ICONOGRAFÍA LUCIDE (SVG Integrado Autónomo)
+// =============================================================================
+const ICONS = {
+  wallet: '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  creditCard: '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>',
+  banknote: '<rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/>',
+  calendar: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
+  fileText: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
+  barChart: '<line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/>',
+  shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+  search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  alertCircle: '<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
+  alertTriangle: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/>',
+  arrowLeft: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+  arrowRight: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  chevronRight: '<path d="m9 18 6-6-6-6"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  logOut: '<path d="9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
+  phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  mapPin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+  printer: '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/>',
+  lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  key: '<path d="m21 2-2 2m-1.5 1.5L14 9l-2-2-4 4 2 2-3 3-2-2-3 3 2 2-2 2"/>',
+  refresh: '<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/>',
+  edit: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+  trash: '<path d="3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>'
+};
+
+function icon(name, className = '', size = 20) {
+  const content = ICONS[name] || ICONS.alertCircle;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${className}">${content}</svg>`;
+}
+
+// =============================================================================
+// 2. MODELO DE DATOS INICIAL Y PERSISTENCIA (LOCALSTORAGE)
+// =============================================================================
+const STORAGE_KEY = 'cobranzapro_db_v1';
+const CURRENT_DATE = '2026-10-02'; // Fecha del sistema (America/Lima)
+
+function getInitialDatabase() {
+  const profiles = [
+    {
+      id: 'prof-admin',
+      dni: '10203040',
+      fullName: 'Carlos Mendoza',
+      phone: '987654321',
+      role: 'ADMINISTRADOR',
+      pin: '1234',
+      active: true,
+      failedAttempts: 0,
+      lockedUntil: null
+    },
+    {
+      id: 'prof-cobrador-1',
+      dni: '20304050',
+      fullName: 'Pedro Castillo',
+      phone: '912345678',
+      role: 'COBRADOR',
+      pin: '1234',
+      active: true,
+      failedAttempts: 0,
+      lockedUntil: null
+    },
+    {
+      id: 'prof-cobrador-2',
+      dni: '30405060',
+      fullName: 'Luis Quispe',
+      phone: '923456789',
+      role: 'COBRADOR',
+      pin: '1234',
+      active: true,
+      failedAttempts: 0,
+      lockedUntil: null
+    }
+  ];
+
+  const clients = [
+    {
+      id: 'cli-1',
+      dni: '45678901',
+      fullName: 'Juan Pérez',
+      phone: '991122334',
+      address: 'Av. España 450, Trujillo',
+      addressReference: 'Frente al parque principal',
+      collectorId: 'prof-cobrador-1',
+      notes: 'Cliente puntual en pagos matutinos',
+      active: true,
+      createdAt: '2026-09-01'
+    },
+    {
+      id: 'cli-2',
+      dni: '46789012',
+      fullName: 'María López',
+      phone: '992233445',
+      address: 'Jr. Pizarro 210, Trujillo',
+      addressReference: 'Botica San José',
+      collectorId: 'prof-cobrador-1',
+      notes: 'Paga habitualmente después de las 3pm',
+      active: true,
+      createdAt: '2026-09-05'
+    },
+    {
+      id: 'cli-3',
+      dni: '47890123',
+      fullName: 'Roberto Gómez',
+      phone: '993344556',
+      address: 'Av. Larco 820, Trujillo',
+      addressReference: 'Mercado Central puesto 14',
+      collectorId: 'prof-cobrador-1',
+      notes: 'Negocio de abarrotes',
+      active: true,
+      createdAt: '2026-09-08'
+    },
+    {
+      id: 'cli-4',
+      dni: '48901234',
+      fullName: 'Carlos Torres',
+      phone: '994455667',
+      address: 'Ca. Bolognesi 105, Trujillo',
+      addressReference: 'Portón azul de dos pisos',
+      collectorId: 'prof-cobrador-1',
+      notes: 'Dificultades de cobranza, requiere seguimiento estricto',
+      active: true,
+      createdAt: '2026-08-20'
+    },
+    {
+      id: 'cli-5',
+      dni: '49012345',
+      fullName: 'Rosa Flores',
+      phone: '995566778',
+      address: 'Av. América Sur 1200, Trujillo',
+      addressReference: 'Esquina Grifo Primax',
+      collectorId: 'prof-cobrador-1',
+      notes: 'Excelente historial crediticio, préstamo cancelado',
+      active: true,
+      createdAt: '2026-08-15'
+    },
+    {
+      id: 'cli-6',
+      dni: '40123456',
+      fullName: 'Elena Morales',
+      phone: '996677889',
+      address: 'Jr. Ayacucho 315, Trujillo',
+      addressReference: 'Librería El Sol',
+      collectorId: 'prof-cobrador-1',
+      notes: 'Realizó abono parcial ayer',
+      active: true,
+      createdAt: '2026-09-12'
+    },
+    {
+      id: 'cli-7',
+      dni: '41234567',
+      fullName: 'Fernando Silva',
+      phone: '997788990',
+      address: 'Av. Miraflores 440, Trujillo',
+      addressReference: 'Panadería La Espiga',
+      collectorId: 'prof-cobrador-2',
+      notes: 'Puntual',
+      active: true,
+      createdAt: '2026-09-15'
+    },
+    {
+      id: 'cli-8',
+      dni: '42345678',
+      fullName: 'Lucía Díaz',
+      phone: '998899001',
+      address: 'Ca. Los Cedros 123, Trujillo',
+      addressReference: 'Mz B Lote 4',
+      collectorId: 'prof-cobrador-2',
+      notes: 'Atraso de 2 cuotas por viaje',
+      active: true,
+      createdAt: '2026-09-10'
+    }
+  ];
+
+  const loans = [
+    {
+      id: 'loan-1',
+      clientId: 'cli-1',
+      collectorId: 'prof-cobrador-1',
+      principal: 200,
+      interestRate: 20,
+      interestAmount: 40,
+      totalAmount: 240,
+      installmentAmount: 10,
+      frequency: 'DIARIO',
+      numberOfInstallments: 24,
+      startDate: '2026-09-15',
+      endDate: '2026-10-16',
+      balance: 150,
+      status: 'ACTIVE',
+      createdAt: '2026-09-15'
+    },
+    {
+      id: 'loan-2',
+      clientId: 'cli-2',
+      collectorId: 'prof-cobrador-1',
+      principal: 300,
+      interestRate: 20,
+      interestAmount: 60,
+      totalAmount: 360,
+      installmentAmount: 15,
+      frequency: 'DIARIO',
+      numberOfInstallments: 24,
+      startDate: '2026-09-15',
+      endDate: '2026-10-16',
+      balance: 300,
+      status: 'ACTIVE',
+      createdAt: '2026-09-15'
+    },
+    {
+      id: 'loan-3',
+      clientId: 'cli-3',
+      collectorId: 'prof-cobrador-1',
+      principal: 400,
+      interestRate: 20,
+      interestAmount: 80,
+      totalAmount: 480,
+      installmentAmount: 20,
+      frequency: 'DIARIO',
+      numberOfInstallments: 24,
+      startDate: '2026-09-10',
+      endDate: '2026-10-13',
+      balance: 420,
+      status: 'ACTIVE',
+      createdAt: '2026-09-10'
+    },
+    {
+      id: 'loan-4',
+      clientId: 'cli-4',
+      collectorId: 'prof-cobrador-1',
+      principal: 500,
+      interestRate: 20,
+      interestAmount: 100,
+      totalAmount: 600,
+      installmentAmount: 20,
+      frequency: 'DIARIO',
+      numberOfInstallments: 30,
+      startDate: '2026-09-01',
+      endDate: '2026-10-12',
+      balance: 500,
+      status: 'ACTIVE',
+      createdAt: '2026-09-01'
+    },
+    {
+      id: 'loan-5',
+      clientId: 'cli-5',
+      collectorId: 'prof-cobrador-1',
+      principal: 200,
+      interestRate: 20,
+      interestAmount: 40,
+      totalAmount: 240,
+      installmentAmount: 10,
+      frequency: 'DIARIO',
+      numberOfInstallments: 24,
+      startDate: '2026-08-20',
+      endDate: '2026-09-22',
+      balance: 0,
+      status: 'PAID',
+      createdAt: '2026-08-20'
+    },
+    {
+      id: 'loan-6',
+      clientId: 'cli-6',
+      collectorId: 'prof-cobrador-1',
+      principal: 200,
+      interestRate: 20,
+      interestAmount: 40,
+      totalAmount: 240,
+      installmentAmount: 10,
+      frequency: 'DIARIO',
+      numberOfInstallments: 24,
+      startDate: '2026-09-21',
+      endDate: '2026-10-22',
+      balance: 234,
+      status: 'ACTIVE',
+      createdAt: '2026-09-21'
+    },
+    {
+      id: 'loan-7',
+      clientId: 'cli-7',
+      collectorId: 'prof-cobrador-2',
+      principal: 250,
+      interestRate: 20,
+      interestAmount: 50,
+      totalAmount: 300,
+      installmentAmount: 15,
+      frequency: 'DIARIO',
+      numberOfInstallments: 20,
+      startDate: '2026-09-21',
+      endDate: '2026-10-16',
+      balance: 210,
+      status: 'ACTIVE',
+      createdAt: '2026-09-21'
+    },
+    {
+      id: 'loan-8',
+      clientId: 'cli-8',
+      collectorId: 'prof-cobrador-2',
+      principal: 300,
+      interestRate: 20,
+      interestAmount: 60,
+      totalAmount: 360,
+      installmentAmount: 15,
+      frequency: 'DIARIO',
+      numberOfInstallments: 24,
+      startDate: '2026-09-18',
+      endDate: '2026-10-21',
+      balance: 330,
+      status: 'ACTIVE',
+      createdAt: '2026-09-18'
+    }
+  ];
+
+  function generateSchedule(loan) {
+    const list = [];
+    let d = new Date(loan.startDate + 'T00:00:00');
+    let count = 0;
+    while (count < loan.numberOfInstallments) {
+      if (loan.frequency === 'DIARIO') {
+        const day = d.getDay();
+        if (day === 0) { d.setDate(d.getDate() + 1); continue; }
+        if (day === 6) { d.setDate(d.getDate() + 2); continue; }
+      }
+      count++;
+      const dateStr = d.toISOString().split('T')[0];
+      list.push({
+        id: `inst-${loan.id}-${count}`,
+        loanId: loan.id,
+        installmentNumber: count,
+        dueDate: dateStr,
+        expectedAmount: loan.installmentAmount,
+        paidAmount: 0,
+        remainingAmount: loan.installmentAmount,
+        status: 'PENDIENTE'
+      });
+      if (loan.frequency === 'DIARIO') d.setDate(d.getDate() + 1);
+      else if (loan.frequency === 'SEMANAL') d.setDate(d.getDate() + 7);
+      else if (loan.frequency === 'MENSUAL') d.setMonth(d.getMonth() + 1);
+      else d.setFullYear(d.getFullYear() + 1);
+    }
+    return list;
+  }
+
+  let loanInstallments = [];
+  loans.forEach(l => {
+    const insts = generateSchedule(l);
+    loanInstallments = loanInstallments.concat(insts);
+  });
+
+  const payments = [
+    { id: 'pay-1', loanId: 'loan-1', clientId: 'cli-1', collectorId: 'prof-cobrador-1', amount: 50, date: '2026-09-20', notes: 'Abono 5 cuotas', createdBy: 'prof-cobrador-1' },
+    { id: 'pay-2', loanId: 'loan-1', clientId: 'cli-1', collectorId: 'prof-cobrador-1', amount: 40, date: '2026-09-25', notes: 'Abono 4 cuotas', createdBy: 'prof-cobrador-1' },
+    { id: 'pay-3', loanId: 'loan-2', clientId: 'cli-2', collectorId: 'prof-cobrador-1', amount: 60, date: '2026-09-22', notes: 'Pago inicial 4 cuotas', createdBy: 'prof-cobrador-1' },
+    { id: 'pay-4', loanId: 'loan-3', clientId: 'cli-3', collectorId: 'prof-cobrador-1', amount: 60, date: '2026-09-18', notes: 'Pago semana 1', createdBy: 'prof-cobrador-1' },
+    { id: 'pay-5', loanId: 'loan-4', clientId: 'cli-4', collectorId: 'prof-cobrador-1', amount: 100, date: '2026-09-08', notes: 'Abono primeras cuotas', createdBy: 'prof-cobrador-1' },
+    { id: 'pay-6', loanId: 'loan-5', clientId: 'cli-5', collectorId: 'prof-cobrador-1', amount: 240, date: '2026-09-15', notes: 'Cancelación total anticipada', createdBy: 'prof-cobrador-1' },
+    { id: 'pay-7', loanId: 'loan-6', clientId: 'cli-6', collectorId: 'prof-cobrador-1', amount: 6, date: '2026-09-22', notes: 'Abono parcial cuota 1', createdBy: 'prof-cobrador-1' },
+    { id: 'pay-8', loanId: 'loan-7', clientId: 'cli-7', collectorId: 'prof-cobrador-2', amount: 90, date: '2026-09-28', notes: 'Al día', createdBy: 'prof-cobrador-2' },
+    { id: 'pay-9', loanId: 'loan-8', clientId: 'cli-8', collectorId: 'prof-cobrador-2', amount: 30, date: '2026-09-22', notes: 'Abono inicial', createdBy: 'prof-cobrador-2' }
+  ];
+
+  payments.forEach(p => {
+    let unallocated = p.amount;
+    const insts = loanInstallments.filter(i => i.loanId === p.loanId).sort((a,b) => a.installmentNumber - b.installmentNumber);
+    for (let inst of insts) {
+      if (unallocated <= 0) break;
+      if (inst.status === 'PAGADO') continue;
+      if (unallocated >= inst.remainingAmount) {
+        unallocated -= inst.remainingAmount;
+        inst.paidAmount += inst.remainingAmount;
+        inst.remainingAmount = 0;
+        inst.status = 'PAGADO';
+      } else {
+        inst.paidAmount += unallocated;
+        inst.remainingAmount -= unallocated;
+        inst.status = 'PAGO_PARCIAL';
+        unallocated = 0;
+      }
+    }
+  });
+
+  const auditLogs = [
+    {
+      id: 'aud-1',
+      userId: 'prof-admin',
+      userName: 'Carlos Mendoza',
+      action: 'CREAR_PRESTAMO',
+      entity: 'loans',
+      entityId: 'loan-1',
+      details: 'Préstamo creado por S/ 200 para Juan Pérez',
+      createdAt: '2026-09-15 08:30:00'
+    },
+    {
+      id: 'aud-2',
+      userId: 'prof-cobrador-1',
+      userName: 'Pedro Castillo',
+      action: 'REGISTRAR_PAGO',
+      entity: 'payments',
+      entityId: 'pay-2',
+      details: 'Pago registrado por S/ 40.00 para Juan Pérez',
+      createdAt: '2026-09-25 10:15:00'
+    }
+  ];
+
+  return { profiles, clients, loans, loanInstallments, payments, auditLogs };
+}
+
+class AppStore {
+  constructor() {
+    this.load();
+    this.currentUser = this.data.profiles.find(p => p.role === 'ADMINISTRADOR');
+  }
+
+  load() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      try {
+        this.data = JSON.parse(raw);
+        return;
+      } catch (e) {
+        console.error('Error al cargar datos locales, reiniciando:', e);
+      }
+    }
+    this.data = getInitialDatabase();
+    this.save();
+  }
+
+  save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+  }
+
+  resetData() {
+    this.data = getInitialDatabase();
+    this.save();
+    showToast('Datos reiniciados al estado de prueba inicial', 'success');
+  }
+
+  setCurrentUser(profileId) {
+    const p = this.data.profiles.find(x => x.id === profileId);
+    if (p) {
+      this.currentUser = p;
+      return true;
+    }
+    return false;
+  }
+
+  getLoanOverdueDays(loanId) {
+    const loan = this.data.loans.find(l => l.id === loanId);
+    if (!loan || loan.status !== 'ACTIVE') return 0;
+    
+    const overdueInsts = this.data.loanInstallments.filter(inst => {
+      return inst.loanId === loanId && 
+             inst.dueDate < CURRENT_DATE && 
+             inst.status !== 'PAGADO';
+    });
+    return overdueInsts.length;
+  }
+
+  getClientTodayInstallment(loanId) {
+    if (!loanId) return null;
+    return this.data.loanInstallments.find(inst => inst.loanId === loanId && inst.dueDate === CURRENT_DATE);
+  }
+
+  getClientRiskStatus(client) {
+    const activeLoan = this.data.loans.find(l => l.clientId === client.id && l.status === 'ACTIVE');
+    if (!activeLoan) {
+      const paidLoan = this.data.loans.find(l => l.clientId === client.id && l.status === 'PAID');
+      if (paidLoan) {
+        return { days: 0, level: 'green', text: 'PAGADO', isMoroso: false, isPaid: true };
+      }
+      return { days: 0, level: 'gray', text: 'SIN PRÉSTAMO', isMoroso: false, isPaid: false };
+    }
+
+    const overdueDays = this.getLoanOverdueDays(activeLoan.id);
+    if (overdueDays === 0) {
+      return { days: 0, level: 'green', text: 'AL DÍA (0 días)', isMoroso: false, isPaid: false };
+    } else if (overdueDays <= 5) {
+      return { days: overdueDays, level: 'yellow', text: `ATRASO (${overdueDays} d)`, isMoroso: false, isPaid: false };
+    } else if (overdueDays <= 10) {
+      return { days: overdueDays, level: 'orange', text: `ATRASO (${overdueDays} d)`, isMoroso: false, isPaid: false };
+    } else {
+      return { days: overdueDays, level: 'red', text: `MOROSO (${overdueDays} d)`, isMoroso: true, isPaid: false };
+    }
+  }
+
+  hasClientPaidToday(clientId) {
+    return this.data.payments.some(p => p.clientId === clientId && p.date === CURRENT_DATE);
+  }
+
+  registerPayment(loanId, amount, notes = '') {
+    amount = parseFloat(amount);
+    if (isNaN(amount) || amount <= 0) {
+      throw new Error('El monto recibido debe ser mayor a cero');
+    }
+
+    const loan = this.data.loans.find(l => l.id === loanId);
+    if (!loan) throw new Error('Préstamo no encontrado');
+    if (loan.status !== 'ACTIVE') throw new Error('El préstamo no está activo');
+    if (amount > loan.balance) {
+      throw new Error(`El monto recibido (S/ ${amount.toFixed(2)}) supera el saldo pendiente (S/ ${loan.balance.toFixed(2)})`);
+    }
+
+    const paymentId = 'pay-' + Date.now();
+    const newPayment = {
+      id: paymentId,
+      loanId: loan.id,
+      clientId: loan.clientId,
+      collectorId: this.currentUser.id,
+      amount: amount,
+      date: CURRENT_DATE,
+      notes: notes || 'Cobranza en campo',
+      createdBy: this.currentUser.id,
+      createdAt: new Date().toISOString()
+    };
+    this.data.payments.unshift(newPayment);
+
+    let unallocated = amount;
+    const installments = this.data.loanInstallments
+      .filter(i => i.loanId === loan.id && i.status !== 'PAGADO')
+      .sort((a, b) => a.installmentNumber - b.installmentNumber);
+
+    for (let inst of installments) {
+      if (unallocated <= 0) break;
+      if (unallocated >= inst.remainingAmount) {
+        unallocated -= inst.remainingAmount;
+        inst.paidAmount += inst.remainingAmount;
+        inst.remainingAmount = 0;
+        inst.status = 'PAGADO';
+      } else {
+        inst.paidAmount += unallocated;
+        inst.remainingAmount -= unallocated;
+        inst.status = 'PAGO_PARCIAL';
+        unallocated = 0;
+      }
+    }
+
+    loan.balance = Math.max(0, parseFloat((loan.balance - amount).toFixed(2)));
+    if (loan.balance === 0) {
+      loan.status = 'PAID';
+    }
+
+    const client = this.data.clients.find(c => c.id === loan.clientId);
+    this.data.auditLogs.unshift({
+      id: 'aud-' + Date.now(),
+      userId: this.currentUser.id,
+      userName: this.currentUser.fullName,
+      action: 'REGISTRAR_PAGO',
+      entity: 'payments',
+      entityId: paymentId,
+      details: `Pago de S/ ${amount.toFixed(2)} registrado para ${client ? client.fullName : 'cliente'}. Nuevo saldo: S/ ${loan.balance.toFixed(2)}`,
+      createdAt: new Date().toLocaleString('es-PE')
+    });
+
+    this.save();
+    return {
+      success: true,
+      amount,
+      newBalance: loan.balance,
+      isPaidOff: loan.status === 'PAID'
+    };
+  }
+
+  createLoan({ clientId, principal, interestRate, frequency, numberOfInstallments, startDate }) {
+    principal = parseFloat(principal);
+    interestRate = parseFloat(interestRate);
+    numberOfInstallments = parseInt(numberOfInstallments);
+
+    const client = this.data.clients.find(c => c.id === clientId);
+    if (!client) throw new Error('Cliente no encontrado');
+
+    const existingActive = this.data.loans.find(l => l.clientId === clientId && l.status === 'ACTIVE');
+    if (existingActive) {
+      throw new Error('El cliente ya tiene un préstamo ACTIVO. No se permite más de uno a la vez.');
+    }
+
+    const interestAmount = parseFloat((principal * (interestRate / 100)).toFixed(2));
+    const totalAmount = parseFloat((principal + interestAmount).toFixed(2));
+    const installmentAmount = parseFloat((totalAmount / numberOfInstallments).toFixed(2));
+
+    const loanId = 'loan-' + Date.now();
+    const loan = {
+      id: loanId,
+      clientId,
+      collectorId: client.collectorId,
+      principal,
+      interestRate,
+      interestAmount,
+      totalAmount,
+      installmentAmount,
+      frequency,
+      numberOfInstallments,
+      startDate,
+      endDate: startDate,
+      balance: totalAmount,
+      status: 'ACTIVE',
+      createdAt: CURRENT_DATE
+    };
+
+    const installments = [];
+    let d = new Date(startDate + 'T00:00:00');
+    let count = 0;
+    while (count < numberOfInstallments) {
+      if (frequency === 'DIARIO') {
+        const day = d.getDay();
+        if (day === 0) { d.setDate(d.getDate() + 1); continue; }
+        if (day === 6) { d.setDate(d.getDate() + 2); continue; }
+      }
+      count++;
+      const dateStr = d.toISOString().split('T')[0];
+      installments.push({
+        id: `inst-${loanId}-${count}`,
+        loanId,
+        installmentNumber: count,
+        dueDate: dateStr,
+        expectedAmount: installmentAmount,
+        paidAmount: 0,
+        remainingAmount: installmentAmount,
+        status: 'PENDIENTE'
+      });
+      if (frequency === 'DIARIO') d.setDate(d.getDate() + 1);
+      else if (frequency === 'SEMANAL') d.setDate(d.getDate() + 7);
+      else if (frequency === 'MENSUAL') d.setMonth(d.getMonth() + 1);
+      else d.setFullYear(d.getFullYear() + 1);
+    }
+
+    loan.endDate = installments[installments.length - 1].dueDate;
+
+    this.data.loans.unshift(loan);
+    this.data.loanInstallments = this.data.loanInstallments.concat(installments);
+
+    this.data.auditLogs.unshift({
+      id: 'aud-' + Date.now(),
+      userId: this.currentUser.id,
+      userName: this.currentUser.fullName,
+      action: 'CREAR_PRESTAMO',
+      entity: 'loans',
+      entityId: loanId,
+      details: `Préstamo creado de S/ ${principal} al ${interestRate}% (${numberOfInstallments} cuotas de S/ ${installmentAmount}) para ${client.fullName}`,
+      createdAt: new Date().toLocaleString('es-PE')
+    });
+
+    this.save();
+    return loan;
+  }
+}
+
+const store = new AppStore();
+
+// =============================================================================
+// 3. SISTEMA DE TOASTS & NOTIFICACIONES
+// =============================================================================
+function showToast(message, type = 'success') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  let iconName = 'check';
+  if (type === 'error') iconName = 'alertCircle';
+  if (type === 'warning') iconName = 'alertTriangle';
+
+  toast.innerHTML = `
+    <span style="color: ${type === 'success' ? '#16A34A' : type === 'error' ? '#DC2626' : '#EAB308'}">
+      ${icon(iconName, '', 20)}
+    </span>
+    <span>${message}</span>
+  `;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(20px)';
+    toast.style.transition = 'all 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 3500);
+}
+
+// =============================================================================
+// 4. GESTIÓN DE TEMAS (LIGHT / DARK)
+// =============================================================================
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('cobranzapro_theme', next);
+  renderApp();
+}
+
+// =============================================================================
+// 5. CONTROLADOR DE VISTAS Y NAVEGACIÓN
+// =============================================================================
+let currentView = 'collector-dashboard';
+let activeFilter = 'TODOS';
+let activeSortOrder = 'MAYOR_ATRASO';
+let searchQuery = '';
+let activeClientId = null;
+let activeCollectorFilter = null; // Para drill-down desde dashboard admin
+
+function navigateTo(viewName, params = {}) {
+  currentView = viewName;
+  if (params.clientId) activeClientId = params.clientId;
+  if (params.collectorFilter) activeCollectorFilter = params.collectorFilter;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  renderApp();
+}
+
+// =============================================================================
+// 6. RENDERIZADO PRINCIPAL
+// =============================================================================
+function renderApp() {
+  const app = document.getElementById('app');
+  if (!app) return;
+
+  if (!store.currentUser) {
+    app.innerHTML = renderLoginView();
+    attachLoginEvents();
+    return;
+  }
+
+  const role = store.currentUser.role;
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+  app.innerHTML = `
+    <!-- Barra Lateral para Desktop -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-logo">
+          <div class="brand-icon-box">${icon('wallet', '', 20)}</div>
+          <span>CobranzaPro</span>
+        </div>
+        <div class="text-xs text-muted" style="margin-top: 0.35rem;">
+          ${role === 'ADMINISTRADOR' ? 'Panel de Administración' : 'Panel del Cobrador'}
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        ${role === 'ADMINISTRADOR' ? `
+          <button class="nav-item ${currentView === 'admin-dashboard' ? 'active' : ''}" onclick="navigateTo('admin-dashboard')">
+            ${icon('barChart', '', 20)} <span>Dashboard General</span>
+          </button>
+          <button class="nav-item ${currentView === 'clients' ? 'active' : ''}" onclick="navigateTo('clients')">
+            ${icon('users', '', 20)} <span>Clientes / Deudores</span>
+          </button>
+          <button class="nav-item ${currentView === 'loans' ? 'active' : ''}" onclick="navigateTo('loans')">
+            ${icon('creditCard', '', 20)} <span>Préstamos</span>
+          </button>
+          <button class="nav-item ${currentView === 'collectors' ? 'active' : ''}" onclick="navigateTo('collectors')">
+            ${icon('user', '', 20)} <span>Cobradores</span>
+          </button>
+          <button class="nav-item ${currentView === 'tabular-control' ? 'active' : ''}" onclick="navigateTo('tabular-control')">
+            ${icon('fileText', '', 20)} <span>Control Diario (Hoja)</span>
+          </button>
+          <button class="nav-item ${currentView === 'reports' ? 'active' : ''}" onclick="navigateTo('reports')">
+            ${icon('download', '', 20)} <span>Reportes</span>
+          </button>
+          <button class="nav-item ${currentView === 'audit' ? 'active' : ''}" onclick="navigateTo('audit')">
+            ${icon('shield', '', 20)} <span>Auditoría</span>
+          </button>
+        ` : `
+          <button class="nav-item ${currentView === 'collector-dashboard' ? 'active' : ''}" onclick="navigateTo('collector-dashboard')">
+            ${icon('home', '', 20)} <span>Mis Cobranzas de Hoy</span>
+          </button>
+          <button class="nav-item ${currentView === 'collector-clients' ? 'active' : ''}" onclick="navigateTo('collector-clients')">
+            ${icon('users', '', 20)} <span>Mis Clientes</span>
+          </button>
+        `}
+      </nav>
+
+      <div class="sidebar-footer">
+        <div style="padding: 0.5rem 0.75rem; background: var(--bg-subtle); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <div class="text-sm font-semibold">${store.currentUser.fullName}</div>
+            <div class="text-xs text-muted">DNI: ${store.currentUser.dni}</div>
+          </div>
+          <span class="badge ${role === 'ADMINISTRADOR' ? 'badge-orange' : 'badge-green'} text-xs">
+            ${role === 'ADMINISTRADOR' ? 'ADMIN' : 'COBRADOR'}
+          </span>
+        </div>
+        <button class="btn btn-outline btn-block text-sm" onclick="openChangePinModal()" style="min-height: 38px;">
+          ${icon('key', '', 16)} <span>Cambiar PIN</span>
+        </button>
+        <button class="btn btn-subtle btn-block text-sm text-danger" onclick="logout()" style="min-height: 38px;">
+          ${icon('logOut', '', 16)} <span>Cerrar sesión</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Contenido Principal -->
+    <div class="main-wrapper">
+      <!-- Navbar Superior -->
+      <header class="top-nav">
+        <div class="brand-logo" style="display: flex;">
+          <div class="brand-icon-box" style="width: 30px; height: 30px;">${icon('wallet', '', 18)}</div>
+          <span style="font-size: 1.05rem;">CobranzaPro</span>
+        </div>
+
+        <div class="nav-actions">
+          <select class="form-select" style="min-height: 36px; padding: 0.2rem 0.5rem; font-size: 0.8rem; font-weight: 600;" onchange="switchDemoUser(this.value)">
+            <option value="prof-admin" ${store.currentUser.id === 'prof-admin' ? 'selected' : ''}>👤 Carlos (Admin)</option>
+            <option value="prof-cobrador-1" ${store.currentUser.id === 'prof-cobrador-1' ? 'selected' : ''}>🛵 Pedro (Cobrador A)</option>
+            <option value="prof-cobrador-2" ${store.currentUser.id === 'prof-cobrador-2' ? 'selected' : ''}>🛵 Luis (Cobrador B)</option>
+          </select>
+
+          <button class="theme-toggle-btn" onclick="toggleTheme()" title="Cambiar tema">
+            ${isDark ? icon('sun', '', 20) : icon('moon', '', 20)}
+          </button>
+
+          <button class="icon-btn" onclick="if(confirm('¿Restablecer datos de prueba al estado inicial?')) { store.resetData(); renderApp(); }" title="Restablecer datos iniciales">
+            ${icon('refresh', '', 18)}
+          </button>
+        </div>
+      </header>
+
+      <!-- Contenedor de la Vista Activa -->
+      <main class="content-container">
+        ${renderCurrentView()}
+      </main>
+
+      <!-- Navegación Inferior Táctil para Móvil -->
+      <nav class="mobile-bottom-nav">
+        ${role === 'COBRADOR' ? `
+          <button class="mobile-nav-btn ${currentView === 'collector-dashboard' ? 'active' : ''}" onclick="navigateTo('collector-dashboard')">
+            ${icon('home')} <span>Inicio</span>
+          </button>
+          <button class="mobile-nav-btn ${currentView === 'collector-clients' ? 'active' : ''}" onclick="navigateTo('collector-clients')">
+            ${icon('users')} <span>Clientes</span>
+          </button>
+          <button class="mobile-nav-btn" onclick="openFastPaymentModal()">
+            <div style="background: #16A34A; color: white; width: 36px; height: 36px; border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-md);">
+              ${icon('plus', '', 22)}
+            </div>
+            <span style="font-weight: 700; color: #16A34A;">Cobrar</span>
+          </button>
+          <button class="mobile-nav-btn ${currentView === 'profile' ? 'active' : ''}" onclick="navigateTo('profile')">
+            ${icon('user')} <span>Perfil</span>
+          </button>
+        ` : `
+          <button class="mobile-nav-btn ${currentView === 'admin-dashboard' ? 'active' : ''}" onclick="navigateTo('admin-dashboard')">
+            ${icon('barChart')} <span>Dashboard</span>
+          </button>
+          <button class="mobile-nav-btn ${currentView === 'clients' ? 'active' : ''}" onclick="navigateTo('clients')">
+            ${icon('users')} <span>Clientes</span>
+          </button>
+          <button class="mobile-nav-btn ${currentView === 'loans' ? 'active' : ''}" onclick="navigateTo('loans')">
+            ${icon('creditCard')} <span>Préstamos</span>
+          </button>
+          <button class="mobile-nav-btn ${currentView === 'tabular-control' ? 'active' : ''}" onclick="navigateTo('tabular-control')">
+            ${icon('fileText')} <span>Control</span>
+          </button>
+          <button class="mobile-nav-btn ${currentView === 'profile' ? 'active' : ''}" onclick="navigateTo('profile')">
+            ${icon('user')} <span>Más</span>
+          </button>
+        `}
+      </nav>
+    </div>
+  `;
+}
+
+function switchDemoUser(profileId) {
+  store.setCurrentUser(profileId);
+  currentView = store.currentUser.role === 'ADMINISTRADOR' ? 'admin-dashboard' : 'collector-dashboard';
+  renderApp();
+  showToast(`Cambiado a usuario: ${store.currentUser.fullName} (${store.currentUser.role})`, 'success');
+}
+
+function logout() {
+  store.currentUser = null;
+  renderApp();
+  showToast('Sesión cerrada con éxito', 'success');
+}
+
+// =============================================================================
+// 7. VISTAS DE LA APLICACIÓN
+// =============================================================================
+function renderCurrentView() {
+  switch (currentView) {
+    case 'collector-dashboard':
+      return renderCollectorDashboard();
+    case 'collector-clients':
+      return renderCollectorClients();
+    case 'client-detail':
+      return renderClientDetail();
+    case 'admin-dashboard':
+      return renderAdminDashboard();
+    case 'clients':
+      return renderClientsManager();
+    case 'loans':
+      return renderLoansManager();
+    case 'collectors':
+      return renderCollectorsManager();
+    case 'tabular-control':
+      return renderTabularControl();
+    case 'reports':
+      return renderReportsView();
+    case 'audit':
+      return renderAuditView();
+    case 'profile':
+      return renderProfileView();
+    default:
+      return renderCollectorDashboard();
+  }
+}
+
+// -----------------------------------------------------------------------------
+// VISTA: PANTALLA PRINCIPAL DEL COBRADOR ("Mis cobranzas de hoy")
+// -----------------------------------------------------------------------------
+function renderCollectorDashboard() {
+  const collector = store.currentUser;
+  
+  // Regla RLS: Cobrador solo ve sus clientes asignados
+  const myClients = store.data.clients.filter(c => c.collectorId === collector.id && c.active);
+  const myClientIds = myClients.map(c => c.id);
+  const myLoans = store.data.loans.filter(l => myClientIds.includes(l.clientId));
+
+  let expectedToday = 0;
+  let collectedToday = 0;
+  let clientsWithDueToday = 0;
+  let overdueClientsCount = 0;
+
+  myLoans.filter(l => l.status === 'ACTIVE').forEach(loan => {
+    const todayInst = store.getClientTodayInstallment(loan.id);
+    if (todayInst) {
+      clientsWithDueToday++;
+      expectedToday += todayInst.expectedAmount;
+      collectedToday += todayInst.paidAmount;
+    }
+    const overdue = store.getLoanOverdueDays(loan.id);
+    if (overdue > 0) overdueClientsCount++;
+  });
+
+  // Filtrado de clientes según requerimiento 11
+  let filteredClients = myClients.filter(client => {
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const match = client.fullName.toLowerCase().includes(q) ||
+                    client.dni.includes(q) ||
+                    (client.phone && client.phone.includes(q));
+      if (!match) return false;
+    }
+
+    const loan = myLoans.find(l => l.clientId === client.id && l.status === 'ACTIVE');
+    const pastLoan = myLoans.find(l => l.clientId === client.id);
+    const risk = store.getClientRiskStatus(client);
+    const paidToday = store.hasClientPaidToday(client.id);
+    const hasTodayInst = loan ? !!store.getClientTodayInstallment(loan.id) : false;
+
+    if (activeFilter === 'COBRAR_HOY') {
+      return hasTodayInst && !paidToday;
+    }
+    if (activeFilter === 'PAGARON') {
+      return paidToday;
+    }
+    if (activeFilter === 'NO_PAGARON') {
+      return hasTodayInst && !paidToday;
+    }
+    if (activeFilter === 'ATRASADOS') {
+      return risk.days > 0;
+    }
+    if (activeFilter === 'MOROSOS') {
+      return risk.isMoroso;
+    }
+    if (activeFilter === 'PRESTAMOS_ACTIVOS') {
+      return !!loan;
+    }
+    if (activeFilter === 'PRESTAMOS_PAGADOS') {
+      return pastLoan && pastLoan.status === 'PAID';
+    }
+    return true; // TODOS
+  });
+
+  // Ordenamiento según requerimiento 11
+  filteredClients.sort((a, b) => {
+    const riskA = store.getClientRiskStatus(a);
+    const riskB = store.getClientRiskStatus(b);
+    const loanA = myLoans.find(l => l.clientId === a.id);
+    const loanB = myLoans.find(l => l.clientId === b.id);
+    const balA = loanA ? loanA.balance : 0;
+    const balB = loanB ? loanB.balance : 0;
+
+    if (activeSortOrder === 'MAYOR_ATRASO') {
+      if (riskB.days !== riskA.days) return riskB.days - riskA.days;
+      const todayA = loanA && store.getClientTodayInstallment(loanA.id) ? 1 : 0;
+      const todayB = loanB && store.getClientTodayInstallment(loanB.id) ? 1 : 0;
+      return todayB - todayA;
+    } else if (activeSortOrder === 'MENOR_ATRASO') {
+      return riskA.days - riskB.days;
+    } else if (activeSortOrder === 'MAYOR_SALDO') {
+      return balB - balA;
+    } else if (activeSortOrder === 'MENOR_SALDO') {
+      return balA - balB;
+    } else if (activeSortOrder === 'NOMBRE') {
+      return a.fullName.localeCompare(b.fullName);
+    }
+    return 0;
+  });
+
+  return `
+    <div style="margin-bottom: 1.25rem;">
+      <h1 class="text-2xl font-bold">Hola, ${collector.fullName.split(' ')[0]} 👋</h1>
+      <p class="text-sm text-muted">Ruta de cobranza para hoy (${CURRENT_DATE})</p>
+    </div>
+
+    <!-- Tarjetas KPI Superiores -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">${icon('users', 'text-primary', 16)} <span>Cobrar Hoy</span></div>
+        <div class="kpi-value">${clientsWithDueToday}</div>
+        <div class="kpi-subtext">Clientes programados</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">${icon('clock', 'text-muted', 16)} <span>Esperado</span></div>
+        <div class="kpi-value text-primary currency-amount">S/ ${expectedToday.toFixed(2)}</div>
+        <div class="kpi-subtext">Meta de cobranza</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">${icon('check', 'text-success', 16)} <span>Cobrado</span></div>
+        <div class="kpi-value text-success currency-amount">S/ ${collectedToday.toFixed(2)}</div>
+        <div class="kpi-subtext">Recaudado hoy</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">${icon('alertTriangle', 'text-danger', 16)} <span>Atrasados</span></div>
+        <div class="kpi-value text-danger">${overdueClientsCount}</div>
+        <div class="kpi-subtext">Con cuotas vencidas</div>
+      </div>
+    </div>
+
+    <!-- Buscador en Tiempo Real y Selector de Orden -->
+    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
+      <div class="search-wrapper" style="flex: 2; min-width: 220px;">
+        <span class="search-icon">${icon('search', '', 18)}</span>
+        <input 
+          type="text" 
+          class="form-input search-input" 
+          placeholder="Buscar por nombre, DNI o teléfono..." 
+          value="${searchQuery}"
+          oninput="searchQuery = this.value; renderApp();"
+        >
+        ${searchQuery ? `<button class="clear-search-btn" onclick="searchQuery=''; renderApp();">${icon('x', '', 14)}</button>` : ''}
+      </div>
+
+      <div style="flex: 1; min-width: 140px;">
+        <select class="form-select" style="min-height: 44px; width: 100%; font-size: 0.85rem;" onchange="activeSortOrder=this.value; renderApp();">
+          <option value="MAYOR_ATRASO" ${activeSortOrder === 'MAYOR_ATRASO' ? 'selected' : ''}>Mayor atraso</option>
+          <option value="MENOR_ATRASO" ${activeSortOrder === 'MENOR_ATRASO' ? 'selected' : ''}>Menor atraso</option>
+          <option value="MAYOR_SALDO" ${activeSortOrder === 'MAYOR_SALDO' ? 'selected' : ''}>Mayor saldo</option>
+          <option value="MENOR_SALDO" ${activeSortOrder === 'MENOR_SALDO' ? 'selected' : ''}>Menor saldo</option>
+          <option value="NOMBRE" ${activeSortOrder === 'NOMBRE' ? 'selected' : ''}>Nombre (A-Z)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Filtros Horizontales en Chips (Requisito 11) -->
+    <div class="filter-chips-container">
+      <button class="chip-btn ${activeFilter === 'TODOS' ? 'active' : ''}" onclick="activeFilter='TODOS'; renderApp();">
+        Todos (${myClients.length})
+      </button>
+      <button class="chip-btn ${activeFilter === 'COBRAR_HOY' ? 'active' : ''}" onclick="activeFilter='COBRAR_HOY'; renderApp();">
+        Cobrar hoy
+      </button>
+      <button class="chip-btn ${activeFilter === 'PAGARON' ? 'active' : ''}" onclick="activeFilter='PAGARON'; renderApp();">
+        Pagaron hoy
+      </button>
+      <button class="chip-btn ${activeFilter === 'NO_PAGARON' ? 'active' : ''}" onclick="activeFilter='NO_PAGARON'; renderApp();">
+        No pagaron hoy
+      </button>
+      <button class="chip-btn ${activeFilter === 'ATRASADOS' ? 'active' : ''}" onclick="activeFilter='ATRASADOS'; renderApp();">
+        Con atraso (${overdueClientsCount})
+      </button>
+      <button class="chip-btn ${activeFilter === 'MOROSOS' ? 'active' : ''}" onclick="activeFilter='MOROSOS'; renderApp();">
+        Más de 10 días (Morosos)
+      </button>
+      <button class="chip-btn ${activeFilter === 'PRESTAMOS_ACTIVOS' ? 'active' : ''}" onclick="activeFilter='PRESTAMOS_ACTIVOS'; renderApp();">
+        Préstamos activos
+      </button>
+      <button class="chip-btn ${activeFilter === 'PRESTAMOS_PAGADOS' ? 'active' : ''}" onclick="activeFilter='PRESTAMOS_PAGADOS'; renderApp();">
+        Préstamos pagados
+      </button>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+      <h2 class="text-lg font-bold">Cobranzas de hoy (${filteredClients.length})</h2>
+    </div>
+
+    ${filteredClients.length === 0 ? `
+      <div class="empty-state">
+        <div class="empty-state-icon">${icon('check', '', 28)}</div>
+        <h3 class="text-base font-bold">No se encontraron clientes</h3>
+        <p class="text-sm text-muted">No hay cobros que coincidan con los filtros aplicados.</p>
+        <button class="btn btn-outline" onclick="activeFilter='TODOS'; searchQuery=''; renderApp();">Limpiar filtros</button>
+      </div>
+    ` : `
+      <div class="client-collection-list">
+        ${filteredClients.map(client => renderClientCollectionCard(client, myLoans)).join('')}
+      </div>
+    `}
+  `;
+}
+
+function renderClientCollectionCard(client, myLoans) {
+  const loan = myLoans.find(l => l.clientId === client.id && l.status === 'ACTIVE') ||
+               myLoans.find(l => l.clientId === client.id);
+  const risk = store.getClientRiskStatus(client);
+  const paidToday = store.hasClientPaidToday(client.id);
+  const cuota = loan ? loan.installmentAmount : 0;
+  const balance = loan ? loan.balance : 0;
+
+  let badgeClass = 'badge-green';
+  let cardRiskClass = 'risk-green';
+  if (risk.level === 'yellow') { badgeClass = 'badge-yellow'; cardRiskClass = 'risk-yellow'; }
+  if (risk.level === 'orange') { badgeClass = 'badge-orange'; cardRiskClass = 'risk-orange'; }
+  if (risk.level === 'red') { badgeClass = 'badge-red'; cardRiskClass = 'risk-red'; }
+
+  return `
+    <div class="client-card ${cardRiskClass}">
+      <div class="client-card-header">
+        <div>
+          <div class="client-card-name" onclick="navigateTo('client-detail', { clientId: '${client.id}' })" style="cursor: pointer;">
+            ${risk.isMoroso ? '🔴 ' : ''}${client.fullName}
+          </div>
+          <div class="client-card-meta">
+            <span>DNI: ${client.dni}</span>
+            <span>•</span>
+            <span style="display: inline-flex; align-items: center; gap: 0.2rem;">
+              ${icon('mapPin', '', 12)} ${client.address.split(',')[0]}
+            </span>
+          </div>
+        </div>
+        <div style="text-align: right;">
+          ${risk.isMoroso ? `
+            <span class="badge badge-red">MOROSO</span>
+          ` : `
+            <span class="badge ${badgeClass}">${risk.text}</span>
+          `}
+          ${paidToday ? `<div class="badge badge-green text-xs" style="margin-top: 0.25rem;">${icon('check', '', 12)} Pagó hoy</div>` : ''}
+        </div>
+      </div>
+
+      <div class="client-card-grid">
+        <div class="client-metric-item">
+          <span class="client-metric-label">Cuota</span>
+          <span class="client-metric-value currency-amount">S/ ${cuota.toFixed(2)}</span>
+        </div>
+        <div class="client-metric-item">
+          <span class="client-metric-label">Saldo</span>
+          <span class="client-metric-value currency-amount">S/ ${balance.toFixed(2)}</span>
+        </div>
+        <div class="client-metric-item">
+          <span class="client-metric-label">Atraso</span>
+          <span class="client-metric-value ${risk.days > 0 ? (risk.isMoroso ? 'text-danger' : 'text-primary') : 'text-success'}">
+            ${risk.days} días
+          </span>
+        </div>
+      </div>
+
+      <div class="client-card-footer">
+        <button class="btn btn-outline" style="flex: 1;" onclick="navigateTo('client-detail', { clientId: '${client.id}' })">
+          Detalle
+        </button>
+        ${loan && loan.status === 'ACTIVE' && balance > 0 ? `
+          <button class="btn-pay-action" style="flex: 2;" onclick="openPaymentModal('${loan.id}', '${client.id}')">
+            ${icon('banknote', '', 20)}
+            <span>REGISTRAR PAGO</span>
+          </button>
+        ` : `
+          <button class="btn btn-subtle" style="flex: 2;" disabled>
+            Préstamo Cancelado
+          </button>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+function renderCollectorClients() {
+  const collector = store.currentUser;
+  const myClients = store.data.clients.filter(c => c.collectorId === collector.id && c.active);
+  const myLoans = store.data.loans.filter(l => l.collectorId === collector.id);
+
+  return `
+    <div style="margin-bottom: 1.25rem;">
+      <h1 class="text-2xl font-bold">Mis Clientes Asignados</h1>
+      <p class="text-sm text-muted">Tienes ${myClients.length} clientes en tu cartera de cobranza.</p>
+    </div>
+
+    <div class="client-collection-list">
+      ${myClients.map(client => renderClientCollectionCard(client, myLoans)).join('')}
+    </div>
+  `;
+}
+
+function renderClientDetail() {
+  const client = store.data.clients.find(c => c.id === activeClientId);
+  if (!client) {
+    return `<div class="card"><p>Cliente no encontrado.</p><button class="btn btn-primary" onclick="navigateTo('collector-dashboard')">Volver</button></div>`;
+  }
+
+  const collector = store.data.profiles.find(p => p.id === client.collectorId);
+  const loan = store.data.loans.find(l => l.clientId === client.id && l.status === 'ACTIVE') ||
+               store.data.loans.find(l => l.clientId === client.id);
+
+  const risk = store.getClientRiskStatus(client);
+  const installments = loan ? store.data.loanInstallments.filter(i => i.loanId === loan.id).sort((a,b) => a.installmentNumber - b.installmentNumber) : [];
+  const clientPayments = loan ? store.data.payments.filter(p => p.loanId === loan.id).sort((a,b) => new Date(b.date) - new Date(a.date)) : [];
+  const totalPaid = loan ? (loan.totalAmount - loan.balance) : 0;
+
+  return `
+    <div>
+      <button class="btn btn-outline" style="margin-bottom: 1rem;" onclick="history.back() || navigateTo('collector-dashboard')">
+        ${icon('arrowLeft', '', 18)} <span>Volver a la lista</span>
+      </button>
+
+      <div class="card" style="margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+          <div>
+            <h1 class="text-xl font-bold ${risk.isMoroso ? 'text-danger' : ''}">
+              ${risk.isMoroso ? '🔴 ' : ''}${client.fullName}
+            </h1>
+            <div class="text-sm text-muted" style="margin-top: 0.25rem;">
+              <strong>DNI:</strong> ${client.dni} &nbsp;|&nbsp; <strong>Tel:</strong> ${client.phone || 'No registrado'}
+            </div>
+          </div>
+          <span class="badge ${risk.isMoroso ? 'badge-red' : risk.level === 'yellow' ? 'badge-yellow' : risk.level === 'orange' ? 'badge-orange' : 'badge-green'}">
+            ${risk.text}
+          </span>
+        </div>
+
+        <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border); font-size: 0.85rem;" class="text-secondary">
+          <p><strong>Dirección:</strong> ${client.address}</p>
+          ${client.addressReference ? `<p><strong>Referencia:</strong> ${client.addressReference}</p>` : ''}
+          <p><strong>Cobrador asignado:</strong> ${collector ? collector.fullName : 'Sin asignar'}</p>
+          ${client.notes ? `<p><strong>Observaciones:</strong> ${client.notes}</p>` : ''}
+        </div>
+      </div>
+
+      ${loan ? `
+        <div class="card" style="margin-bottom: 1rem;">
+          <div class="card-header">
+            <h2 class="card-title">Resumen del Préstamo</h2>
+            <span class="badge ${loan.status === 'ACTIVE' ? 'badge-green' : 'badge-gray'}">${loan.status}</span>
+          </div>
+
+          <div class="kpi-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 0.75rem;">
+            <div class="kpi-card">
+              <span class="kpi-label">Monto Prestado</span>
+              <span class="kpi-value currency-amount">S/ ${loan.principal.toFixed(2)}</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Interés (${loan.interestRate}%)</span>
+              <span class="kpi-value text-primary currency-amount">S/ ${loan.interestAmount.toFixed(2)}</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Total a Pagar</span>
+              <span class="kpi-value currency-amount">S/ ${loan.totalAmount.toFixed(2)}</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Valor Cuota</span>
+              <span class="kpi-value text-primary currency-amount">S/ ${loan.installmentAmount.toFixed(2)}</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Total Pagado</span>
+              <span class="kpi-value text-success currency-amount">S/ ${totalPaid.toFixed(2)}</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Saldo Pendiente</span>
+              <span class="kpi-value ${loan.balance > 0 ? 'text-danger' : 'text-success'} currency-amount">S/ ${loan.balance.toFixed(2)}</span>
+            </div>
+          </div>
+
+          ${loan.status === 'ACTIVE' && loan.balance > 0 ? `
+            <button class="btn-pay-action" onclick="openPaymentModal('${loan.id}', '${client.id}')">
+              ${icon('banknote', '', 20)}
+              <span>REGISTRAR PAGO AHORA</span>
+            </button>
+          ` : ''}
+        </div>
+
+        <div class="card" style="margin-bottom: 1rem;">
+          <h2 class="card-title" style="margin-bottom: 0.75rem;">Cronograma de Pagos (${installments.length} cuotas)</h2>
+          <div class="table-responsive-wrapper" style="max-height: 280px; overflow-y: auto;">
+            <table class="fintech-table">
+              <thead>
+                <tr>
+                  <th>N°</th>
+                  <th>Vencimiento</th>
+                  <th>Esperado</th>
+                  <th>Pagado</th>
+                  <th>Saldo</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${installments.map(i => `
+                  <tr>
+                    <td class="font-bold">#${i.installmentNumber}</td>
+                    <td>${i.dueDate}</td>
+                    <td class="currency-amount">S/ ${i.expectedAmount.toFixed(2)}</td>
+                    <td class="currency-amount text-success">S/ ${i.paidAmount.toFixed(2)}</td>
+                    <td class="currency-amount">S/ ${i.remainingAmount.toFixed(2)}</td>
+                    <td>
+                      <span class="badge ${i.status === 'PAGADO' ? 'badge-green' : i.status === 'PAGO_PARCIAL' ? 'badge-yellow' : (i.dueDate < CURRENT_DATE ? 'badge-red' : 'badge-gray')}">
+                        ${i.status === 'PENDIENTE' && i.dueDate < CURRENT_DATE ? 'VENCIDO' : i.status}
+                      </span>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title" style="margin-bottom: 0.75rem;">Historial de Pagos Recibidos</h2>
+          ${clientPayments.length === 0 ? `
+            <p class="text-sm text-muted">Aún no se han registrado pagos para este préstamo.</p>
+          ` : `
+            <div class="table-responsive-wrapper">
+              <table class="fintech-table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Monto</th>
+                    <th>Cobrador</th>
+                    <th>Observación</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${clientPayments.map(p => {
+                    const cob = store.data.profiles.find(x => x.id === p.collectorId);
+                    return `
+                      <tr>
+                        <td>${p.date}</td>
+                        <td class="font-bold text-success currency-amount">S/ ${p.amount.toFixed(2)}</td>
+                        <td>${cob ? cob.fullName : 'Cobrador'}</td>
+                        <td class="text-sm text-muted">${p.notes || '-'}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
+      ` : `
+        <div class="card empty-state">
+          <p class="text-muted">Este cliente no cuenta con préstamos registrados actualmente.</p>
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function renderAdminDashboard() {
+  const loans = store.data.loans;
+  const clients = store.data.clients;
+  const collectors = store.data.profiles.filter(p => p.role === 'COBRADOR');
+
+  let capitalPrestado = 0;
+  let totalEsperado = 0;
+  let totalCobrado = 0;
+  let saldoPendiente = 0;
+  let totalMorosidad = 0;
+  let morososCount = 0;
+  let activeLoansCount = 0;
+  let paidLoansCount = 0;
+
+  loans.forEach(loan => {
+    capitalPrestado += loan.principal;
+    totalEsperado += loan.totalAmount;
+    totalCobrado += (loan.totalAmount - loan.balance);
+    saldoPendiente += loan.balance;
+    if (loan.status === 'ACTIVE') {
+      activeLoansCount++;
+      const overdue = store.getLoanOverdueDays(loan.id);
+      if (overdue > 10) {
+        morososCount++;
+        totalMorosidad += loan.balance;
+      }
+    } else if (loan.status === 'PAID') {
+      paidLoansCount++;
+    }
+  });
+
+  return `
+    <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h1 class="text-2xl font-bold">Dashboard Financiero General</h1>
+        <p class="text-sm text-muted">Métricas consolidadas de cartera al ${CURRENT_DATE}</p>
+      </div>
+      <button class="btn btn-primary" onclick="openCreateLoanModal()">
+        ${icon('plus', '', 18)} <span>Nuevo Préstamo</span>
+      </button>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">${icon('wallet', 'text-primary', 16)} <span>Capital Prestado</span></div>
+        <div class="kpi-value currency-amount">S/ ${capitalPrestado.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</div>
+        <div class="kpi-subtext">Monto base otorgado</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">${icon('banknote', 'text-muted', 16)} <span>Total a Cobrar</span></div>
+        <div class="kpi-value text-primary currency-amount">S/ ${totalEsperado.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</div>
+        <div class="kpi-subtext">Capital + Intereses</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">${icon('check', 'text-success', 16)} <span>Total Cobrado</span></div>
+        <div class="kpi-value text-success currency-amount">S/ ${totalCobrado.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</div>
+        <div class="kpi-subtext">${((totalCobrado / (totalEsperado || 1)) * 100).toFixed(1)}% recuperado</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">${icon('clock', 'text-muted', 16)} <span>Saldo Pendiente</span></div>
+        <div class="kpi-value text-secondary currency-amount">S/ ${saldoPendiente.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</div>
+        <div class="kpi-subtext">Por cobrar en campo</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">${icon('alertTriangle', 'text-danger', 16)} <span>Morosidad (+10d)</span></div>
+        <div class="kpi-value text-danger currency-amount">S/ ${totalMorosidad.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</div>
+        <div class="kpi-subtext">${morososCount} clientes críticos</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">${icon('users', 'text-primary', 16)} <span>Total Clientes</span></div>
+        <div class="kpi-value">${clients.length}</div>
+        <div class="kpi-subtext">${activeLoansCount} con préstamo activo</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">${icon('check', 'text-success', 16)} <span>Préstamos Pagados</span></div>
+        <div class="kpi-value text-success">${paidLoansCount}</div>
+        <div class="kpi-subtext">Créditos liquidados</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">${icon('user', 'text-muted', 16)} <span>Cobradores</span></div>
+        <div class="kpi-value">${collectors.length}</div>
+        <div class="kpi-subtext">Personal activo en campo</div>
+      </div>
+    </div>
+
+    <!-- Gráficos Limpios SVG -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 1rem;">Recuperación de Cartera</h2>
+        <div style="display: flex; align-items: center; justify-content: space-around; padding: 1rem 0;">
+          <svg width="140" height="140" viewBox="0 0 36 36">
+            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--bg-subtle)" stroke-width="3.8"/>
+            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#16A34A" stroke-width="3.8" stroke-dasharray="${((totalCobrado / (totalEsperado || 1)) * 100).toFixed(0)}, 100"/>
+            <text x="18" y="20.5" font-size="7" font-weight="bold" fill="currentColor" text-anchor="middle">
+              ${((totalCobrado / (totalEsperado || 1)) * 100).toFixed(0)}%
+            </text>
+          </svg>
+          <div>
+            <div style="margin-bottom: 0.5rem;">
+              <span class="badge badge-green">Cobrado</span>
+              <div class="font-bold text-success currency-amount">S/ ${totalCobrado.toFixed(2)}</div>
+            </div>
+            <div>
+              <span class="badge badge-gray">Pendiente</span>
+              <div class="font-bold text-muted currency-amount">S/ ${saldoPendiente.toFixed(2)}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 0.5rem;">Distribución de Clientes por Riesgo</h2>
+        <div style="padding: 0.5rem 0;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.25rem;">
+            <span>Al día (0 días)</span>
+            <span class="font-bold text-success">
+              ${clients.filter(c => store.getClientRiskStatus(c).level === 'green').length}
+            </span>
+          </div>
+          <div style="background: var(--bg-subtle); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 0.75rem;">
+            <div style="width: ${(clients.filter(c => store.getClientRiskStatus(c).level === 'green').length / clients.length) * 100}%; background: #16A34A; height: 100%;"></div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.25rem;">
+            <span>Atraso Leve (1-5 días)</span>
+            <span class="font-bold text-warning">
+              ${clients.filter(c => store.getClientRiskStatus(c).level === 'yellow').length}
+            </span>
+          </div>
+          <div style="background: var(--bg-subtle); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 0.75rem;">
+            <div style="width: ${(clients.filter(c => store.getClientRiskStatus(c).level === 'yellow').length / clients.length) * 100}%; background: #EAB308; height: 100%;"></div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.25rem;">
+            <span>Atraso Medio (6-10 días)</span>
+            <span class="font-bold text-secondary">
+              ${clients.filter(c => store.getClientRiskStatus(c).level === 'orange').length}
+            </span>
+          </div>
+          <div style="background: var(--bg-subtle); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 0.75rem;">
+            <div style="width: ${(clients.filter(c => store.getClientRiskStatus(c).level === 'orange').length / clients.length) * 100}%; background: #EA580C; height: 100%;"></div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.25rem;">
+            <span>Morosos Críticos (+10 días)</span>
+            <span class="font-bold text-danger">
+              ${clients.filter(c => store.getClientRiskStatus(c).level === 'red').length}
+            </span>
+          </div>
+          <div style="background: var(--bg-subtle); height: 8px; border-radius: 4px; overflow: hidden;">
+            <div style="width: ${(clients.filter(c => store.getClientRiskStatus(c).level === 'red').length / clients.length) * 100}%; background: #DC2626; height: 100%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rendimiento por Cobrador -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">Rendimiento por Cobrador</h2>
+      </div>
+
+      <div class="table-responsive-wrapper">
+        <table class="fintech-table">
+          <thead>
+            <tr>
+              <th>Cobrador</th>
+              <th>Clientes</th>
+              <th>Esperado Hoy</th>
+              <th>Cobrado Hoy</th>
+              <th>Saldo Pendiente</th>
+              <th>Atrasados</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${collectors.map(c => {
+              const cClients = store.data.clients.filter(cli => cli.collectorId === c.id && cli.active);
+              const cLoans = store.data.loans.filter(l => l.collectorId === c.id && l.status === 'ACTIVE');
+              let expToday = 0;
+              let cobToday = 0;
+              let balPending = 0;
+              let delayedCount = 0;
+
+              cLoans.forEach(l => {
+                balPending += l.balance;
+                const inst = store.getClientTodayInstallment(l.id);
+                if (inst) {
+                  expToday += inst.expectedAmount;
+                  cobToday += inst.paidAmount;
+                }
+                if (store.getLoanOverdueDays(l.id) > 0) delayedCount++;
+              });
+
+              return `
+                <tr>
+                  <td class="font-bold">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <div class="brand-icon-box" style="width: 28px; height: 28px; font-size: 0.75rem;">${c.fullName[0]}</div>
+                      <div>
+                        <div>${c.fullName}</div>
+                        <div class="text-xs text-muted">DNI: ${c.dni}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>${cClients.length}</td>
+                  <td class="currency-amount">S/ ${expToday.toFixed(2)}</td>
+                  <td class="currency-amount text-success font-bold">S/ ${cobToday.toFixed(2)}</td>
+                  <td class="currency-amount text-muted">S/ ${balPending.toFixed(2)}</td>
+                  <td>
+                    <span class="badge ${delayedCount > 0 ? 'badge-yellow' : 'badge-green'}">
+                      ${delayedCount}
+                    </span>
+                  </td>
+                  <td>
+                    <button class="btn btn-outline" style="min-height: 32px; padding: 0.2rem 0.6rem; font-size: 0.8rem;" onclick="navigateTo('clients', { collectorFilter: '${c.id}' })">
+                      Ver cartera
+                    </button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderClientsManager() {
+  const collectors = store.data.profiles.filter(p => p.role === 'COBRADOR');
+  let clients = store.data.clients;
+
+  if (activeCollectorFilter) {
+    clients = clients.filter(c => c.collectorId === activeCollectorFilter);
+  }
+
+  const selectedCollector = collectors.find(c => c.id === activeCollectorFilter);
+
+  return `
+    <div style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+      <div>
+        <h1 class="text-2xl font-bold">Mantenedor de Clientes</h1>
+        <p class="text-sm text-muted">
+          ${selectedCollector ? `Filtrando clientes de: <strong>${selectedCollector.fullName}</strong>` : 'Administra el padrón de clientes y su asignación a cobradores.'}
+        </p>
+      </div>
+      <div style="display: flex; gap: 0.5rem;">
+        ${activeCollectorFilter ? `
+          <button class="btn btn-outline" onclick="activeCollectorFilter = null; renderApp();">
+            Mostrar Todos
+          </button>
+        ` : ''}
+        <button class="btn btn-primary" onclick="openCreateClientModal()">
+          ${icon('plus', '', 18)} <span>Nuevo Cliente</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="table-responsive-wrapper">
+        <table class="fintech-table table-cards-mobile">
+          <thead>
+            <tr>
+              <th>DNI</th>
+              <th>Nombre Completo</th>
+              <th>Teléfono</th>
+              <th>Dirección</th>
+              <th>Cobrador</th>
+              <th>Estado Riesgo</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${clients.map(client => {
+              const collector = collectors.find(c => c.id === client.collectorId);
+              const risk = store.getClientRiskStatus(client);
+              return `
+                <tr class="${risk.isMoroso ? 'row-delinquent-critical' : ''}">
+                  <td data-label="DNI" class="font-bold">${client.dni}</td>
+                  <td data-label="Cliente">
+                    <div class="font-semibold ${risk.isMoroso ? 'text-danger' : ''}">
+                      ${risk.isMoroso ? '🔴 ' : ''}${client.fullName}
+                    </div>
+                  </td>
+                  <td data-label="Teléfono">${client.phone || '-'}</td>
+                  <td data-label="Dirección">${client.address}</td>
+                  <td data-label="Cobrador">
+                    <span class="badge badge-gray">${collector ? collector.fullName : 'Sin asignar'}</span>
+                  </td>
+                  <td data-label="Riesgo">
+                    <span class="badge ${risk.isMoroso ? 'badge-red' : risk.level === 'yellow' ? 'badge-yellow' : risk.level === 'orange' ? 'badge-orange' : 'badge-green'}">
+                      ${risk.text}
+                    </span>
+                  </td>
+                  <td data-label="Activo">
+                    <span class="badge ${client.active ? 'badge-green' : 'badge-gray'}">
+                      ${client.active ? 'ACTIVO' : 'INACTIVO'}
+                    </span>
+                  </td>
+                  <td data-label="Acciones">
+                    <div style="display: flex; gap: 0.35rem;">
+                      <button class="btn btn-outline" style="min-height: 32px; padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="navigateTo('client-detail', { clientId: '${client.id}' })">
+                        Detalle
+                      </button>
+                      <button class="btn btn-subtle" style="min-height: 32px; padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="openEditClientModal('${client.id}')">
+                        Editar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function openEditClientModal(clientId) {
+  const client = store.data.clients.find(c => c.id === clientId);
+  if (!client) return;
+
+  const collectors = store.data.profiles.filter(p => p.role === 'COBRADOR');
+  const modalContainer = document.getElementById('modalContainer');
+  modalContainer.innerHTML = `
+    <div class="modal-overlay active" id="editClientModalOverlay" onclick="if(event.target === this) closeGenericModal('editClientModalOverlay')">
+      <div class="modal-container">
+        <div class="modal-header">
+          <div>
+            <h2 class="text-lg font-bold">Editar Cliente</h2>
+            <div class="text-xs text-muted">DNI: ${client.dni}</div>
+          </div>
+          <button class="icon-btn" onclick="closeGenericModal('editClientModalOverlay')">${icon('x', '', 18)}</button>
+        </div>
+
+        <form onsubmit="handleEditClient(event, '${client.id}')">
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">Nombre Completo</label>
+              <input type="text" id="editClientName" class="form-input" required value="${client.fullName}">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div class="form-group">
+                <label class="form-label">Teléfono</label>
+                <input type="text" id="editClientPhone" class="form-input" value="${client.phone || ''}">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Cobrador Asignado (Reasignar)</label>
+                <select id="editClientCollector" class="form-select" required>
+                  ${collectors.map(c => `<option value="${c.id}" ${c.id === client.collectorId ? 'selected' : ''}>${c.fullName}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Dirección</label>
+              <input type="text" id="editClientAddress" class="form-input" required value="${client.address}">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Referencia</label>
+              <input type="text" id="editClientRef" class="form-input" value="${client.addressReference || ''}">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Observaciones</label>
+              <textarea id="editClientNotes" class="form-textarea">${client.notes || ''}</textarea>
+            </div>
+
+            <div class="form-group" style="flex-direction: row; align-items: center; justify-content: space-between; padding: 0.75rem; background: var(--bg-subtle); border-radius: var(--radius-md);">
+              <div>
+                <div class="text-sm font-semibold">Estado del Cliente (Soft Delete)</div>
+                <div class="text-xs text-muted">Si se desactiva, se conserva todo su historial financiero intacto.</div>
+              </div>
+              <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700; cursor: pointer;">
+                <input type="checkbox" id="editClientActive" ${client.active ? 'checked' : ''} style="width: 20px; height: 20px;">
+                <span>${client.active ? 'Activo' : 'Inactivo'}</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" onclick="closeGenericModal('editClientModalOverlay')">Cancelar</button>
+            <button type="submit" class="btn btn-primary font-bold">Guardar Cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+}
+
+function handleEditClient(e, clientId) {
+  e.preventDefault();
+  const client = store.data.clients.find(c => c.id === clientId);
+  if (!client) return;
+
+  const oldCollectorId = client.collectorId;
+  client.fullName = document.getElementById('editClientName').value.trim();
+  client.phone = document.getElementById('editClientPhone').value.trim();
+  client.collectorId = document.getElementById('editClientCollector').value;
+  client.address = document.getElementById('editClientAddress').value.trim();
+  client.addressReference = document.getElementById('editClientRef').value.trim();
+  client.notes = document.getElementById('editClientNotes').value.trim();
+  client.active = document.getElementById('editClientActive').checked;
+
+  // Si se reasignó cobrador, actualizar también sus préstamos activos
+  if (oldCollectorId !== client.collectorId) {
+    store.data.loans.forEach(l => {
+      if (l.clientId === client.id && l.status === 'ACTIVE') {
+        l.collectorId = client.collectorId;
+      }
+    });
+  }
+
+  store.data.auditLogs.unshift({
+    id: 'aud-' + Date.now(),
+    userId: store.currentUser.id,
+    userName: store.currentUser.fullName,
+    action: oldCollectorId !== client.collectorId ? 'REASIGNAR_COBRADOR' : 'ACTUALIZAR_CLIENTE',
+    entity: 'clients',
+    entityId: client.id,
+    details: `Cliente ${client.fullName} actualizado. ${oldCollectorId !== client.collectorId ? 'Reasignado a nuevo cobrador.' : ''}`,
+    createdAt: new Date().toLocaleString('es-PE')
+  });
+
+  store.save();
+  closeGenericModal('editClientModalOverlay');
+  showToast('Cliente actualizado correctamente', 'success');
+  renderApp();
+}
+
+function renderLoansManager() {
+  const loans = store.data.loans;
+  const clients = store.data.clients;
+  const collectors = store.data.profiles.filter(p => p.role === 'COBRADOR');
+
+  return `
+    <div style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+      <div>
+        <h1 class="text-2xl font-bold">Administración de Préstamos</h1>
+        <p class="text-sm text-muted">Creación de créditos y simulación automática de cronogramas.</p>
+      </div>
+      <button class="btn btn-primary" onclick="openCreateLoanModal()">
+        ${icon('plus', '', 18)} <span>Nuevo Préstamo</span>
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="table-responsive-wrapper">
+        <table class="fintech-table table-cards-mobile">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Cobrador</th>
+              <th>Capital</th>
+              <th>Tasa %</th>
+              <th>Total Pagar</th>
+              <th>Cuota</th>
+              <th>Saldo</th>
+              <th>Frecuencia</th>
+              <th>Estado</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${loans.map(l => {
+              const client = clients.find(c => c.id === l.clientId);
+              const collector = collectors.find(c => c.id === l.collectorId);
+              return `
+                <tr>
+                  <td data-label="Cliente" class="font-bold">${client ? client.fullName : l.clientId}</td>
+                  <td data-label="Cobrador">${collector ? collector.fullName : '-'}</td>
+                  <td data-label="Capital" class="currency-amount">S/ ${l.principal.toFixed(2)}</td>
+                  <td data-label="Tasa">${l.interestRate}%</td>
+                  <td data-label="Total Pagar" class="currency-amount font-bold">S/ ${l.totalAmount.toFixed(2)}</td>
+                  <td data-label="Cuota" class="currency-amount text-primary">S/ ${l.installmentAmount.toFixed(2)}</td>
+                  <td data-label="Saldo" class="currency-amount ${l.balance > 0 ? 'text-danger' : 'text-success'} font-bold">
+                    S/ ${l.balance.toFixed(2)}
+                  </td>
+                  <td data-label="Frecuencia"><span class="badge badge-gray">${l.frequency}</span></td>
+                  <td data-label="Estado">
+                    <span class="badge ${l.status === 'ACTIVE' ? 'badge-green' : 'badge-gray'}">${l.status}</span>
+                  </td>
+                  <td data-label="Acción">
+                    <button class="btn btn-outline" style="min-height: 32px; padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="navigateTo('client-detail', { clientId: '${l.clientId}' })">
+                      Ver Cronograma
+                    </button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderTabularControl() {
+  const loans = store.data.loans;
+  const clients = store.data.clients;
+  const collectors = store.data.profiles.filter(p => p.role === 'COBRADOR');
+
+  return `
+    <div style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+      <div>
+        <h1 class="text-2xl font-bold">Hoja de Control Diario Digital</h1>
+        <p class="text-sm text-muted">Vista tabular equivalente a la planilla de campo con alerta de morosos.</p>
+      </div>
+      <button class="btn btn-outline" onclick="window.print()">
+        ${icon('printer', '', 18)} <span>Imprimir Planilla</span>
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="table-responsive-wrapper">
+        <table class="fintech-table">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Fecha Inicio</th>
+              <th>Fecha Fin</th>
+              <th>Crédito</th>
+              <th>Total a Pagar</th>
+              <th>Días Atraso</th>
+              <th>Pagado</th>
+              <th>Cuota</th>
+              <th>Saldo</th>
+              <th>Cobrador</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${loans.map(loan => {
+              const client = clients.find(c => c.id === loan.clientId);
+              const collector = collectors.find(c => c.id === loan.collectorId);
+              const risk = client ? store.getClientRiskStatus(client) : { days: 0, isMoroso: false };
+              const pagado = loan.totalAmount - loan.balance;
+
+              return `
+                <tr class="${risk.isMoroso ? 'row-delinquent-critical' : ''}">
+                  <td class="font-bold">
+                    <span class="${risk.isMoroso ? 'text-danger' : ''}">
+                      ${risk.isMoroso ? '🔴 ' : ''}${client ? client.fullName : '-'}
+                    </span>
+                  </td>
+                  <td>${loan.startDate}</td>
+                  <td>${loan.endDate}</td>
+                  <td class="currency-amount">S/ ${loan.principal.toFixed(2)}</td>
+                  <td class="currency-amount">S/ ${loan.totalAmount.toFixed(2)}</td>
+                  <td class="${risk.days > 0 ? (risk.isMoroso ? 'text-danger font-bold' : 'text-primary') : 'text-success'}">
+                    ${risk.days} días
+                  </td>
+                  <td class="currency-amount text-success">S/ ${pagado.toFixed(2)}</td>
+                  <td class="currency-amount font-bold">S/ ${loan.installmentAmount.toFixed(2)}</td>
+                  <td class="currency-amount ${loan.balance > 0 ? 'text-danger font-bold' : 'text-success'}">
+                    S/ ${loan.balance.toFixed(2)}
+                  </td>
+                  <td>${collector ? collector.fullName.split(' ')[0] : '-'}</td>
+                  <td>
+                    <span class="badge ${risk.isMoroso ? 'badge-red' : loan.status === 'ACTIVE' ? 'badge-green' : 'badge-gray'}">
+                      ${risk.isMoroso ? 'MOROSO' : loan.status}
+                    </span>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderCollectorsManager() {
+  const collectors = store.data.profiles.filter(p => p.role === 'COBRADOR');
+
+  return `
+    <div style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+      <div>
+        <h1 class="text-2xl font-bold">Equipo de Cobradores</h1>
+        <p class="text-sm text-muted">Gestión de personal de campo y credenciales de acceso.</p>
+      </div>
+      <button class="btn btn-primary" onclick="openCreateCollectorModal()">
+        ${icon('plus', '', 18)} <span>Nuevo Cobrador</span>
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="table-responsive-wrapper">
+        <table class="fintech-table table-cards-mobile">
+          <thead>
+            <tr>
+              <th>DNI</th>
+              <th>Nombre Completo</th>
+              <th>Teléfono</th>
+              <th>Clientes Asignados</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${collectors.map(c => {
+              const clientsCount = store.data.clients.filter(cli => cli.collectorId === c.id && cli.active).length;
+              return `
+                <tr>
+                  <td data-label="DNI" class="font-bold">${c.dni}</td>
+                  <td data-label="Nombre">${c.fullName}</td>
+                  <td data-label="Teléfono">${c.phone || '-'}</td>
+                  <td data-label="Clientes"><span class="badge badge-gray">${clientsCount} clientes</span></td>
+                  <td data-label="Estado">
+                    <span class="badge ${c.active ? 'badge-green' : 'badge-gray'}">
+                      ${c.active ? 'ACTIVO' : 'INACTIVO'}
+                    </span>
+                  </td>
+                  <td data-label="Acciones">
+                    <button class="btn btn-outline" style="min-height: 32px; padding: 0.2rem 0.6rem; font-size: 0.8rem;" onclick="toggleCollectorStatus('${c.id}')">
+                      ${c.active ? 'Desactivar' : 'Activar'}
+                    </button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function toggleCollectorStatus(collectorId) {
+  const col = store.data.profiles.find(p => p.id === collectorId);
+  if (!col) return;
+  col.active = !col.active;
+  store.save();
+  showToast(`Cobrador ${col.fullName} ${col.active ? 'activado' : 'desactivado'}`);
+  renderApp();
+}
+
+function renderReportsView() {
+  return `
+    <div style="margin-bottom: 1.25rem;">
+      <h1 class="text-2xl font-bold">Módulo de Reportes</h1>
+      <p class="text-sm text-muted">Exporta y analiza la información financiera.</p>
+    </div>
+
+    <div class="card" style="margin-bottom: 1rem;">
+      <h2 class="card-title" style="margin-bottom: 1rem;">Filtros de Reporte</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <div class="form-group">
+          <label class="form-label">Fecha Desde</label>
+          <input type="date" class="form-input" value="2026-09-01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha Hasta</label>
+          <input type="date" class="form-input" value="${CURRENT_DATE}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cobrador</label>
+          <select class="form-select">
+            <option value="ALL">Todos los cobradores</option>
+            ${store.data.profiles.filter(p => p.role === 'COBRADOR').map(c => `<option value="${c.id}">${c.fullName}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estado de Préstamo</label>
+          <select class="form-select">
+            <option value="ALL">Todos los estados</option>
+            <option value="ACTIVE">Activos</option>
+            <option value="PAID">Pagados</option>
+          </select>
+        </div>
+      </div>
+      <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+        <button class="btn btn-primary" onclick="exportDataToCsv('prestamos')">
+          ${icon('download', '', 18)} <span>Exportar a Excel (CSV)</span>
+        </button>
+        <button class="btn btn-outline" onclick="window.print()">
+          ${icon('printer', '', 18)} <span>Generar PDF / Imprimir</span>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function exportDataToCsv(entity) {
+  let csv = 'Cliente,Fecha Inicio,Fecha Fin,Credito,Total a Pagar,Saldo,Cobrador,Estado\n';
+  store.data.loans.forEach(l => {
+    const c = store.data.clients.find(cli => cli.id === l.clientId);
+    const cob = store.data.profiles.find(p => p.id === l.collectorId);
+    csv += `"${c ? c.fullName : ''}","${l.startDate}","${l.endDate}",${l.principal},${l.totalAmount},${l.balance},"${cob ? cob.fullName : ''}","${l.status}"\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `reporte_prestamos_${CURRENT_DATE}.csv`;
+  a.click();
+  showToast('Archivo CSV descargado correctamente', 'success');
+}
+
+function renderAuditView() {
+  return `
+    <div style="margin-bottom: 1.25rem;">
+      <h1 class="text-2xl font-bold">Historial de Auditoría</h1>
+      <p class="text-sm text-muted">Trazabilidad inmutable de todas las operaciones financieras y administrativas.</p>
+    </div>
+
+    <div class="card">
+      <div class="table-responsive-wrapper">
+        <table class="fintech-table">
+          <thead>
+            <tr>
+              <th>Fecha y Hora</th>
+              <th>Usuario</th>
+              <th>Acción</th>
+              <th>Entidad</th>
+              <th>Detalle de Operación</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${store.data.auditLogs.map(log => `
+              <tr>
+                <td class="text-xs text-muted">${log.createdAt}</td>
+                <td class="font-bold">${log.userName}</td>
+                <td><span class="badge badge-gray text-xs">${log.action}</span></td>
+                <td>${log.entity}</td>
+                <td class="text-sm">${log.details}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderProfileView() {
+  const u = store.currentUser;
+  return `
+    <div style="margin-bottom: 1.25rem;">
+      <h1 class="text-2xl font-bold">Mi Perfil</h1>
+      <p class="text-sm text-muted">Configuración de usuario y seguridad.</p>
+    </div>
+
+    <div class="card" style="margin-bottom: 1rem;">
+      <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+        <div class="brand-icon-box" style="width: 56px; height: 56px; font-size: 1.5rem; font-weight: bold;">
+          ${u.fullName[0]}
+        </div>
+        <div>
+          <h2 class="text-xl font-bold">${u.fullName}</h2>
+          <div class="text-sm text-muted">DNI: ${u.dni} &nbsp;•&nbsp; Rol: ${u.role}</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Teléfono</label>
+        <input type="text" class="form-input" value="${u.phone || ''}" readonly>
+      </div>
+
+      <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+        <button class="btn btn-primary" onclick="openChangePinModal()">
+          ${icon('key', '', 18)} <span>Cambiar mi PIN</span>
+        </button>
+        <button class="btn btn-outline text-danger" onclick="logout()">
+          ${icon('logOut', '', 18)} <span>Cerrar Sesión</span>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+// =============================================================================
+// 8. MODAL DE REGISTRO RÁPIDO DE PAGO (FIELD-OPTIMIZED BOTTOM SHEET)
+// =============================================================================
+let currentPaymentLoanId = null;
+
+function openPaymentModal(loanId, clientId) {
+  currentPaymentLoanId = loanId;
+  const loan = store.data.loans.find(l => l.id === loanId);
+  const client = store.data.clients.find(c => c.id === clientId);
+  if (!loan || !client) return;
+
+  const expectedAmount = loan.installmentAmount;
+  const balance = loan.balance;
+
+  const modalContainer = document.getElementById('modalContainer');
+  modalContainer.innerHTML = `
+    <div class="modal-overlay active" id="paymentModalOverlay" onclick="if(event.target === this) closePaymentModal()">
+      <div class="modal-container bottom-sheet">
+        <div class="modal-header">
+          <div>
+            <h2 class="text-lg font-bold">Registrar Pago</h2>
+            <div class="text-xs text-muted">${client.fullName} &nbsp;•&nbsp; DNI: ${client.dni}</div>
+          </div>
+          <button class="icon-btn" onclick="closePaymentModal()">${icon('x', '', 18)}</button>
+        </div>
+
+        <div class="modal-body" id="paymentModalBody">
+          <div style="display: flex; justify-content: space-between; background: var(--bg-subtle); padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1rem;">
+            <div>
+              <div class="text-xs text-muted">Cuota Esperada</div>
+              <div class="text-lg font-bold text-primary currency-amount">S/ ${expectedAmount.toFixed(2)}</div>
+            </div>
+            <div style="text-align: right;">
+              <div class="text-xs text-muted">Saldo Pendiente</div>
+              <div class="text-lg font-bold currency-amount">S/ ${balance.toFixed(2)}</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="text-align: center;">Monto Recibido</label>
+            <div class="stepper-control">
+              <button type="button" class="stepper-btn" onclick="adjustPaymentStepper(-5)">-</button>
+              <input 
+                type="number" 
+                id="paymentAmountInput" 
+                class="form-input stepper-input" 
+                value="${Math.min(expectedAmount, balance)}" 
+                step="1" 
+                min="1" 
+                max="${balance}"
+                oninput="updatePaymentPreview(${balance})"
+              >
+              <button type="button" class="stepper-btn" onclick="adjustPaymentStepper(5)">+</button>
+            </div>
+          </div>
+
+          <div class="text-xs text-muted font-semibold" style="margin-bottom: 0.35rem;">Opciones rápidas:</div>
+          <div class="quick-amounts">
+            <button type="button" class="quick-amount-btn" onclick="setPaymentAmount(5, ${balance})">S/ 5</button>
+            <button type="button" class="quick-amount-btn" onclick="setPaymentAmount(10, ${balance})">S/ 10</button>
+            <button type="button" class="quick-amount-btn" onclick="setPaymentAmount(15, ${balance})">S/ 15</button>
+            <button type="button" class="quick-amount-btn" onclick="setPaymentAmount(${expectedAmount}, ${balance})">Cuota (S/${expectedAmount})</button>
+            <button type="button" class="quick-amount-btn" onclick="setPaymentAmount(${balance}, ${balance})">Total (S/${balance})</button>
+          </div>
+
+          <div style="margin: 1rem 0; padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+            <span class="text-sm font-semibold">Saldo tras este pago:</span>
+            <span id="newBalancePreview" class="text-base font-bold text-success currency-amount">
+              S/ ${(balance - Math.min(expectedAmount, balance)).toFixed(2)}
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Observación (Opcional)</label>
+            <input type="text" id="paymentNotesInput" class="form-input" placeholder="Ej: Pago completo cuota del día">
+          </div>
+        </div>
+
+        <div class="modal-footer" id="paymentModalFooter">
+          <button class="btn btn-outline" style="flex: 1;" onclick="closePaymentModal()">Cancelar</button>
+          <button class="btn btn-success" style="flex: 2; font-weight: 700;" onclick="submitPayment()">
+            ${icon('check', '', 20)}
+            <span>CONFIRMAR PAGO</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function adjustPaymentStepper(delta) {
+  const input = document.getElementById('paymentAmountInput');
+  if (!input) return;
+  let val = parseFloat(input.value) || 0;
+  val = Math.max(1, val + delta);
+  input.value = val;
+  input.dispatchEvent(new Event('input'));
+}
+
+function setPaymentAmount(amount, maxBalance) {
+  const input = document.getElementById('paymentAmountInput');
+  if (!input) return;
+  input.value = Math.min(amount, maxBalance);
+  input.dispatchEvent(new Event('input'));
+}
+
+function updatePaymentPreview(currentBalance) {
+  const input = document.getElementById('paymentAmountInput');
+  const preview = document.getElementById('newBalancePreview');
+  if (!input || !preview) return;
+  const val = parseFloat(input.value) || 0;
+  const remaining = Math.max(0, currentBalance - val);
+  preview.textContent = `S/ ${remaining.toFixed(2)}`;
+}
+
+function closePaymentModal() {
+  const overlay = document.getElementById('paymentModalOverlay');
+  if (overlay) overlay.remove();
+}
+
+function submitPayment() {
+  const input = document.getElementById('paymentAmountInput');
+  const notesInput = document.getElementById('paymentNotesInput');
+  const amount = parseFloat(input.value);
+  const notes = notesInput ? notesInput.value : '';
+
+  try {
+    const res = store.registerPayment(currentPaymentLoanId, amount, notes);
+    
+    // Presentación de éxito solicitada en Requisito 29
+    const modalBody = document.getElementById('paymentModalBody');
+    const modalFooter = document.getElementById('paymentModalFooter');
+    if (modalBody && modalFooter) {
+      modalBody.innerHTML = `
+        <div class="payment-success-card">
+          <div class="success-check-circle">
+            ${icon('check', '', 36)}
+          </div>
+          <h2 class="text-xl font-bold" style="color: #16A34A;">✅ PAGO REGISTRADO</h2>
+          <div class="payment-success-amount">S/ ${res.amount.toFixed(2)}</div>
+          
+          <div class="payment-success-balance">
+            <span class="text-muted">Nuevo Saldo:</span>
+            <span class="font-bold text-lg currency-amount">S/ ${res.newBalance.toFixed(2)}</span>
+          </div>
+
+          ${res.isPaidOff ? `
+            <div class="badge badge-green" style="font-size: 0.85rem; padding: 0.5rem 1rem;">
+              🎉 ¡Préstamo cancelado en su totalidad!
+            </div>
+          ` : ''}
+        </div>
+      `;
+
+      modalFooter.innerHTML = `
+        <button class="btn btn-primary btn-block btn-lg" onclick="closePaymentModal(); renderApp();">
+          Continuar con siguiente cobranza
+        </button>
+      `;
+    } else {
+      closePaymentModal();
+      renderApp();
+    }
+
+    showToast(`✅ Pago de S/ ${res.amount.toFixed(2)} registrado`, 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+function openFastPaymentModal() {
+  const myClients = store.data.clients.filter(c => c.collectorId === store.currentUser.id && c.active);
+  const myLoans = store.data.loans.filter(l => l.collectorId === store.currentUser.id && l.status === 'ACTIVE');
+  if (myLoans.length === 0) {
+    showToast('No tienes préstamos activos pendientes de cobro.', 'warning');
+    return;
+  }
+  openPaymentModal(myLoans[0].id, myLoans[0].clientId);
+}
+
+function openCreateLoanModal() {
+  const availableClients = store.data.clients.filter(c => {
+    return !store.data.loans.some(l => l.clientId === c.id && l.status === 'ACTIVE');
+  });
+
+  const modalContainer = document.getElementById('modalContainer');
+  modalContainer.innerHTML = `
+    <div class="modal-overlay active" id="loanModalOverlay" onclick="if(event.target === this) closeGenericModal('loanModalOverlay')">
+      <div class="modal-container">
+        <div class="modal-header">
+          <h2 class="text-lg font-bold">Crear Nuevo Préstamo</h2>
+          <button class="icon-btn" onclick="closeGenericModal('loanModalOverlay')">${icon('x', '', 18)}</button>
+        </div>
+
+        <form id="createLoanForm" onsubmit="handleCreateLoan(event)">
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">Cliente (Sin préstamo activo)</label>
+              <select id="loanClientId" class="form-select" required>
+                ${availableClients.length === 0 ? '<option value="">No hay clientes sin préstamo activo</option>' : ''}
+                ${availableClients.map(c => `<option value="${c.id}">${c.fullName} (DNI: ${c.dni})</option>`).join('')}
+              </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div class="form-group">
+                <label class="form-label">Monto Prestado (S/)</label>
+                <input type="number" id="loanPrincipal" class="form-input" value="200" min="10" step="10" required oninput="recalcLoanSimulator()">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tasa de Interés (%)</label>
+                <input type="number" id="loanRate" class="form-input" value="20" min="1" step="0.5" required oninput="recalcLoanSimulator()">
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div class="form-group">
+                <label class="form-label">Frecuencia</label>
+                <select id="loanFrequency" class="form-select" onchange="recalcLoanSimulator()">
+                  <option value="DIARIO" selected>DIARIO (Lunes a Viernes)</option>
+                  <option value="SEMANAL">SEMANAL</option>
+                  <option value="MENSUAL">MENSUAL</option>
+                  <option value="ANUAL">ANUAL</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Cantidad de Cuotas</label>
+                <input type="number" id="loanInstallmentsCount" class="form-input" value="24" min="1" step="1" required oninput="recalcLoanSimulator()">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Fecha de Inicio</label>
+              <input type="date" id="loanStartDate" class="form-input" value="${CURRENT_DATE}" required>
+            </div>
+
+            <div style="background: var(--bg-subtle); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem; margin-top: 0.5rem;">
+              <div class="text-xs text-muted font-bold" style="text-transform: uppercase; margin-bottom: 0.5rem;">
+                Resumen del Préstamo
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; font-size: 0.85rem;">
+                <div>Capital: <strong id="simCapital">S/ 200.00</strong></div>
+                <div>Interés: <strong id="simInteres" class="text-primary">S/ 40.00</strong></div>
+                <div>Total a Cobrar: <strong id="simTotal">S/ 240.00</strong></div>
+                <div>Valor Cuota: <strong id="simCuota" class="text-success">S/ 10.00</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" onclick="closeGenericModal('loanModalOverlay')">Cancelar</button>
+            <button type="submit" class="btn btn-primary font-bold">
+              ${icon('check', '', 18)} <span>CONFIRMAR PRÉSTAMO</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  recalcLoanSimulator();
+}
+
+function recalcLoanSimulator() {
+  const pInput = document.getElementById('loanPrincipal');
+  const rInput = document.getElementById('loanRate');
+  const nInput = document.getElementById('loanInstallmentsCount');
+  if (!pInput || !rInput || !nInput) return;
+
+  const principal = parseFloat(pInput.value) || 0;
+  const rate = parseFloat(rInput.value) || 0;
+  const n = parseInt(nInput.value) || 1;
+
+  const interest = principal * (rate / 100);
+  const total = principal + interest;
+  const cuota = n > 0 ? (total / n) : 0;
+
+  document.getElementById('simCapital').textContent = `S/ ${principal.toFixed(2)}`;
+  document.getElementById('simInteres').textContent = `S/ ${interest.toFixed(2)}`;
+  document.getElementById('simTotal').textContent = `S/ ${total.toFixed(2)}`;
+  document.getElementById('simCuota').textContent = `S/ ${cuota.toFixed(2)}`;
+}
+
+function handleCreateLoan(e) {
+  e.preventDefault();
+  const clientId = document.getElementById('loanClientId').value;
+  const principal = document.getElementById('loanPrincipal').value;
+  const interestRate = document.getElementById('loanRate').value;
+  const frequency = document.getElementById('loanFrequency').value;
+  const numberOfInstallments = document.getElementById('loanInstallmentsCount').value;
+  const startDate = document.getElementById('loanStartDate').value;
+
+  try {
+    store.createLoan({ clientId, principal, interestRate, frequency, numberOfInstallments, startDate });
+    closeGenericModal('loanModalOverlay');
+    showToast('Préstamo y cronograma generados con éxito', 'success');
+    renderApp();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+function openCreateClientModal() {
+  const collectors = store.data.profiles.filter(p => p.role === 'COBRADOR');
+  const modalContainer = document.getElementById('modalContainer');
+  modalContainer.innerHTML = `
+    <div class="modal-overlay active" id="clientModalOverlay" onclick="if(event.target === this) closeGenericModal('clientModalOverlay')">
+      <div class="modal-container">
+        <div class="modal-header">
+          <h2 class="text-lg font-bold">Registrar Nuevo Cliente</h2>
+          <button class="icon-btn" onclick="closeGenericModal('clientModalOverlay')">${icon('x', '', 18)}</button>
+        </div>
+
+        <form onsubmit="handleCreateClient(event)">
+          <div class="modal-body">
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 0.75rem;">
+              <div class="form-group">
+                <label class="form-label">DNI</label>
+                <input type="text" id="newClientDni" class="form-input" required maxlength="12" placeholder="40000000">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nombre Completo</label>
+                <input type="text" id="newClientName" class="form-input" required placeholder="Nombres y Apellidos">
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div class="form-group">
+                <label class="form-label">Teléfono</label>
+                <input type="text" id="newClientPhone" class="form-input" placeholder="987654321">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Cobrador Asignado</label>
+                <select id="newClientCollector" class="form-select" required>
+                  ${collectors.map(c => `<option value="${c.id}">${c.fullName}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Dirección</label>
+              <input type="text" id="newClientAddress" class="form-input" required placeholder="Av. / Ca. y Número">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Referencia</label>
+              <input type="text" id="newClientRef" class="form-input" placeholder="Frente a..., portón color...">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Observaciones</label>
+              <textarea id="newClientNotes" class="form-textarea" placeholder="Notas sobre el cliente o negocio"></textarea>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" onclick="closeGenericModal('clientModalOverlay')">Cancelar</button>
+            <button type="submit" class="btn btn-primary font-bold">Guardar Cliente</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+}
+
+function handleCreateClient(e) {
+  e.preventDefault();
+  const dni = document.getElementById('newClientDni').value.trim();
+  const fullName = document.getElementById('newClientName').value.trim();
+  const phone = document.getElementById('newClientPhone').value.trim();
+  const collectorId = document.getElementById('newClientCollector').value;
+  const address = document.getElementById('newClientAddress').value.trim();
+  const addressReference = document.getElementById('newClientRef').value.trim();
+  const notes = document.getElementById('newClientNotes').value.trim();
+
+  if (store.data.clients.some(c => c.dni === dni)) {
+    showToast('El DNI ingresado ya existe en la base de datos', 'error');
+    return;
+  }
+
+  const newClient = {
+    id: 'cli-' + Date.now(),
+    dni,
+    fullName,
+    phone,
+    collectorId,
+    address,
+    addressReference,
+    notes,
+    active: true,
+    createdAt: CURRENT_DATE
+  };
+
+  store.data.clients.unshift(newClient);
+  store.data.auditLogs.unshift({
+    id: 'aud-' + Date.now(),
+    userId: store.currentUser.id,
+    userName: store.currentUser.fullName,
+    action: 'CREAR_CLIENTE',
+    entity: 'clients',
+    entityId: newClient.id,
+    details: `Cliente ${fullName} registrado y asignado a cobrador.`,
+    createdAt: new Date().toLocaleString('es-PE')
+  });
+
+  store.save();
+  closeGenericModal('clientModalOverlay');
+  showToast('Cliente registrado con éxito', 'success');
+  renderApp();
+}
+
+function openCreateCollectorModal() {
+  const modalContainer = document.getElementById('modalContainer');
+  modalContainer.innerHTML = `
+    <div class="modal-overlay active" id="collectorModalOverlay" onclick="if(event.target === this) closeGenericModal('collectorModalOverlay')">
+      <div class="modal-container">
+        <div class="modal-header">
+          <h2 class="text-lg font-bold">Registrar Nuevo Cobrador</h2>
+          <button class="icon-btn" onclick="closeGenericModal('collectorModalOverlay')">${icon('x', '', 18)}</button>
+        </div>
+
+        <form onsubmit="handleCreateCollector(event)">
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">Nombre Completo</label>
+              <input type="text" id="newColName" class="form-input" required placeholder="Ej: Pedro Ramos">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div class="form-group">
+                <label class="form-label">DNI</label>
+                <input type="text" id="newColDni" class="form-input" required maxlength="12" placeholder="70000000">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Teléfono</label>
+                <input type="text" id="newColPhone" class="form-input" placeholder="987654321">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">PIN Temporal (4 dígitos)</label>
+              <input type="password" id="newColPin" class="form-input" required maxlength="6" value="1234">
+              <span class="text-xs text-muted">El usuario podrá cambiar su PIN al iniciar sesión.</span>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" onclick="closeGenericModal('collectorModalOverlay')">Cancelar</button>
+            <button type="submit" class="btn btn-primary font-bold">Crear Cobrador</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+}
+
+function handleCreateCollector(e) {
+  e.preventDefault();
+  const fullName = document.getElementById('newColName').value.trim();
+  const dni = document.getElementById('newColDni').value.trim();
+  const phone = document.getElementById('newColPhone').value.trim();
+  const pin = document.getElementById('newColPin').value.trim();
+
+  if (store.data.profiles.some(p => p.dni === dni)) {
+    showToast('El DNI ingresado ya pertenece a otro usuario', 'error');
+    return;
+  }
+
+  const newProfile = {
+    id: 'prof-col-' + Date.now(),
+    fullName,
+    dni,
+    phone,
+    role: 'COBRADOR',
+    pin,
+    active: true,
+    failedAttempts: 0,
+    lockedUntil: null
+  };
+
+  store.data.profiles.push(newProfile);
+  store.data.auditLogs.unshift({
+    id: 'aud-' + Date.now(),
+    userId: store.currentUser.id,
+    userName: store.currentUser.fullName,
+    action: 'CREAR_COBRADOR',
+    entity: 'profiles',
+    entityId: newProfile.id,
+    details: `Cobrador ${fullName} creado.`,
+    createdAt: new Date().toLocaleString('es-PE')
+  });
+
+  store.save();
+  closeGenericModal('collectorModalOverlay');
+  showToast('Cobrador registrado con éxito', 'success');
+  renderApp();
+}
+
+function openChangePinModal() {
+  const modalContainer = document.getElementById('modalContainer');
+  modalContainer.innerHTML = `
+    <div class="modal-overlay active" id="pinModalOverlay" onclick="if(event.target === this) closeGenericModal('pinModalOverlay')">
+      <div class="modal-container" style="max-width: 380px;">
+        <div class="modal-header">
+          <h2 class="text-lg font-bold">Cambiar mi PIN</h2>
+          <button class="icon-btn" onclick="closeGenericModal('pinModalOverlay')">${icon('x', '', 18)}</button>
+        </div>
+
+        <form onsubmit="handleChangePin(event)">
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">PIN Actual</label>
+              <input type="password" id="oldPinInput" class="form-input" required maxlength="6">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nuevo PIN (4 a 6 dígitos)</label>
+              <input type="password" id="newPinInput" class="form-input" required minlength="4" maxlength="6">
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" onclick="closeGenericModal('pinModalOverlay')">Cancelar</button>
+            <button type="submit" class="btn btn-primary font-bold">Actualizar PIN</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+}
+
+function handleChangePin(e) {
+  e.preventDefault();
+  const oldPin = document.getElementById('oldPinInput').value;
+  const newPin = document.getElementById('newPinInput').value;
+
+  if (store.currentUser.pin !== oldPin) {
+    showToast('El PIN actual no es correcto', 'error');
+    return;
+  }
+
+  store.currentUser.pin = newPin;
+  store.save();
+  closeGenericModal('pinModalOverlay');
+  showToast('PIN actualizado con éxito', 'success');
+}
+
+function closeGenericModal(modalId) {
+  const el = document.getElementById(modalId);
+  if (el) el.remove();
+}
+
+// =============================================================================
+// 10. PANTALLA DE LOGIN SIMPLE (DNI Y PIN SEGURO CON PROTECCIÓN CONTRA INTENTOS)
+// =============================================================================
+let failedLoginAttempts = 0;
+
+function renderLoginView() {
+  return `
+    <div class="login-wrapper">
+      <div class="login-card">
+        <div class="login-logo">
+          <div class="brand-icon-box">${icon('wallet', '', 28)}</div>
+          <h1 class="text-2xl font-bold">CobranzaPro</h1>
+          <p class="text-sm text-muted">Ingresa a tu cuenta para continuar</p>
+        </div>
+
+        <form id="loginForm">
+          <div class="form-group">
+            <label class="form-label">DNI</label>
+            <input 
+              type="text" 
+              id="loginDni" 
+              class="form-input" 
+              placeholder="Número de DNI" 
+              required 
+              maxlength="12"
+              autocomplete="username"
+            >
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">PIN</label>
+            <input 
+              type="password" 
+              id="loginPin" 
+              class="form-input" 
+              placeholder="••••" 
+              required 
+              maxlength="6"
+              autocomplete="current-password"
+            >
+          </div>
+
+          <div id="loginErrorMsg" class="text-xs text-danger font-medium" style="margin-bottom: 0.75rem; min-height: 18px;"></div>
+
+          <button type="submit" id="loginSubmitBtn" class="btn btn-primary btn-block btn-lg font-bold">
+            ${icon('lock', '', 18)} <span>Ingresar</span>
+          </button>
+        </form>
+
+        <div style="margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--border); text-align: center;">
+          <div class="text-xs text-muted font-bold" style="margin-bottom: 0.6rem; text-transform: uppercase;">
+            Acceso Rápido para Demostración:
+          </div>
+          <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+            <button class="btn btn-outline text-xs" style="min-height: 34px; padding: 0.2rem 0.5rem;" onclick="quickLogin('10203040', '1234')">
+              👑 Carlos (Admin)
+            </button>
+            <button class="btn btn-outline text-xs" style="min-height: 34px; padding: 0.2rem 0.5rem;" onclick="quickLogin('20304050', '1234')">
+              🛵 Pedro (Cobrador A)
+            </button>
+            <button class="btn btn-outline text-xs" style="min-height: 34px; padding: 0.2rem 0.5rem;" onclick="quickLogin('30405060', '1234')">
+              🛵 Luis (Cobrador B)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function attachLoginEvents() {
+  const form = document.getElementById('loginForm');
+  if (!form) return;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const dni = document.getElementById('loginDni').value.trim();
+    const pin = document.getElementById('loginPin').value.trim();
+    performLogin(dni, pin);
+  });
+}
+
+function quickLogin(dni, pin) {
+  performLogin(dni, pin);
+}
+
+function performLogin(dni, pin) {
+  const errorMsg = document.getElementById('loginErrorMsg');
+  const submitBtn = document.getElementById('loginSubmitBtn');
+
+  if (failedLoginAttempts >= 5) {
+    if (errorMsg) errorMsg.textContent = 'Demasiados intentos fallidos. Por seguridad espere 1 minuto.';
+    return;
+  }
+
+  const profile = store.data.profiles.find(p => p.dni === dni && p.active);
+  if (!profile || profile.pin !== pin) {
+    failedLoginAttempts++;
+    if (errorMsg) {
+      errorMsg.textContent = `DNI o PIN incorrecto. Intento ${failedLoginAttempts} de 5.`;
+    }
+    if (failedLoginAttempts >= 5) {
+      if (submitBtn) submitBtn.disabled = true;
+      if (errorMsg) errorMsg.textContent = 'Cuenta temporalmente bloqueada por 60 segundos.';
+      setTimeout(() => {
+        failedLoginAttempts = 0;
+        if (submitBtn) submitBtn.disabled = false;
+        if (errorMsg) errorMsg.textContent = '';
+      }, 60000);
+    }
+    return;
+  }
+
+  failedLoginAttempts = 0;
+  store.currentUser = profile;
+  currentView = profile.role === 'ADMINISTRADOR' ? 'admin-dashboard' : 'collector-dashboard';
+  showToast(`¡Bienvenido, ${profile.fullName}!`, 'success');
+  renderApp();
+}
+
+// =============================================================================
+// 11. INICIALIZACIÓN DE LA APLICACIÓN
+// =============================================================================
+document.addEventListener('DOMContentLoaded', () => {
+  renderApp();
+});
+
+</script>
+</body>
+</html>

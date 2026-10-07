@@ -1,5 +1,12 @@
 {
   "mcpServers": {
+    "primeng": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@primeng/mcp"
+      ]
+    },
     "playwright": {
       "command": "npx",
       "args": [
@@ -12,6 +19,14 @@
     },
     "supabase-prod": {
       "serverUrl": "https://mcp.supabase.com/mcp?project_ref=TU_PROJECT_REF_PROD&read_only=true&features=docs,database,debugging"
+    },
+    "angular-cli": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@angular/cli",
+        "mcp"
+      ]
     }
   }
 }
