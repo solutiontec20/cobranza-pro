@@ -1,14 +1,11 @@
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { Button } from './shared/ui/button/button';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, Button],
+  imports: [RouterOutlet],
   template: `
-  <h1>Hola Mundo</h1>
-  <ng-button/>
-  <router-outlet />
-  `
+    <router-outlet />
+  `,
 })
 export class App {}
