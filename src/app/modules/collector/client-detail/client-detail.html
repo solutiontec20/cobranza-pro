@@ -1,0 +1,374 @@
+<p-toast />
+
+<div class="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 sm:p-6">
+  <!-- Back button -->
+  <button
+    pButton
+    type="button"
+    icon="pi pi-arrow-left"
+    label="Volver a la lista"
+    severity="secondary"
+    variant="outlined"
+    class="w-fit"
+    (click)="goBack()"
+  ></button>
+
+  @if (!client()) {
+    <div class="rounded-xl border border-surface-200 bg-surface-0 p-8 text-center dark:border-surface-700 dark:bg-surface-900">
+      <i class="pi pi-search mb-3 text-4xl text-surface-400" aria-hidden="true"></i>
+      <p class="text-surface-600 dark:text-surface-400">Cliente no encontrado.</p>
+      <button pButton type="button" label="Ir al inicio" class="mt-4" (click)="goBack()"></button>
+    </div>
+  } @else {
+    <!-- Client header card -->
+    <div class="overflow-hidden rounded-xl border border-surface-200 bg-surface-0 shadow-sm dark:border-surface-700 dark:bg-surface-900">
+      <div class="flex items-start justify-between gap-3 p-5">
+        <div class="min-w-0">
+          <h1
+            class="m-0 text-xl font-bold text-surface-950 dark:text-surface-0"
+            [class.text-red-600]="risk()?.isMoroso"
+          >
+            @if (risk()?.isMoroso) {
+              <i class="pi pi-exclamation-circle mr-1 text-red-600" aria-hidden="true"></i>
+            }
+            {{ client()!.fullName }}
+          </h1>
+          <p class="mt-1 mb-0 text-sm text-surface-500 dark:text-surface-400">
+            DNI: <strong>{{ client()!.dni }}</strong> &nbsp;·&nbsp;
+            <a
+              [href]="'tel:+51' + client()!.phone"
+              class="text-primary-600 hover:underline dark:text-primary-400"
+            >{{ client()!.phone }}</a>
+          </p>
+        </div>
+        <p-tag [severity]="getRiskSeverity()" [value]="risk()?.text ?? ''" />
+      </div>
+
+      <div class="border-t border-surface-200 px-5 py-4 text-sm text-surface-600 dark:border-surface-700 dark:text-surface-300">
+        <p class="mb-1">
+          <i class="pi pi-map-marker mr-2 text-surface-400" aria-hidden="true"></i>
+          {{ client()!.address }}
+        </p>
+        @if (client()!.addressReference) {
+          <p class="mb-1 text-surface-500">Ref: {{ client()!.addressReference }}</p>
+        }
+        <p class="mb-0">
+          <i class="pi pi-user mr-2 text-surface-400" aria-hidden="true"></i>
+          Cobrador asignado: <strong>{{ collector()?.fullName ?? 'Sin asignar' }}</strong>
+        </p>
+        @if (client()!.notes) {
+          <p class="mt-2 mb-0 rounded-lg bg-surface-50 p-2 text-surface-500 italic dark:bg-surface-800">
+            <i class="pi pi-info-circle mr-1" aria-hidden="true"></i>{{ client()!.notes }}
+          </p>
+        }
+      </div>
+    </div>
+
+    <!-- Loan summary -->
+    @if (loan()) {
+      <div class="rounded-xl border border-surface-200 bg-surface-0 shadow-sm dark:border-surface-700 dark:bg-surface-900">
+        <div class="flex items-center justify-between p-5 pb-4">
+          <h2 class="m-0 text-lg font-semibold text-surface-950 dark:text-surface-0">
+            Resumen del Préstamo
+          </h2>
+          <p-tag
+            [severity]="loan()!.status === 'ACTIVE' ? 'success' : 'secondary'"
+            [value]="loan()!.status === 'ACTIVE' ? 'Activo' : 'Cancelado'"
+          />
+        </div>
+
+        <!-- KPI grid -->
+        <dl class="grid grid-cols-2 divide-x divide-y divide-surface-200 border-t border-surface-200 sm:grid-cols-3 dark:divide-surface-700 dark:border-surface-700">
+          <div class="px-5 py-3">
+            <dt class="text-xs text-surface-500 dark:text-surface-400">Monto prestado</dt>
+            <dd class="mt-1 mb-0 font-semibold tabular-nums text-surface-950 dark:text-surface-0">
+              {{ loan()!.principal | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+            </dd>
+          </div>
+          <div class="px-5 py-3">
+            <dt class="text-xs text-surface-500 dark:text-surface-400">Interés ({{ loan()!.interestRate }}%)</dt>
+            <dd class="mt-1 mb-0 font-semibold tabular-nums text-primary-600 dark:text-primary-400">
+              {{ loan()!.interestAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+            </dd>
+          </div>
+          <div class="px-5 py-3">
+            <dt class="text-xs text-surface-500 dark:text-surface-400">Total a pagar</dt>
+            <dd class="mt-1 mb-0 font-semibold tabular-nums text-surface-950 dark:text-surface-0">
+              {{ loan()!.totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+            </dd>
+          </div>
+          <div class="px-5 py-3">
+            <dt class="text-xs text-surface-500 dark:text-surface-400">Valor cuota</dt>
+            <dd class="mt-1 mb-0 font-semibold tabular-nums text-primary-600 dark:text-primary-400">
+              {{ loan()!.installmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+            </dd>
+          </div>
+          <div class="px-5 py-3">
+            <dt class="text-xs text-surface-500 dark:text-surface-400">Total pagado</dt>
+            <dd class="mt-1 mb-0 font-semibold tabular-nums text-green-700 dark:text-green-400">
+              {{ totalPaid() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+            </dd>
+          </div>
+          <div class="px-5 py-3">
+            <dt class="text-xs text-surface-500 dark:text-surface-400">Saldo pendiente</dt>
+            <dd
+              class="mt-1 mb-0 font-bold tabular-nums"
+              [class.text-red-600]="loan()!.balance > 0"
+              [class.text-green-700]="loan()!.balance === 0"
+            >
+              {{ loan()!.balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+            </dd>
+          </div>
+        </dl>
+
+        <!-- Payment CTA -->
+        @if (loan()!.status === 'ACTIVE' && loan()!.balance > 0) {
+          <div class="border-t border-surface-200 p-5 dark:border-surface-700">
+            <button
+              pButton
+              type="button"
+              icon="pi pi-wallet"
+              label="REGISTRAR PAGO"
+              class="w-full justify-center text-lg font-bold"
+              severity="success"
+              (click)="openPaymentModal()"
+            ></button>
+          </div>
+        }
+      </div>
+
+      <!-- Installments table -->
+      <div class="rounded-xl border border-surface-200 bg-surface-0 shadow-sm dark:border-surface-700 dark:bg-surface-900">
+        <h2 class="m-0 p-5 pb-4 text-lg font-semibold text-surface-950 dark:text-surface-0">
+          Cronograma de Cuotas <span class="text-sm font-normal text-surface-500">({{ installments().length }} cuotas)</span>
+        </h2>
+        <p-table
+          [value]="installments()"
+          [scrollable]="true"
+          scrollHeight="300px"
+          styleClass="text-sm"
+          [tableStyle]="{ 'min-width': '40rem' }"
+        >
+          <ng-template #header>
+            <tr>
+              <th class="w-12">N°</th>
+              <th>Vencimiento</th>
+              <th class="text-right">Esperado</th>
+              <th class="text-right">Pagado</th>
+              <th class="text-right">Saldo</th>
+              <th>Estado</th>
+            </tr>
+          </ng-template>
+          <ng-template #body let-inst>
+            <tr [class.bg-red-50]="inst.dueDate < today && inst.status === 'PENDIENTE'" [class.dark:bg-red-950/20]="inst.dueDate < today && inst.status === 'PENDIENTE'">
+              <td class="font-bold">#{{ inst.installmentNumber }}</td>
+              <td>{{ inst.dueDate | date: 'dd/MM/yyyy' }}</td>
+              <td class="text-right tabular-nums">
+                {{ inst.expectedAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              </td>
+              <td class="text-right tabular-nums text-green-700 dark:text-green-400">
+                {{ inst.paidAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              </td>
+              <td class="text-right tabular-nums">
+                {{ inst.remainingAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              </td>
+              <td>
+                <p-tag
+                  [severity]="getInstallmentSeverity(inst.status, inst.dueDate)"
+                  [value]="getInstallmentLabel(inst.status, inst.dueDate)"
+                />
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+
+      <!-- Payment history -->
+      <div class="rounded-xl border border-surface-200 bg-surface-0 shadow-sm dark:border-surface-700 dark:bg-surface-900">
+        <h2 class="m-0 p-5 pb-4 text-lg font-semibold text-surface-950 dark:text-surface-0">
+          Historial de Pagos
+        </h2>
+        @if (clientPayments().length === 0) {
+          <p class="px-5 pb-5 text-sm text-surface-500 dark:text-surface-400">
+            Aún no se han registrado pagos para este préstamo.
+          </p>
+        } @else {
+          <p-table
+            [value]="clientPayments()"
+            [tableStyle]="{ 'min-width': '32rem' }"
+            styleClass="text-sm"
+          >
+            <ng-template #header>
+              <tr>
+                <th>Fecha</th>
+                <th class="text-right">Monto</th>
+                <th>Observación</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-pago>
+              <tr>
+                <td>{{ pago.date | date: 'dd/MM/yyyy' }}</td>
+                <td class="text-right font-bold tabular-nums text-green-700 dark:text-green-400">
+                  {{ pago.amount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                </td>
+                <td class="text-surface-500 dark:text-surface-400">{{ pago.notes || '—' }}</td>
+              </tr>
+            </ng-template>
+          </p-table>
+        }
+      </div>
+    } @else {
+      <div class="rounded-xl border border-dashed border-surface-300 bg-surface-0 p-8 text-center dark:border-surface-600 dark:bg-surface-900">
+        <i class="pi pi-file mb-3 text-4xl text-surface-400" aria-hidden="true"></i>
+        <p class="text-surface-600 dark:text-surface-400">
+          Este cliente no cuenta con préstamos registrados actualmente.
+        </p>
+      </div>
+    }
+  }
+</div>
+
+<!-- Payment Modal -->
+<p-dialog
+  [visible]="showPaymentModal()"
+  (visibleChange)="showPaymentModal.set($event)"
+  [modal]="true"
+  [draggable]="false"
+  [breakpoints]="{ '640px': '100vw' }"
+  styleClass="payment-dialog"
+  [style]="{ width: '480px' }"
+  [header]="paymentSuccess() ? '¡Pago registrado!' : 'Registrar pago'"
+>
+  @if (!paymentSuccess()) {
+    <!-- Payment form -->
+    <div class="flex flex-col gap-4">
+      <div>
+        <p class="m-0 text-sm text-surface-600 dark:text-surface-400">
+          Cliente: <strong class="text-surface-950 dark:text-surface-0">{{ client()?.fullName }}</strong>
+        </p>
+        <p class="mt-1 mb-0 text-sm text-surface-600 dark:text-surface-400">
+          Saldo pendiente: <strong class="tabular-nums text-red-600 dark:text-red-400">
+            {{ loan()?.balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+          </strong>
+        </p>
+      </div>
+
+      <!-- Quick amounts -->
+      @if (quickAmounts().length > 0) {
+        <div>
+          <p class="mb-2 text-xs font-semibold text-surface-500 dark:text-surface-400">Montos rápidos</p>
+          <div class="flex flex-wrap gap-2">
+            @for (amount of quickAmounts(); track amount) {
+              <button
+                type="button"
+                class="min-h-10 rounded-lg border border-surface-300 bg-surface-50 px-3 text-sm font-semibold text-surface-700 transition-colors hover:border-primary-500 hover:bg-primary-50 hover:text-primary-700 focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-surface-600 dark:bg-surface-800 dark:text-surface-200"
+                [class.border-primary-600]="paymentAmount() === amount"
+                [class.bg-primary-50]="paymentAmount() === amount"
+                [class.text-primary-700]="paymentAmount() === amount"
+                (click)="selectQuickAmount(amount)"
+              >
+                {{ amount | currency: 'PEN' : 'symbol' : '1.0-2' : 'es-PE' }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Amount input -->
+      <div class="flex flex-col gap-1.5">
+        <label for="payment-amount" class="text-sm font-semibold text-surface-700 dark:text-surface-200">
+          Monto recibido <span class="text-red-500" aria-hidden="true">*</span>
+        </label>
+        <p-inputnumber
+          inputId="payment-amount"
+          mode="currency"
+          currency="PEN"
+          locale="es-PE"
+          [min]="0.01"
+          [max]="loan()?.balance ?? 0"
+          [ngModel]="paymentAmount()"
+          (ngModelChange)="paymentAmount.set($event)"
+          styleClass="w-full"
+          inputStyleClass="w-full text-xl font-bold tabular-nums"
+        />
+      </div>
+
+      <!-- Notes -->
+      <div class="flex flex-col gap-1.5">
+        <label for="payment-notes" class="text-sm font-semibold text-surface-700 dark:text-surface-200">
+          Observación
+        </label>
+        <textarea
+          id="payment-notes"
+          pInputTextarea
+          rows="2"
+          class="w-full resize-none"
+          placeholder="Ej: Cobranza en campo, abono parcial…"
+          [ngModel]="paymentNotes()"
+          (ngModelChange)="paymentNotes.set($event)"
+        ></textarea>
+      </div>
+    </div>
+
+    <ng-template #footer>
+      <button
+        pButton
+        type="button"
+        label="Cancelar"
+        severity="secondary"
+        variant="outlined"
+        (click)="closePaymentModal()"
+      ></button>
+      <button
+        pButton
+        type="button"
+        icon="pi pi-check"
+        label="Confirmar pago"
+        severity="success"
+        [disabled]="!paymentAmount() || (paymentAmount() ?? 0) <= 0 || isSubmitting()"
+        [loading]="isSubmitting()"
+        (click)="submitPayment()"
+      ></button>
+    </ng-template>
+  } @else {
+    <!-- Success state -->
+    <div class="flex flex-col items-center gap-4 py-4 text-center">
+      <div class="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+        <i class="pi pi-check-circle text-3xl" aria-hidden="true"></i>
+      </div>
+      <div>
+        <p class="m-0 text-3xl font-bold tabular-nums text-green-700 dark:text-green-400">
+          {{ paymentResult()?.amount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+        </p>
+        <p class="mt-1 mb-0 text-sm text-surface-500 dark:text-surface-400">
+          registrado para {{ client()?.fullName }}
+        </p>
+      </div>
+      <div class="w-full rounded-lg border border-surface-200 p-4 dark:border-surface-700">
+        <div class="flex items-center justify-between text-sm">
+          <span class="text-surface-600 dark:text-surface-400">Nuevo saldo pendiente</span>
+          <span class="font-bold tabular-nums" [class.text-green-700]="paymentResult()?.newBalance === 0" [class.dark:text-green-400]="paymentResult()?.newBalance === 0">
+            {{ paymentResult()?.newBalance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+          </span>
+        </div>
+        @if (paymentResult()?.isPaidOff) {
+          <p class="mt-2 mb-0 text-sm font-semibold text-green-700 dark:text-green-400">
+            <i class="pi pi-star-fill mr-1" aria-hidden="true"></i>
+            ¡Préstamo cancelado en su totalidad!
+          </p>
+        }
+      </div>
+    </div>
+
+    <ng-template #footer>
+      <button
+        pButton
+        type="button"
+        label="Listo"
+        severity="success"
+        class="w-full"
+        (click)="closePaymentModal()"
+      ></button>
+    </ng-template>
+  }
+</p-dialog>

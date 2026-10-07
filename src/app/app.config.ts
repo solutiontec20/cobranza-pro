@@ -5,10 +5,14 @@ import { routes } from './app.routes';
 import Aura from '@primeuix/themes/aura';
 import { appEnv } from './core/config/app-env';
 import { es } from 'primelocale/js/es.js';
+import { MessageService } from 'primeng/api';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
+    provideAnimationsAsync(),
+    MessageService,
     {
       provide: LOCALE_ID,
       useValue: 'es-PE',

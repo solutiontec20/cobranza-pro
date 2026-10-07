@@ -1,0 +1,180 @@
+<div class="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
+  <header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <p class="m-0 text-sm font-medium text-primary-700 dark:text-primary-300">
+        {{ today | date: 'EEEE, d MMMM' : undefined : 'es-PE' }}
+      </p>
+      <h1 class="mt-1 mb-0 text-2xl font-semibold tracking-tight text-pretty text-surface-950 sm:text-3xl dark:text-surface-0">
+        Ruta de cobranza de Pedro
+      </h1>
+      <p class="mt-1 mb-0 text-sm text-surface-500 dark:text-surface-400">
+        Priorizá atrasos y registrá cada visita desde el teléfono.
+      </p>
+    </div>
+    <div class="flex items-center gap-2 text-sm text-surface-600 dark:text-surface-300">
+      <span class="relative flex h-2.5 w-2.5" aria-hidden="true">
+        <span class="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-50"></span>
+        <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-600"></span>
+      </span>
+      Jornada activa
+    </div>
+  </header>
+
+  <section
+    aria-labelledby="daily-progress-title"
+    class="overflow-hidden rounded-2xl bg-primary-950 p-5 text-white shadow-sm sm:p-6 dark:bg-surface-900 dark:ring-1 dark:ring-surface-700"
+  >
+    <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p id="daily-progress-title" class="m-0 text-sm text-primary-200">Avance de hoy</p>
+        <p class="mt-2 mb-0 text-3xl font-semibold tabular-nums sm:text-4xl">
+          {{ store.summary().collectedToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+        </p>
+        <p class="mt-1 mb-0 text-sm text-primary-200">
+          de {{ store.summary().expectedToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }} programados
+        </p>
+      </div>
+      <p class="m-0 text-4xl font-semibold tabular-nums text-primary-200">
+        {{ store.summary().completionPercentage }}<span class="text-xl">%</span>
+      </p>
+    </div>
+    <p-progressbar
+      class="mt-5 block"
+      [value]="store.summary().completionPercentage"
+      [showValue]="false"
+      ariaLabel="Porcentaje de la cobranza diaria completado"
+    />
+    <p class="mt-3 mb-0 text-xs text-primary-200">
+      Faltan
+      {{ store.summary().expectedToday - store.summary().collectedToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+      para completar la ruta.
+    </p>
+  </section>
+
+  <section aria-label="Resumen operativo" class="grid grid-cols-2 gap-y-5 rounded-xl border border-surface-200 bg-surface-0 py-4 sm:grid-cols-4 dark:border-surface-700 dark:bg-surface-900">
+    <app-collection-metric
+      label="Cobrar hoy"
+      [value]="store.summary().dueToday.toString()"
+      hint="clientes programados"
+      icon="pi pi-users"
+    />
+    <app-collection-metric
+      label="Esperado"
+      [value]="(store.summary().expectedToday | currency: 'PEN' : 'symbol' : '1.0-0' : 'es-PE') ?? ''"
+      hint="meta de cobranza"
+      icon="pi pi-clock"
+      accentClass="border-blue-500"
+    />
+    <app-collection-metric
+      label="Cobrado"
+      [value]="(store.summary().collectedToday | currency: 'PEN' : 'symbol' : '1.0-0' : 'es-PE') ?? ''"
+      hint="recaudado hoy"
+      icon="pi pi-check-circle"
+      accentClass="border-green-500"
+    />
+    <app-collection-metric
+      label="Atrasados"
+      [value]="store.summary().overdueClients.toString()"
+      hint="requieren prioridad"
+      icon="pi pi-exclamation-triangle"
+      accentClass="border-red-500"
+    />
+  </section>
+
+  <section aria-labelledby="collection-list-title" class="flex flex-col gap-4">
+    <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_14rem]">
+      <div>
+        <label for="collection-search" class="sr-only">Buscar cliente por nombre, DNI o teléfono</label>
+        <p-iconfield class="w-full">
+          <p-inputicon class="pi pi-search" />
+          <input
+            id="collection-search"
+            name="collection-search"
+            pInputText
+            type="search"
+            autocomplete="off"
+            class="w-full"
+            placeholder="Buscar nombre, DNI o teléfono…"
+            [value]="store.query()"
+            (input)="updateQuery($event)"
+          />
+        </p-iconfield>
+      </div>
+      <div>
+        <label for="collection-sort" class="sr-only">Ordenar clientes</label>
+        <p-select
+          inputId="collection-sort"
+          class="w-full"
+          [options]="sortOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="store.sortOrder()"
+          (ngModelChange)="store.setSortOrder($event)"
+          ariaLabel="Ordenar clientes"
+        />
+      </div>
+    </div>
+
+    <div class="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0" aria-label="Filtros de cobranza">
+      <div class="flex w-max gap-2">
+        @for (filter of filters; track filter.value) {
+          <button
+            type="button"
+            class="min-h-10 rounded-full border px-4 text-sm font-medium whitespace-nowrap focus-visible:ring-2 focus-visible:ring-primary-500"
+            [class.border-primary-600]="store.activeFilter() === filter.value"
+            [class.bg-primary-600]="store.activeFilter() === filter.value"
+            [class.text-white]="store.activeFilter() === filter.value"
+            [class.border-surface-300]="store.activeFilter() !== filter.value"
+            [class.bg-surface-0]="store.activeFilter() !== filter.value"
+            [class.text-surface-700]="store.activeFilter() !== filter.value"
+            [class.dark:border-surface-600]="store.activeFilter() !== filter.value"
+            [class.dark:bg-surface-900]="store.activeFilter() !== filter.value"
+            [class.dark:text-surface-200]="store.activeFilter() !== filter.value"
+            [attr.aria-pressed]="store.activeFilter() === filter.value"
+            (click)="selectFilter(filter.value)"
+          >
+            {{ filter.label }} ({{ store.countFor(filter.value) }})
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <h2 id="collection-list-title" class="m-0 text-xl font-semibold text-surface-950 dark:text-surface-0">
+          Cobranzas priorizadas
+        </h2>
+        <p class="mt-1 mb-0 text-sm text-surface-500 dark:text-surface-400">
+          {{ store.filteredClients().length }} clientes en esta vista
+        </p>
+      </div>
+    </div>
+
+    @if (actionNotice()) {
+      <div role="status" aria-live="polite" class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-200">
+        {{ actionNotice() }}
+      </div>
+    }
+
+    @if (store.filteredClients().length > 0) {
+      <div class="grid gap-3 lg:grid-cols-2">
+        @for (client of store.filteredClients(); track client.id) {
+          <app-collection-client-card
+            [client]="client"
+            (paymentRequested)="requestPayment($event)"
+          />
+        }
+      </div>
+    } @else {
+      <div class="rounded-xl border border-dashed border-surface-300 bg-surface-0 px-6 py-12 text-center dark:border-surface-700 dark:bg-surface-900">
+        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-surface-100 text-surface-500 dark:bg-surface-800 dark:text-surface-300">
+          <i class="pi pi-search" aria-hidden="true"></i>
+        </div>
+        <h3 class="mt-4 mb-1 text-lg font-semibold text-surface-950 dark:text-surface-0">No hay clientes en esta vista</h3>
+        <p class="mt-0 mb-4 text-sm text-surface-500 dark:text-surface-400">Cambiá el filtro o limpiá la búsqueda para continuar.</p>
+        <button pButton type="button" severity="secondary" variant="outlined" label="Limpiar filtros" (click)="store.clearFilters()"></button>
+      </div>
+    }
+  </section>
+</div>
+

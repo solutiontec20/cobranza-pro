@@ -1,1 +1,55 @@
-<p>topbar works!</p>,
+<div class="h-full px-4 flex items-center justify-between">
+  <!-- Left side (Toggle Sidebar Desktop) / Mobile Logo -->
+  <div class="flex items-center gap-3">
+    <button 
+      class="hidden md:flex w-10 h-10 rounded-full hover:bg-surface-100 dark:hover:bg-surface-800 items-center justify-center text-surface-500 transition-colors"
+      (click)="layoutService.toggleSidebar()"
+    >
+      <i class="pi pi-bars text-xl"></i>
+    </button>
+
+    <div class="md:hidden flex items-center gap-2">
+      <div class="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center shadow-sm">
+        <i class="pi pi-wallet text-sm text-white"></i>
+      </div>
+      <span class="font-bold text-surface-900 dark:text-surface-0 tracking-tight">CobranzaPro</span>
+    </div>
+  </div>
+
+  <!-- Right side Actions -->
+  <div class="flex items-center gap-2 md:gap-3">
+    <!-- Theme Toggle -->
+    <button 
+      class="relative w-10 h-10 rounded-full hover:bg-surface-100 dark:hover:bg-surface-800 flex items-center justify-center text-surface-500 transition-colors cursor-pointer border-none bg-transparent"
+      (click)="themeService.toggleTheme()"
+    >
+      @if (themeService.isDark()) {
+        <i class="pi pi-sun text-xl"></i>
+      } @else {
+        <i class="pi pi-moon text-xl"></i>
+      }
+    </button>
+
+    <!-- Notification bell -->
+    <button class="relative w-10 h-10 rounded-full hover:bg-surface-100 dark:hover:bg-surface-800 flex items-center justify-center text-surface-500 transition-colors border-none bg-transparent cursor-pointer">
+      <i class="pi pi-bell text-xl"></i>
+      <span class="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-surface-0 dark:border-surface-900"></span>
+    </button>
+
+    <div class="h-8 w-px bg-surface-200 dark:bg-surface-700 hidden md:block mx-1"></div>
+
+    <!-- Create Button Desktop -->
+    <button pButton icon="pi pi-plus" label="Nuevo" class="hidden md:flex p-button-sm rounded-lg" size="small"></button>
+
+    <!-- User Profile Info Desktop -->
+    <div class="hidden md:flex flex-col items-end mr-1">
+      <span class="text-sm font-bold text-surface-900 dark:text-surface-0">{{ authService.currentUser()?.fullName || 'Usuario' }}</span>
+      <span class="text-[10px] text-surface-500">{{ authService.currentUser()?.role || '' }}</span>
+    </div>
+
+    <!-- User Avatar -->
+    <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold ml-1 cursor-pointer hover:opacity-90 transition-opacity">
+      {{ authService.currentUser()?.fullName?.charAt(0) || 'U' }}
+    </div>
+  </div>
+</div>
