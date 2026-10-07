@@ -2,7 +2,7 @@ import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ButtonDirective } from 'primeng/button';
+import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TextareaModule } from 'primeng/textarea';
@@ -16,7 +16,7 @@ import { AuthService } from '../../auth/auth.service';
 @Component({
   selector: 'app-client-detail',
   imports: [
-    ButtonDirective,
+    ButtonModule,
     CurrencyPipe,
     DatePipe,
     DialogModule,

@@ -41,6 +41,9 @@ importers:
       chart.js:
         specifier: 4.5.1
         version: 4.5.1
+      primeicons:
+        specifier: 8.0.2
+        version: 8.0.2
       primelocale:
         specifier: 2.5.0
         version: 2.5.0
@@ -2531,6 +2534,9 @@ packages:
     resolution: {integrity: sha512-Z/CJHIkdujO/OtN7nXUii0Rf3VT5SRuhjBA82Xvu2XhBUgX3nhP67T0LHceBdQLex7OOFGTox+Q5Yg8Jk2Qivg==}
     engines: {node: '>=14'}
     hasBin: true
+
+  primeicons@8.0.2:
+    resolution: {integrity: sha512-o3UQey3nXMEQRAudVYZZWswz6mmnWpPnksYb7wIu4rEEVfdS3pLnxnmSJx5gKBRMer1MxnhJZG5QRDxVVJFNkA==}
 
   primelocale@2.5.0:
     resolution: {integrity: sha512-if5sKywlbltSJbuojKEHpiQu7MDVXGUCpAETjZtqchjRglV9dXgOnFQ4LL/YkYBYAgHPBoel2JhAd67sDIhZVg==}
@@ -5167,6 +5173,8 @@ snapshots:
       source-map-js: 1.2.2
 
   prettier@3.9.9: {}
+
+  primeicons@8.0.2: {}
 
   primelocale@2.5.0: {}
 

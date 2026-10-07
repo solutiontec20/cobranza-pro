@@ -27,7 +27,7 @@ import { AuthService } from '../../auth/auth.service';
           <h1 class="text-2xl font-bold text-surface-900 dark:text-surface-0 m-0">Administración de Préstamos</h1>
           <p class="text-sm text-surface-500 mt-1">Creación de créditos y seguimiento.</p>
         </div>
-        <button pButton icon="pi pi-plus" label="Nuevo Préstamo" (click)="openNewDialog()"></button>
+        <p-button icon="pi pi-plus" label="Nuevo Préstamo" (click)="openNewDialog()"></p-button>
       </div>
 
       <div class="card bg-surface-0 dark:bg-surface-900 p-4 border-round-xl shadow-sm">
@@ -60,7 +60,7 @@ import { AuthService } from '../../auth/auth.service';
                 <p-tag [severity]="loan.status === 'ACTIVE' ? 'success' : 'secondary'" [value]="loan.status"></p-tag>
               </td>
               <td class="text-center">
-                <button pButton label="Cronograma" class="p-button-outlined p-button-sm"></button>
+                <p-button label="Cronograma" variant="outlined" size="small"></p-button>
               </td>
             </tr>
           </ng-template>
@@ -120,8 +120,8 @@ import { AuthService } from '../../auth/auth.service';
         </div>
 
         <div class="flex justify-end gap-2 mt-4">
-          <button pButton type="button" label="Cancelar" class="p-button-text p-button-secondary" (click)="dialogVisible.set(false)"></button>
-          <button pButton type="submit" label="Crear Préstamo" [disabled]="loanForm.invalid"></button>
+          <p-button type="button" label="Cancelar" severity="secondary" variant="text" (click)="dialogVisible.set(false)"></p-button>
+          <p-button type="submit" label="Crear Préstamo" [disabled]="loanForm.invalid"></p-button>
         </div>
       </form>
     </p-dialog>

@@ -1,7 +1,7 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ButtonDirective } from 'primeng/button';
+import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
@@ -24,7 +24,7 @@ interface FilterOption {
 @Component({
   selector: 'app-collector-dashboard',
   imports: [
-    ButtonDirective,
+    ButtonModule,
     CollectionClientCard,
     CollectionMetric,
     CurrencyPipe,
