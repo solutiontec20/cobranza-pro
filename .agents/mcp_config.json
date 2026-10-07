@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ]
+    },
+    "supabase-uat": {
+      "serverUrl": "https://mcp.supabase.com/mcp?project_ref=TU_PROJECT_REF_UAT&features=docs,database,debugging,development,functions"
+    },
+    "supabase-prod": {
+      "serverUrl": "https://mcp.supabase.com/mcp?project_ref=TU_PROJECT_REF_PROD&read_only=true&features=docs,database,debugging"
+    }
+  }
+}
