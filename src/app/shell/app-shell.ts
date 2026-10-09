@@ -1,78 +1,159 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { Sidebar } from './sidebar/sidebar';
 import { Topbar } from './topbar/topbar';
-import { LayoutService } from '../core/services/layout.service';
 import { AuthService } from '../modules/auth/auth.service';
 import { ToastModule } from 'primeng/toast';
+import { SidebarModule } from 'primeng/sidebar';
+import { AvatarModule } from 'primeng/avatar';
+import { ButtonModule } from 'primeng/button';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet, Sidebar, Topbar, ToastModule],
+  imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet, Topbar, ToastModule, SidebarModule, AvatarModule, ButtonModule],
   template: `
-    <div class="min-h-screen bg-surface-50 dark:bg-surface-950 flex font-sans text-surface-900 dark:text-surface-0">
       <p-toast />
-      <!-- Desktop Sidebar -->
-      <app-sidebar 
-        class="hidden md:flex flex-col border-r border-surface-200 dark:border-surface-800 bg-surface-0 dark:bg-surface-900 transition-all duration-300 ease-in-out"
-        [class.w-72]="!layoutService.sidebarCollapsed()"
-        [class.w-20]="layoutService.sidebarCollapsed()"
-      />
-      
-      <!-- Main Content Area -->
-      <div class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden transition-all duration-300 ease-in-out">
-        <app-topbar class="h-16 flex-shrink-0 border-b border-surface-200 dark:border-surface-800 bg-surface-0/80 dark:bg-surface-900/80 backdrop-blur-md z-10 sticky top-0" />
-        
-        <main id="main-content" class="flex-1 overflow-auto pb-20 md:pb-8">
-          <router-outlet />
-        </main>
-
-        <!-- Mobile Bottom Nav -->
-        <nav aria-label="Navegación principal" class="md:hidden fixed bottom-0 left-0 right-0 min-h-16 bg-surface-0 dark:bg-surface-900 border-t border-surface-200 dark:border-surface-800 flex items-center justify-around z-20 px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-          @if (authService.currentUser()?.role === 'COBRADOR') {
-            <a routerLink="/cobrador" routerLinkActive="text-primary-600 dark:text-primary-400" [routerLinkActiveOptions]="{ exact: true }" class="flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 text-surface-500 hover:text-surface-900 focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-surface-400 dark:hover:text-surface-0 transition-colors">
-              <i class="pi pi-home text-xl"></i>
-              <span class="text-[11px] font-medium">Ruta</span>
-            </a>
-            <a routerLink="/cobrador/clientes" routerLinkActive="text-primary-600 dark:text-primary-400" class="flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 text-surface-500 hover:text-surface-900 focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-surface-400 dark:hover:text-surface-0 transition-colors">
-              <i class="pi pi-users text-xl"></i>
-              <span class="text-[11px] font-medium">Clientes</span>
-            </a>
-            <button class="w-14 h-14 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center text-white -mt-6 shadow-lg shadow-green-500/30 border-4 border-surface-0 dark:border-surface-900 text-2xl z-30 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-green-500/50 transition-all">
-              <i class="pi pi-money-bill"></i>
-            </button>
-            <a routerLink="/perfil" routerLinkActive="text-primary-600 dark:text-primary-400" class="flex min-h-12 min-w-16 flex-col items-center justify-center gap-1 text-surface-500 hover:text-surface-900 focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-surface-400 dark:hover:text-surface-0 transition-colors">
-              <i class="pi pi-user text-xl"></i>
-              <span class="text-[11px] font-medium">Perfil</span>
-            </a>
-          } @else if (authService.currentUser()?.role === 'ADMINISTRADOR') {
-            <a routerLink="/admin/dashboard" routerLinkActive="text-primary-600 dark:text-primary-400" class="flex min-h-12 flex-col items-center justify-center gap-1 text-surface-500 hover:text-surface-900 focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-surface-400 dark:hover:text-surface-0 flex-1 transition-colors">
-              <i class="pi pi-chart-bar text-xl"></i>
-              <span class="text-[10px] font-medium">Dashboard</span>
-            </a>
-            <a routerLink="/admin/clientes" routerLinkActive="text-primary-600 dark:text-primary-400" class="flex min-h-12 flex-col items-center justify-center gap-1 text-surface-500 hover:text-surface-900 focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-surface-400 dark:hover:text-surface-0 flex-1 transition-colors">
-              <i class="pi pi-users text-xl"></i>
-              <span class="text-[10px] font-medium">Clientes</span>
-            </a>
-            <a routerLink="/admin/prestamos" routerLinkActive="text-primary-600 dark:text-primary-400" class="flex min-h-12 flex-col items-center justify-center gap-1 text-surface-500 hover:text-surface-900 focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-surface-400 dark:hover:text-surface-0 flex-1 transition-colors">
-              <i class="pi pi-wallet text-xl"></i>
-              <span class="text-[10px] font-medium">Préstamos</span>
-            </a>
-            <a routerLink="/admin/control-diario" routerLinkActive="text-primary-600 dark:text-primary-400" class="flex min-h-12 flex-col items-center justify-center gap-1 text-surface-500 hover:text-surface-900 focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-surface-400 dark:hover:text-surface-0 flex-1 transition-colors">
-              <i class="pi pi-file-excel text-xl"></i>
-              <span class="text-[10px] font-medium">Control</span>
-            </a>
-            <a href="#" class="flex min-h-12 flex-col items-center justify-center gap-1 text-surface-500 hover:text-surface-900 focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-surface-400 dark:hover:text-surface-0 flex-1 transition-colors">
-              <i class="pi pi-ellipsis-h text-xl"></i>
-              <span class="text-[10px] font-medium">Más</span>
-            </a>
-          }
-        </nav>
+      <div class="h-screen w-full bg-surface-50 dark:bg-surface-900 overflow-hidden font-sans text-surface-900 dark:text-surface-0 flex">
+        <div class="border border-surface-200 dark:border-surface-700 rounded-lg overflow-hidden w-full h-full flex flex-col relative">
+            <p-sidebar-layout class="min-h-192! relative! flex-1">
+                @if (isMobile() && open()) {
+                    <p-sidebar-backdrop class="absolute!" />
+                }
+                <p-sidebar id="preview" [collapsible]="isMobile() ? 'offcanvas' : 'icon'" [overlay]="isMobile()" [(open)]="open">
+                    <p-sidebar-spacer />
+                    <p-sidebar-aside>
+                        <p-sidebar-panel>
+                            <p-sidebar-header>
+                                <p-sidebar-menu>
+                                    <p-sidebar-menu-item>
+                                        <button pSidebarMenuButton class="p-1!">
+                                            <div class="flex size-6 shrink-0 items-center justify-center rounded-md bg-linear-to-br from-violet-500 to-indigo-600 text-white text-xs font-bold leading-none">
+                                              <i class="pi pi-wallet"></i>
+                                            </div>
+                                            <span class="font-semibold text-sm">CobranzaPro</span>
+                                        </button>
+                                    </p-sidebar-menu-item>
+                                </p-sidebar-menu>
+                            </p-sidebar-header>
+                            <p-sidebar-content>
+                                @if (authService.currentUser()?.role === 'COBRADOR') {
+                                    <p-sidebar-group>
+                                        <p-sidebar-group-label>Cobrador</p-sidebar-group-label>
+                                        <p-sidebar-group-content>
+                                            <p-sidebar-menu>
+                                                <p-sidebar-menu-item>
+                                                    <a pSidebarMenuButton routerLink="/cobrador" routerLinkActive #rla1="routerLinkActive" [routerLinkActiveOptions]="{exact: true}" [isActive]="rla1.isActive">
+                                                        <i class="pi pi-home"></i>
+                                                        <span>Cobranza de hoy</span>
+                                                    </a>
+                                                </p-sidebar-menu-item>
+                                                <p-sidebar-menu-item>
+                                                    <a pSidebarMenuButton routerLink="/cobrador/clientes" routerLinkActive #rla2="routerLinkActive" [isActive]="rla2.isActive">
+                                                        <i class="pi pi-users"></i>
+                                                        <span>Mis Clientes</span>
+                                                    </a>
+                                                </p-sidebar-menu-item>
+                                            </p-sidebar-menu>
+                                        </p-sidebar-group-content>
+                                    </p-sidebar-group>
+                                } @else if (authService.currentUser()?.role === 'ADMINISTRADOR') {
+                                    <p-sidebar-group>
+                                        <p-sidebar-group-label>Administración</p-sidebar-group-label>
+                                        <p-sidebar-group-content>
+                                            <p-sidebar-menu>
+                                                <p-sidebar-menu-item>
+                                                    <a pSidebarMenuButton routerLink="/admin/dashboard" routerLinkActive #rla4="routerLinkActive" [isActive]="rla4.isActive">
+                                                        <i class="pi pi-chart-bar"></i>
+                                                        <span>Dashboard</span>
+                                                    </a>
+                                                </p-sidebar-menu-item>
+                                                <p-sidebar-menu-item>
+                                                    <a pSidebarMenuButton routerLink="/admin/clientes" routerLinkActive #rla5="routerLinkActive" [isActive]="rla5.isActive">
+                                                        <i class="pi pi-users"></i>
+                                                        <span>Clientes</span>
+                                                    </a>
+                                                </p-sidebar-menu-item>
+                                                <p-sidebar-menu-item>
+                                                    <a pSidebarMenuButton routerLink="/admin/prestamos" routerLinkActive #rla6="routerLinkActive" [isActive]="rla6.isActive">
+                                                        <i class="pi pi-wallet"></i>
+                                                        <span>Préstamos</span>
+                                                    </a>
+                                                </p-sidebar-menu-item>
+                                                <p-sidebar-menu-item>
+                                                    <a pSidebarMenuButton routerLink="/admin/cobradores" routerLinkActive #rla7="routerLinkActive" [isActive]="rla7.isActive">
+                                                        <i class="pi pi-id-card"></i>
+                                                        <span>Cobradores</span>
+                                                    </a>
+                                                </p-sidebar-menu-item>
+                                                <p-sidebar-menu-item>
+                                                    <a pSidebarMenuButton routerLink="/admin/control-diario" routerLinkActive #rla8="routerLinkActive" [isActive]="rla8.isActive">
+                                                        <i class="pi pi-file-excel"></i>
+                                                        <span>Control Diario</span>
+                                                    </a>
+                                                </p-sidebar-menu-item>
+                                                <p-sidebar-menu-item>
+                                                    <a pSidebarMenuButton routerLink="/admin/auditoria" routerLinkActive #rla9="routerLinkActive" [isActive]="rla9.isActive">
+                                                        <i class="pi pi-shield"></i>
+                                                        <span>Auditoría</span>
+                                                    </a>
+                                                </p-sidebar-menu-item>
+                                            </p-sidebar-menu>
+                                        </p-sidebar-group-content>
+                                    </p-sidebar-group>
+                                }
+                            </p-sidebar-content>
+                            <p-sidebar-footer>
+                                <p-sidebar-menu>
+                                    <p-sidebar-menu-item>
+                                        <button pSidebarMenuButton class="p-1!">
+                                            <p-avatar [label]="authService.currentUser()?.fullName?.charAt(0) || 'U'" shape="circle" class="size-6 shrink-0 text-xs font-bold bg-gradient-to-br from-indigo-500 to-purple-600 text-white" />
+                                            <span class="font-semibold text-sm">{{ authService.currentUser()?.fullName || 'Usuario' }}</span>
+                                        </button>
+                                    </p-sidebar-menu-item>
+                                </p-sidebar-menu>
+                            </p-sidebar-footer>
+                        </p-sidebar-panel>
+                    </p-sidebar-aside>
+                </p-sidebar>
+                <p-sidebar-main>
+                    <div class="flex items-center gap-2 border-b border-surface-200 dark:border-surface-700 px-4 py-2">
+                        <button pButton class="w-8 h-8 p-0 flex items-center justify-center bg-transparent border-0 text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800 rounded-md transition-colors" (click)="open.set(!open())"><i class="pi pi-bars text-xl"></i></button>
+                        <div class="flex-1">
+                          <app-topbar />
+                        </div>
+                    </div>
+                    <div class="p-4 md:p-6 overflow-auto h-[calc(100%-60px)]">
+                        <router-outlet />
+                    </div>
+                </p-sidebar-main>
+            </p-sidebar-layout>
+        </div>
       </div>
-    </div>
   `
 })
-export default class AppShell {
-  layoutService = inject(LayoutService);
+export default class AppShell implements OnInit, OnDestroy {
   authService = inject(AuthService);
+  
+  isMobile = signal(false);
+  open = signal(true);
+  
+  private mql?: MediaQueryList;
+  private mqlListener?: (e: MediaQueryListEvent) => void;
+
+  ngOnInit() {
+      if (typeof window === 'undefined') return;
+      this.mql = window.matchMedia('(max-width: 1023px)');
+      this.isMobile.set(this.mql.matches);
+      this.open.set(!this.mql.matches);
+      this.mqlListener = (e) => {
+          this.isMobile.set(e.matches);
+          this.open.set(!e.matches);
+      };
+      this.mql.addEventListener('change', this.mqlListener);
+  }
+
+  ngOnDestroy() {
+      this.mql?.removeEventListener('change', this.mqlListener!);
+  }
 }
+

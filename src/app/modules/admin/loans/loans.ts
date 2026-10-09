@@ -27,7 +27,7 @@ import { AuthService } from '../../auth/auth.service';
           <h1 class="text-2xl font-bold text-surface-900 dark:text-surface-0 m-0">Administración de Préstamos</h1>
           <p class="text-sm text-surface-500 mt-1">Creación de créditos y seguimiento.</p>
         </div>
-        <p-button icon="pi pi-plus" label="Nuevo Préstamo" (click)="openNewDialog()"></p-button>
+        <p-button (click)="openNewDialog()"><i class="pi pi-plus mr-2"></i>Nuevo Préstamo</p-button>
       </div>
 
       <div class="card bg-surface-0 dark:bg-surface-900 p-4 border-round-xl shadow-sm">
@@ -60,7 +60,7 @@ import { AuthService } from '../../auth/auth.service';
                 <p-tag [severity]="loan.status === 'ACTIVE' ? 'success' : 'secondary'" [value]="loan.status"></p-tag>
               </td>
               <td class="text-center">
-                <p-button label="Cronograma" variant="outlined" size="small"></p-button>
+                <p-button variant="outlined" size="small"><i class="pi pi-calendar mr-2"></i>Cronograma</p-button>
               </td>
             </tr>
           </ng-template>

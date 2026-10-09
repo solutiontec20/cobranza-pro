@@ -2,15 +2,18 @@ import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../auth.service';
-import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-
+import { ButtonModule } from 'primeng/button';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
+import { AutoFocusModule } from 'primeng/autofocus';
 @Component({
-  selector: 'app-login',
-  imports: [ReactiveFormsModule, ButtonModule, InputTextModule],
+  selector: 'login-form',
+  imports: [ReactiveFormsModule, ButtonModule, InputTextModule, IconField, InputIcon],
   templateUrl: './login.html',
 })
 export default class Login {
+
   private authService = inject(AuthService);
   private router = inject(Router);
   private fb = inject(FormBuilder);

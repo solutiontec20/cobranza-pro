@@ -26,7 +26,7 @@ import { MessageService } from 'primeng/api';
           <h1 class="text-2xl font-bold text-surface-900 dark:text-surface-0 m-0">Mantenedor de Clientes</h1>
           <p class="text-sm text-surface-500 mt-1">Administra el padrón de clientes y su asignación a cobradores.</p>
         </div>
-        <p-button icon="pi pi-plus" label="Nuevo Cliente" (click)="openNewDialog()"></p-button>
+        <p-button (click)="openNewDialog()"><i class="pi pi-plus mr-2"></i>Nuevo Cliente</p-button>
       </div>
 
       <div class="card bg-surface-0 dark:bg-surface-900 p-4 border-round-xl shadow-sm">
@@ -78,8 +78,8 @@ import { MessageService } from 'primeng/api';
               </td>
               <td class="text-center">
                 <div class="flex gap-2 justify-center">
-                  <p-button icon="pi pi-eye" label="Ver" severity="secondary" variant="outlined" size="small"></p-button>
-                  <p-button icon="pi pi-pencil" label="Editar" severity="secondary" variant="outlined" size="small" (click)="openEditDialog(client)"></p-button>
+                  <p-button severity="secondary" variant="outlined" size="small"><i class="pi pi-eye mr-2"></i>Ver</p-button>
+                  <p-button severity="secondary" variant="outlined" size="small" (click)="openEditDialog(client)"><i class="pi pi-pencil mr-2"></i>Editar</p-button>
                 </div>
               </td>
             </tr>
