@@ -13,7 +13,7 @@
     "e2e:report": "playwright show-report"
   },
   "private": true,
-  "packageManager": "pnpm@11.15.1",
+  "packageManager": "pnpm@11.28.5",
   "dependencies": {
     "@angular/animations": "^22.2.1",
     "@angular/common": "^22.0.0",
