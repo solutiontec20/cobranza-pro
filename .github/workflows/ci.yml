@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Audit, test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    environment:
+      name: Development
+      deployment: false
+
+    env:
+      NG_APP_PRIMENG_UI_KEY: ${{ secrets.NG_APP_PRIMENG_UI_KEY }}
+      NG_APP_SUPABASE_URL: ${{ vars.NG_APP_SUPABASE_URL }}
+      NG_APP_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NG_APP_SUPABASE_PUBLISHABLE_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm and Node
+        uses: pnpm/setup@v3
+        with:
+          runtime: node@24.15.0
+          cache: true
+          install: false
+
+      - name: Install dependencies
+        run: pnpm ci
+
+      - name: Security audit
+        run: pnpm audit --audit-level=high
+
+      - name: Unit tests
+        run: pnpm test:ci
+
+      - name: Build Angular
+        run: pnpm build
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: E2E
+        run: pnpm e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
