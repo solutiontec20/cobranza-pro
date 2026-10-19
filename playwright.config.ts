@@ -37,9 +37,12 @@ export default defineConfig({
     ? undefined
     : {
         command:
-          'pnpm start -- --host 127.0.0.1 --port 4200',
+          'pnpm exec ng serve --host 127.0.0.1 --port 4200',
+
         url: localUrl,
+
         reuseExistingServer: !isCI,
+
         timeout: 120_000,
 
         stdout: 'pipe',
