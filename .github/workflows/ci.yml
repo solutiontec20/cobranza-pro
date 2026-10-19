@@ -5,10 +5,6 @@ on:
     branches:
       - main
 
-  push:
-    branches:
-      - main
-
   workflow_dispatch:
 
 permissions:
@@ -19,6 +15,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ==========================================================
+  # ANGULAR
+  # ==========================================================
+
   checks:
     name: Audit, test and build
     runs-on: ubuntu-latest
@@ -71,3 +71,50 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 14
+          if-no-files-found: ignore
+
+  # ==========================================================
+  # POSTGRESQL / SUPABASE
+  # ==========================================================
+
+  database:
+    name: Database tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm and Node
+        uses: pnpm/setup@v3
+        with:
+          runtime: node@24.15.0
+          cache: true
+          install: false
+
+      - name: Install dependencies
+        run: pnpm ci
+
+      - name: Start Supabase database
+        run: pnpm supabase db start
+
+      - name: Lint database
+        run: pnpm supabase db lint --local --level error
+
+      - name: Run database tests
+        run: pnpm supabase test db
+
+      - name: Verify generated database types
+        run: |
+          pnpm supabase gen types typescript --local > src/app/core/supabase/database.types.ts
+
+          if ! git diff --ignore-space-at-eol --exit-code --quiet -- src/app/core/supabase/database.types.ts; then
+            echo "database.types.ts no está sincronizado con el esquema PostgreSQL."
+            echo "Regenera database.types.ts y agrega el archivo actualizado al commit."
+            echo ""
+            git diff --ignore-space-at-eol -- src/app/core/supabase/database.types.ts
+            exit 1
+          fi
