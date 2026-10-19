@@ -26,10 +26,7 @@ jobs:
       NG_APP_PRIMENG_UI_KEY: ${{ secrets.NG_APP_PRIMENG_UI_KEY }}
       NG_APP_SUPABASE_URL: ${{ vars.NG_APP_SUPABASE_URL }}
       NG_APP_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NG_APP_SUPABASE_PUBLISHABLE_KEY }}
-
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      SUPABASE_PROJECT_ID: ${{ vars.SUPABASE_PROJECT_ID }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
 
     steps:
       - name: Checkout repository
@@ -51,14 +48,11 @@ jobs:
       # SUPABASE PROD
       # ==========================================
 
-      - name: Link Supabase Production
-        run: pnpm supabase link --project-ref "$SUPABASE_PROJECT_ID"
-
       - name: Preview database migrations
-        run: pnpm supabase db push --dry-run
+        run: pnpm supabase db push --db-url "$SUPABASE_DB_URL" --dry-run
 
       - name: Apply database migrations
-        run: pnpm supabase db push
+        run: pnpm supabase db push --db-url "$SUPABASE_DB_URL"
 
       # ==========================================
       # ANGULAR
