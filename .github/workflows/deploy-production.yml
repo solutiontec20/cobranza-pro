@@ -1,13 +1,17 @@
 name: Deploy Production
 
 on:
+  push:
+    branches:
+      - main
+
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: production
+  group: Production
   cancel-in-progress: false
 
 jobs:

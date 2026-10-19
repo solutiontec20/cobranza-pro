@@ -9,24 +9,18 @@ export default defineConfig({
   testDir: './e2e',
 
   fullyParallel: false,
-
   forbidOnly: isCI,
-
   failOnFlakyTests: isCI,
 
   retries: isCI ? 2 : 0,
-
   workers: isCI ? 1 : undefined,
 
   reporter: 'html',
 
   use: {
     baseURL: remoteUrl ?? localUrl,
-
     trace: 'on-first-retry',
-
     screenshot: 'only-on-failure',
-
     video: 'retain-on-failure',
   },
 
@@ -42,9 +36,16 @@ export default defineConfig({
   webServer: remoteUrl
     ? undefined
     : {
-        command: 'pnpm start',
+        command:
+          'pnpm exec ng serve --host 127.0.0.1 --port 4200',
+
         url: localUrl,
+
         reuseExistingServer: !isCI,
+
         timeout: 120_000,
+
+        stdout: 'pipe',
+        stderr: 'pipe',
       },
 });
