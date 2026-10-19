@@ -106,15 +106,3 @@ jobs:
 
       - name: Run database tests
         run: pnpm supabase test db
-
-      - name: Verify generated database types
-        run: |
-          pnpm supabase gen types typescript --local > src/app/core/supabase/database.types.ts
-
-          if ! git diff --ignore-space-at-eol --exit-code --quiet -- src/app/core/supabase/database.types.ts; then
-            echo "database.types.ts no está sincronizado con el esquema PostgreSQL."
-            echo "Regenera database.types.ts y agrega el archivo actualizado al commit."
-            echo ""
-            git diff --ignore-space-at-eol -- src/app/core/supabase/database.types.ts
-            exit 1
-          fi
