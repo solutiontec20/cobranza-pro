@@ -4,3 +4,4 @@ allowBuilds:
   lmdb: true
   msgpackr-extract: true
   supabase: true
+  workerd: true
