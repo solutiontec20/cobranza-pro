@@ -6,6 +6,7 @@ La aplicación está orientada inicialmente a un equipo pequeño de administraci
 
 ## Stack
 
+
 - Angular 22
 - TypeScript 6
 - PrimeNG 22
