@@ -1,4 +1,4 @@
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 sm:p-6 lg:p-8">
+<div class="mx-auto flex w-full  flex-col gap-6 p-4 sm:p-6 lg:p-8">
   <header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
     <div>
       <p class="m-0 text-sm font-medium text-primary-700 dark:text-primary-300">
@@ -157,7 +157,7 @@
     }
 
     @if (store.filteredClients().length > 0) {
-      <div class="grid gap-3 lg:grid-cols-2">
+      <div class="grid gap-3 lg:grid-cols-3 md:grid-cols-2">
         @for (client of store.filteredClients(); track client.id) {
           <app-collection-client-card
             [client]="client"
@@ -172,7 +172,7 @@
         </div>
         <h3 class="mt-4 mb-1 text-lg font-semibold text-surface-950 dark:text-surface-0">No hay clientes en esta vista</h3>
         <p class="mt-0 mb-4 text-sm text-surface-500 dark:text-surface-400">Cambiá el filtro o limpiá la búsqueda para continuar.</p>
-        <p-button type="button" severity="secondary" variant="outlined" label="Limpiar filtros" (click)="store.clearFilters()"></p-button>
+        <button pButton type="button" severity="secondary" variant="outlined" label="Limpiar filtros" (click)="store.clearFilters()"></button>
       </div>
     }
   </section>

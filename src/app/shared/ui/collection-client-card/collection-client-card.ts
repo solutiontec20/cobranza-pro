@@ -90,7 +90,9 @@ import { CollectionClient } from '../../../modules/collector/collection.model';
             class="ml-auto min-h-10 flex-1 sm:flex-none"
             [disabled]="client().loanStatus !== 'ACTIVE' || client().balance === 0"
             (click)="paymentRequested.emit(client())"
-          ></button>
+          >
+        Cobrar
+        </button>
         </footer>
       </div>
     </article>

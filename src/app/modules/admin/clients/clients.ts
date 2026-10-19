@@ -145,7 +145,7 @@ export default class Clients {
     address: ['', [Validators.required]]
   });
 
-  collectorList = computed(() => this.appStore.profiles().filter(p => p.role === 'COBRADOR'));
+  collectorList = computed(() => this.appStore.profiles().filter(p => p.role === 'collector'));
   
   collectorOptions = computed(() => {
     return this.collectorList().map(c => ({ label: c.fullName, value: c.id }));

@@ -27,7 +27,7 @@ export default class Dashboard implements AfterViewInit, OnDestroy {
     const activeLoans = loans.filter(l => l.status === 'ACTIVE');
     const paidLoans = loans.filter(l => l.status === 'PAID');
     const clients = this.appStore.clients().filter(c => c.active);
-    const collectors = this.appStore.profiles().filter(p => p.role === 'COBRADOR' && p.active);
+    const collectors = this.appStore.profiles().filter(p => p.role === 'collector' && p.active);
     const payments = this.appStore.payments();
 
     const capitalPrestado = activeLoans.reduce((sum, l) => sum + l.principal, 0);
@@ -80,7 +80,7 @@ export default class Dashboard implements AfterViewInit, OnDestroy {
   });
 
   readonly collectorPerformance = computed(() => {
-    const collectors = this.appStore.profiles().filter(p => p.role === 'COBRADOR');
+    const collectors = this.appStore.profiles().filter(p => p.role === 'collector');
     return collectors.map(c => {
       const cClients = this.appStore.clients().filter(cl => cl.collectorId === c.id);
       

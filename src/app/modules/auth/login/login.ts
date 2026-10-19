@@ -19,42 +19,74 @@ export default class Login {
   private fb = inject(FormBuilder);
 
   errorMessage = signal<string | null>(null);
+  loading = signal(false);
+  showPin = signal(false);
 
   loginForm = this.fb.group({
-    dni: ['', [Validators.required, Validators.minLength(8)]],
-    pin: ['', [Validators.required]]
+    dni: ['', [Validators.required, Validators.pattern(/^[0-9]{8}$/)]],
+    pin: ['', [Validators.required, Validators.pattern(/^[0-9]+$/)]],
   });
 
-  onSubmit() {
+  onNumericKeyDown(event: KeyboardEvent): void {
+    const allowedNavigationKeys = [
+      'Backspace',
+      'Tab',
+      'Enter',
+      'Escape',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Delete',
+      'Home',
+      'End',
+    ];
+
+    if (allowedNavigationKeys.includes(event.key) || event.ctrlKey || event.metaKey) {
+      return;
+    }
+
+    if (!/^[0-9]$/.test(event.key)) {
+      event.preventDefault();
+    }
+  }
+
+  onNumericInput(event: Event, field: 'dni' | 'pin'): void {
+    const input = event.target as HTMLInputElement;
+    const numericValue = input.value.replace(/\D/g, '');
+    if (input.value !== numericValue) {
+      input.value = numericValue;
+      this.loginForm.get(field)?.setValue(numericValue);
+    }
+  }
+
+  async onSubmit() {
     this.errorMessage.set(null);
+
     if (this.loginForm.invalid) {
-      this.errorMessage.set('Por favor, ingrese DNI y PIN válidos');
+      this.errorMessage.set('Por favor, ingrese un DNI válido (8 dígitos) y su PIN');
       return;
     }
 
     const { dni, pin } = this.loginForm.value;
-    const result = this.authService.login(dni!, pin!);
+    this.loading.set(true);
 
-    if (result.success) {
+    try {
+      await this.authService.login(dni!, pin!);
       this.navigateBasedOnRole();
-    } else {
-      this.errorMessage.set(result.error || 'Error de autenticación');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error de autenticación';
+      this.errorMessage.set(message);
+    } finally {
+      this.loading.set(false);
     }
   }
 
-  quickLogin(profileId: string) {
-    this.errorMessage.set(null);
-    if (this.authService.switchUser(profileId)) {
-      this.navigateBasedOnRole();
-    } else {
-      this.errorMessage.set('Error al cambiar de usuario');
-    }
-  }
 
   private navigateBasedOnRole() {
     if (this.authService.isCollector()) {
       this.router.navigate(['/cobrador']);
-    } else if (this.authService.isAdmin()) {
+    } else if (this.authService.isAdmin() || this.authService.isSupervisor()) {
       this.router.navigate(['/admin']);
     }
   }

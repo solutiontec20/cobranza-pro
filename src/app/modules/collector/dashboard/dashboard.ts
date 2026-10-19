@@ -24,7 +24,6 @@ interface FilterOption {
 @Component({
   selector: 'app-collector-dashboard',
   imports: [
-    ButtonModule,
     CollectionClientCard,
     CollectionMetric,
     CurrencyPipe,

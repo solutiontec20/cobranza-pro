@@ -8,7 +8,7 @@ import { AuthService } from '../../modules/auth/auth.service';
   imports: [RouterLink, RouterLinkActive],
   template: `
     <div class="space-y-1">
-      @if (authService.currentUser()?.role === 'COBRADOR') {
+      @if (authService.isCollector()) {
         <p class="px-2 text-[10px] font-bold text-surface-400 uppercase tracking-widest mb-2 mt-4 truncate" [class.hidden]="layoutService.sidebarCollapsed()">Cobrador</p>
         
         <a routerLink="/cobrador" routerLinkActive="bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 font-bold" [routerLinkActiveOptions]="{exact: true}" class="flex items-center gap-3 px-3 py-3 rounded-lg text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 font-medium transition-colors group focus-visible:ring-2 focus-visible:ring-primary-500">
@@ -25,7 +25,7 @@ import { AuthService } from '../../modules/auth/auth.service';
           <i class="pi pi-user text-lg text-surface-400 group-hover:text-surface-700 dark:group-hover:text-surface-100 transition-colors"></i>
           <span [class.hidden]="layoutService.sidebarCollapsed()">Perfil</span>
         </a>
-      } @else if (authService.currentUser()?.role === 'ADMINISTRADOR') {
+      } @else if (authService.isAdmin() || authService.isSupervisor()) {
         <p class="px-2 text-[10px] font-bold text-surface-400 uppercase tracking-widest mb-2 mt-4 truncate" [class.hidden]="layoutService.sidebarCollapsed()">Administración</p>
         
         <a routerLink="/admin/dashboard" routerLinkActive="bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 font-bold" class="flex items-center gap-3 px-3 py-3 rounded-lg text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 font-medium transition-all group">

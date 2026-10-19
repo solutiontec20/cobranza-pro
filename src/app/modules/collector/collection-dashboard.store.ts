@@ -19,7 +19,7 @@ export class CollectionDashboardStore {
 
   readonly clients = computed<CollectionClient[]>(() => {
     const user = this.authService.currentUser();
-    if (!user || user.role !== 'COBRADOR') return [];
+    if (!user || user.role !== 'collector') return [];
 
     const allClients = this.appStore.clients().filter(c => c.collectorId === user.id && c.active);
     

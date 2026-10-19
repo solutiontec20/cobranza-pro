@@ -36,7 +36,7 @@ import { CommonModule } from '@angular/common';
                                 </p-sidebar-menu>
                             </p-sidebar-header>
                             <p-sidebar-content>
-                                @if (authService.currentUser()?.role === 'COBRADOR') {
+                                @if (authService.isCollector()) {
                                     <p-sidebar-group>
                                         <p-sidebar-group-label>Cobrador</p-sidebar-group-label>
                                         <p-sidebar-group-content>
@@ -56,7 +56,7 @@ import { CommonModule } from '@angular/common';
                                             </p-sidebar-menu>
                                         </p-sidebar-group-content>
                                     </p-sidebar-group>
-                                } @else if (authService.currentUser()?.role === 'ADMINISTRADOR') {
+                                } @else if (authService.isAdmin() || authService.isSupervisor()) {
                                     <p-sidebar-group>
                                         <p-sidebar-group-label>Administración</p-sidebar-group-label>
                                         <p-sidebar-group-content>

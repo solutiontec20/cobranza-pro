@@ -1,4 +1,4 @@
-import { Injectable, computed, signal } from '@angular/core';
+import {  Service, computed, signal } from '@angular/core';
 import { Profile, RiskLevel, FrequencyType } from '../models/profile.model';
 import { Client } from '../models/client.model';
 import { Loan } from '../models/loan.model';
@@ -8,10 +8,10 @@ import { Payment, AuditLog, AppDatabase } from '../models/payment.model';
 const STORAGE_KEY = 'cobranzapro_db_v1';
 export const SYSTEM_DATE = '2026-10-07';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class AppStoreService {
   private readonly _data = signal<AppDatabase>(this.loadOrInit());
-  
+
   // Read-only projections
   readonly profiles = computed(() => this._data().profiles);
   readonly clients = computed(() => this._data().clients);
@@ -23,10 +23,10 @@ export class AppStoreService {
   getLoanOverdueDays(loanId: string): number {
     const loan = this.loans().find(l => l.id === loanId);
     if (!loan || loan.status !== 'ACTIVE') return 0;
-    
+
     const overdueInsts = this.loanInstallments().filter(inst => {
-      return inst.loanId === loanId && 
-             inst.dueDate < SYSTEM_DATE && 
+      return inst.loanId === loanId &&
+             inst.dueDate < SYSTEM_DATE &&
              inst.status !== 'PAGADO';
     });
     return overdueInsts.length;
@@ -90,7 +90,7 @@ export class AppStoreService {
       createdBy: userId,
       createdAt: new Date().toISOString()
     };
-    
+
     const newPayments = [newPayment, ...data.payments];
 
     let unallocated = amount;
@@ -126,7 +126,7 @@ export class AppStoreService {
 
     const client = data.clients.find(c => c.id === loan.clientId);
     const updatedLoan = newLoans.find(l => l.id === loanId)!;
-    
+
     const newAuditLog: AuditLog = {
       id: 'aud-' + Date.now(),
       userId: userId,
@@ -145,7 +145,7 @@ export class AppStoreService {
       payments: newPayments,
       auditLogs: [newAuditLog, ...data.auditLogs]
     });
-    
+
     this.save();
     return {
       success: true,
@@ -227,12 +227,12 @@ export class AppStoreService {
       id: 'cli-' + Date.now(),
       createdAt: SYSTEM_DATE
     };
-    
+
     this._data.set({
       ...data,
       clients: [newClient, ...data.clients]
     });
-    
+
     this.save();
     return newClient;
   }
@@ -293,9 +293,9 @@ export class AppStoreService {
 
   private getInitialDatabase(): AppDatabase {
     const profiles: Profile[] = [
-      { id: 'prof-admin', dni: '10203040', fullName: 'Carlos Mendoza', phone: '987654321', role: 'ADMINISTRADOR', pin: '1234', active: true, failedAttempts: 0, lockedUntil: null },
-      { id: 'prof-cobrador-1', dni: '20304050', fullName: 'Pedro Castillo', phone: '912345678', role: 'COBRADOR', pin: '1234', active: true, failedAttempts: 0, lockedUntil: null },
-      { id: 'prof-cobrador-2', dni: '30405060', fullName: 'Luis Quispe', phone: '923456789', role: 'COBRADOR', pin: '1234', active: true, failedAttempts: 0, lockedUntil: null }
+      { id: 'prof-admin', dni: '10203040', fullName: 'Carlos Mendoza', phone: '987654321', role: 'admin', active: true },
+      { id: 'prof-cobrador-1', dni: '20304050', fullName: 'Pedro Castillo', phone: '912345678', role: 'collector', active: true },
+      { id: 'prof-cobrador-2', dni: '30405060', fullName: 'Luis Quispe', phone: '923456789', role: 'collector', active: true }
     ];
 
     const clients: Client[] = [
