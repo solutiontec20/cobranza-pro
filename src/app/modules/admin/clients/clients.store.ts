@@ -4,6 +4,7 @@ import {
   ClientCollectorOption,
   ClientListItem,
   CreateClientInput,
+  UpdateClientInput,
 } from '../../../core/models/client.model';
 import { CLIENT_REPOSITORY } from '../../../core/repositories/client.repository';
 
@@ -14,7 +15,7 @@ export class ClientsStore {
   readonly clients = signal<ClientListItem[]>([]);
   readonly collectors = signal<ClientCollectorOption[]>([]);
   readonly loading = signal(false);
-  readonly creating = signal(false);
+  readonly saving = signal(false);
   readonly error = signal<string | null>(null);
 
   async load(): Promise<void> {
@@ -36,7 +37,7 @@ export class ClientsStore {
   }
 
   async create(input: CreateClientInput): Promise<boolean> {
-    this.creating.set(true);
+    this.saving.set(true);
     this.error.set(null);
 
     try {
@@ -47,7 +48,23 @@ export class ClientsStore {
       this.error.set(this.messageFrom(error, 'No se pudo registrar el cliente.'));
       return false;
     } finally {
-      this.creating.set(false);
+      this.saving.set(false);
+    }
+  }
+
+  async update(input: UpdateClientInput): Promise<boolean> {
+    this.saving.set(true);
+    this.error.set(null);
+
+    try {
+      await this.repository.update(input);
+      await this.load();
+      return this.error() === null;
+    } catch (error) {
+      this.error.set(this.messageFrom(error, 'No se pudo actualizar el cliente.'));
+      return false;
+    } finally {
+      this.saving.set(false);
     }
   }
 

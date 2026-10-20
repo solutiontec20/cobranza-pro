@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(7);
+select plan(9);
 
 -- ============================================================
 -- USUARIOS DE PRUEBA
@@ -74,6 +74,33 @@ values
     '22222222-2222-2222-2222-222222222222',
     '44444444-4444-4444-4444-444444444444'
   );
+
+insert into public.loans (
+  id,
+  customer_id,
+  principal_amount,
+  interest_rate_percent,
+  total_amount,
+  disbursed_amount,
+  installment_count,
+  frequency,
+  started_on,
+  first_due_on,
+  created_by
+)
+values (
+  'cccccccc-cccc-cccc-cccc-cccccccccccc',
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  100,
+  10,
+  110,
+  100,
+  2,
+  'weekly',
+  '2026-10-20',
+  '2026-10-20',
+  '44444444-4444-4444-4444-444444444444'
+);
 
 -- ============================================================
 -- COBRADOR A
@@ -156,6 +183,26 @@ select lives_ok(
     where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
   $$,
   'El administrador puede modificar clientes'
+);
+
+select throws_ok(
+  $$
+    update public.customers
+    set active = false
+    where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+  $$,
+  '23514',
+  'CUSTOMER_HAS_ACTIVE_LOAN',
+  'No se puede desactivar un cliente con un préstamo activo'
+);
+
+select lives_ok(
+  $$
+    update public.customers
+    set active = false
+    where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+  $$,
+  'El administrador puede desactivar un cliente sin préstamo activo'
 );
 
 select * from finish();
