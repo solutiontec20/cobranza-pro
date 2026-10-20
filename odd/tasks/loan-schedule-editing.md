@@ -36,8 +36,8 @@ Administrators need to inspect the customer's real payment schedule and correct 
 - Strategy: `ask-on-risk`
 - Forecast: approximately 900 authored changed lines across SQL, tests, types, repository/store, and UI.
 - Chain strategy: `feature-branch-chain` on the existing `felix` branch.
-- Running authored changed lines: 937 (`d2130b9`; 27 generated `database.types.ts` lines excluded).
-- Pull request slices: slice 1 candidate contains `d2130b9`; no pull request created because remote delivery remains user-owned.
+- Running authored changed lines: 1,409 (`d2130b9`, `ce00f2c`; 27 generated `database.types.ts` lines excluded).
+- Pull request slices: slice 1 candidate contains `d2130b9`; slice 2 candidate contains `ce00f2c`; no pull request created because remote delivery remains user-owned.
 
 ## Testing mode
 
@@ -71,20 +71,25 @@ Administrators need to inspect the customer's real payment schedule and correct 
   - Evidence: repository and store APIs cover ordered installment loading, partial-status normalization, audited updates, list refresh, selected-schedule refresh, and translated domain errors; `pnpm test:ci` passed 5 files / 19 tests and `pnpm build` passed.
   - Rollback boundary: revert the loan model/repository/store API additions and their focused tests; no database rollback is required for this work unit.
   - RDD: disabled/unmanaged.
-  - Work-unit commit: pending.
+  - Work-unit commit: `ce00f2c` (`feat(loans): expose schedule data operations`).
 
-- [ ] **LOAN-3 — Build accessible schedule and edit experiences**
+- [x] **LOAN-3 — Build accessible schedule and edit experiences**
   - Add row actions for viewing the schedule and editing eligible loans.
   - Show the MVP schedule columns and summary values, including start/end dates.
   - Reuse the loan form for audited editing, with immutable client and eligibility guidance.
   - Acceptance: admin can view the real schedule, distinguish paid/partial/overdue/pending installments, and edit eligible loans with a reason.
   - Checks: focused Vitest suite, `pnpm build`, and a runtime UI smoke scenario when the local stack is available.
-  - Evidence: pending.
+  - Evidence: the admin table exposes accessible schedule/edit actions; the schedule dialog shows the MVP installment columns, status tags, paid/balance totals, and explicit start/end dates; the shared Signal Form supports audited editing with an immutable client and live installment recalculation.
+  - Runtime harness: a headless Chromium smoke test rendered the loans page with intercepted Supabase responses, opened the schedule, verified start/end labels and installment status, changed the installment count to four, observed the recalculated `S/ 27.50` installment, supplied an audit reason, saved, and observed the success confirmation.
+  - Rollback boundary: revert `src/app/modules/admin/loans/loans.ts`; backend and data-layer capabilities remain independently usable.
+  - RDD: disabled/unmanaged.
+  - Work-unit commit: pending.
 
 ## Progress
 
 - Exploration completed against the two MVP HTML files, README, migration guide, current Angular module, generated Supabase types, and all loan-related migrations.
 - Confirmed that the MVP contains schedule viewing but no editing behavior; the editing rules above come from the user's explicit decision and financial-integrity constraints.
+- UI implementation completed with PrimeNG dialogs/tables, Signal Forms, mobile-first responsive layout, and Spanish `es-PE` formatting.
 
 ## Verification evidence
 
@@ -94,8 +99,10 @@ Administrators need to inspect the customer's real payment schedule and correct 
 - `pnpm supabase test db` — passed; 5 files and 86 tests.
 - `pnpm supabase db lint --level warning` — new `admin_update_loan` clean; existing `admin_create_loan` has two prior loop-variable warnings.
 - `pnpm test:ci` — passed; 5 files and 19 tests.
-- `pnpm build` — passed with the pre-existing initial-bundle budget warning (784.35 kB vs 500 kB).
+- `pnpm build` — passed with the pre-existing initial-bundle budget warning (784.62 kB vs 500 kB).
+- `pnpm supabase test db` — passed after the UI integration; 5 files and 86 tests.
+- Temporary Playwright/Chromium UI smoke — passed; 1 scenario. The temporary harness was removed after verification and is not a committed E2E suite.
 
 ## Next step
 
-Commit LOAN-2, then implement LOAN-3 UI as the next feature-branch-chain slice.
+Commit LOAN-3, record its commit evidence, and close the feature recovery document.
