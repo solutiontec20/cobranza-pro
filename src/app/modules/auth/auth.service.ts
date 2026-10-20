@@ -12,15 +12,31 @@ export class AuthService {
   private _currentUser = signal<Profile | null>(this.getStoredUser());
   readonly currentUser = this._currentUser.asReadonly();
   readonly isAuthenticated = computed(() => this._currentUser() !== null);
-  readonly isAdmin = computed(() => this._currentUser()?.role === 'admin');
-  readonly isSupervisor = computed(() => this._currentUser()?.role === 'supervisor');
-  readonly isCollector = computed(() => this._currentUser()?.role === 'collector');
-
+  readonly isAdmin = computed(() => {
+    const role = this._currentUser()?.role?.toLowerCase();
+    return role === 'admin' || role === 'administrador';
+  });
+  readonly isSupervisor = computed(() => {
+    const role = this._currentUser()?.role?.toLowerCase();
+    return role === 'supervisor';
+  });
+  readonly isCollector = computed(() => {
+    const role = this._currentUser()?.role?.toLowerCase();
+    return role === 'collector' || role === 'cobrador';
+  });
 
   private getStoredUser(): Profile | null {
     try {
       const stored = localStorage.getItem('cobranzapro_user');
-      return stored ? JSON.parse(stored) : null;
+      if (!stored) return null;
+      const user = JSON.parse(stored);
+      if (user && user.role) {
+        const r = String(user.role).toLowerCase();
+        if (r === 'administrador' || r === 'admin') user.role = 'admin';
+        else if (r === 'cobrador' || r === 'collector') user.role = 'collector';
+        else if (r === 'supervisor') user.role = 'supervisor';
+      }
+      return user;
     } catch (e) {
       console.error('Error al leer usuario de localStorage', e);
       return null;

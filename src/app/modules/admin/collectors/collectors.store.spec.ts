@@ -1,0 +1,81 @@
+import { TestBed } from '@angular/core/testing';
+import { AppError } from '../../../core/errors/app-error';
+import { Collector } from '../../../core/models/collector.model';
+import {
+  COLLECTOR_REPOSITORY,
+  CollectorRepository,
+} from '../../../core/repositories/collector.repository';
+import { CollectorsStore } from './collectors.store';
+
+const collector: Collector = {
+  id: 'collector-1',
+  dni: '12345678',
+  fullName: 'María Quispe',
+  phone: '912345678',
+  active: true,
+  createdAt: '2026-10-19T12:00:00Z',
+  activeCustomerCount: 2,
+};
+
+describe('CollectorsStore', () => {
+  let store: CollectorsStore;
+  let repository: {
+    list: ReturnType<typeof vi.fn<CollectorRepository['list']>>;
+    create: ReturnType<typeof vi.fn<CollectorRepository['create']>>;
+    setActive: ReturnType<typeof vi.fn<CollectorRepository['setActive']>>;
+  };
+
+  beforeEach(() => {
+    repository = {
+      list: vi.fn<CollectorRepository['list']>().mockResolvedValue([collector]),
+      create: vi.fn<CollectorRepository['create']>(),
+      setActive: vi.fn<CollectorRepository['setActive']>(),
+    };
+
+    TestBed.configureTestingModule({
+      providers: [CollectorsStore, { provide: COLLECTOR_REPOSITORY, useValue: repository }],
+    });
+    store = TestBed.inject(CollectorsStore);
+  });
+
+  it('loads collectors and filters without accents', async () => {
+    await store.load();
+    store.query.set('maria');
+
+    expect(store.filteredCollectors()).toEqual([collector]);
+    expect(store.summary()).toEqual({ total: 1, active: 1, inactive: 0, assignedCustomers: 2 });
+  });
+
+  it('adds a newly created collector to state', async () => {
+    const created = { ...collector, id: 'collector-2', fullName: 'Ana Flores' };
+    repository.create.mockResolvedValue(created);
+
+    const result = await store.create({
+      fullName: created.fullName,
+      dni: created.dni,
+      phone: created.phone,
+      temporaryPin: '123456',
+    });
+
+    expect(result).toBe(true);
+    expect(store.collectors()).toEqual([created]);
+  });
+
+  it('surfaces the portfolio reassignment error', async () => {
+    repository.setActive.mockRejectedValue(
+      new AppError(
+        'VALIDATION',
+        'No podés desactivar al cobrador mientras tenga clientes activos. Reasigná su cartera primero.',
+      ),
+    );
+
+    const result = await store.setActive({
+      collectorId: collector.id,
+      active: false,
+      reason: 'Salida del equipo',
+    });
+
+    expect(result).toBe(false);
+    expect(store.error()).toContain('Reasigná su cartera primero');
+  });
+});

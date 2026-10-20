@@ -65,3 +65,4 @@ Desktop.ini
 supabase/.temp/
 supabase/.branches/
 .codegraph/
+.env.seed.dev

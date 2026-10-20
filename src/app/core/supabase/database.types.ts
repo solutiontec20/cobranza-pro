@@ -546,6 +546,7 @@ export type Database = {
           dni: string
           full_name: string
           id: string
+          phone: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string
         }
@@ -555,6 +556,7 @@ export type Database = {
           dni: string
           full_name: string
           id: string
+          phone?: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at?: string
         }
@@ -564,6 +566,7 @@ export type Database = {
           dni?: string
           full_name?: string
           id?: string
+          phone?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
         }
@@ -604,6 +607,51 @@ export type Database = {
       }
     }
     Functions: {
+      admin_create_collector_profile: {
+        Args: {
+          p_dni: string
+          p_full_name: string
+          p_phone?: string | null
+          p_user_id: string
+        }
+        Returns: {
+          active: boolean
+          active_customer_count: number
+          created_at: string
+          dni: string
+          full_name: string
+          id: string
+          phone: string | null
+        }[]
+      }
+      admin_list_collectors: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          active: boolean
+          active_customer_count: number
+          created_at: string
+          dni: string
+          full_name: string
+          id: string
+          phone: string | null
+        }[]
+      }
+      admin_set_collector_active: {
+        Args: {
+          p_active: boolean
+          p_collector_id: string
+          p_reason: string
+        }
+        Returns: {
+          active: boolean
+          active_customer_count: number
+          created_at: string
+          dni: string
+          full_name: string
+          id: string
+          phone: string | null
+        }[]
+      }
       register_payment: {
         Args: {
           p_amount: number

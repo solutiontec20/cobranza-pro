@@ -1,16 +1,18 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './modules/auth/auth.guard';
+import { authGuard, publicGuard } from './modules/auth/auth.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   {
     path: 'login',
+    canActivate: [publicGuard],
     loadChildren: () => import('./modules/auth/auth.routes').then(m => m.AUTH_ROUTES),
   },
   {
     path: '',
     loadComponent: () => import('./shell/app-shell'),
-    // canActivate: [authGuard],
+    canActivate: [authGuard],
+    canActivateChild: [authGuard],
     children: [
       // Collector routes
       {
