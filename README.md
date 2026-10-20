@@ -523,3 +523,4 @@ Nunca guardar tokens privados o credenciales sensibles dentro del repositorio.
 - Evitar `any`; usar tipos estrictos.
 - No duplicar reglas de negocio entre frontend y base de datos cuando una operación debe ser transaccional.
 - Preferir implementaciones simples que preserven seguridad, integridad financiera y mantenibilidad.
+
