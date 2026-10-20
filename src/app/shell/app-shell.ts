@@ -36,7 +36,11 @@ import { CommonModule } from '@angular/common';
                                 </p-sidebar-menu>
                             </p-sidebar-header>
                             <p-sidebar-content>
-                                @if (authService.isCollector()) {
+                                @if (authService.mustChangePin()) {
+                                    <p class="px-3 py-2 text-xs text-muted-color">
+                                        Cambiá el PIN temporal para habilitar tu acceso.
+                                    </p>
+                                } @else if (authService.isCollector()) {
                                     <p-sidebar-group>
                                         <p-sidebar-group-label>Cobrador</p-sidebar-group-label>
                                         <p-sidebar-group-content>
@@ -101,6 +105,19 @@ import { CommonModule } from '@angular/common';
                                         </p-sidebar-group-content>
                                     </p-sidebar-group>
                                 }
+                                <p-sidebar-group>
+                                    <p-sidebar-group-label>Seguridad</p-sidebar-group-label>
+                                    <p-sidebar-group-content>
+                                        <p-sidebar-menu>
+                                            <p-sidebar-menu-item>
+                                                <a pSidebarMenuButton routerLink="/cambiar-pin" routerLinkActive #pinRla="routerLinkActive" [isActive]="pinRla.isActive">
+                                                    <i class="pi pi-lock"></i>
+                                                    <span>Cambiar PIN</span>
+                                                </a>
+                                            </p-sidebar-menu-item>
+                                        </p-sidebar-menu>
+                                    </p-sidebar-group-content>
+                                </p-sidebar-group>
                             </p-sidebar-content>
                             <p-sidebar-footer>
                                 <p-sidebar-menu>

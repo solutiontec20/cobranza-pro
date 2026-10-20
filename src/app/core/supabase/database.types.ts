@@ -255,14 +255,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "active": boolean,"created_at": string,"dni": string,"full_name": string,"id": string,"phone": string | null,"role": Database["public"]['Enums']["app_role"],"updated_at": string
+                    "active": boolean,"created_at": string,"credentials_invalid_before": string | null,"dni": string,"full_name": string,"id": string,"must_change_pin": boolean,"phone": string | null,"pin_changed_at": string | null,"role": Database["public"]['Enums']["app_role"],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "active"?: boolean,"created_at"?: string,"dni": string,"full_name": string,"id": string,"phone"?: string | null,"role": Database["public"]['Enums']["app_role"],"updated_at"?: string
+                    "active"?: boolean,"created_at"?: string,"credentials_invalid_before"?: string | null,"dni": string,"full_name": string,"id": string,"must_change_pin"?: boolean,"phone"?: string | null,"pin_changed_at"?: string | null,"role": Database["public"]['Enums']["app_role"],"updated_at"?: string
                   }
                   Update: {
-                    "active"?: boolean,"created_at"?: string,"dni"?: string,"full_name"?: string,"id"?: string,"phone"?: string | null,"role"?: Database["public"]['Enums']["app_role"],"updated_at"?: string
+                    "active"?: boolean,"created_at"?: string,"credentials_invalid_before"?: string | null,"dni"?: string,"full_name"?: string,"id"?: string,"must_change_pin"?: boolean,"phone"?: string | null,"pin_changed_at"?: string | null,"role"?: Database["public"]['Enums']["app_role"],"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -310,6 +310,11 @@ isOneToOne: false
               "active": boolean,"active_customer_count": number,"created_at": string,"dni": string,"full_name": string,"id": string,"phone": string
             }[]
                            },
+"admin_prepare_collector_pin_reset":
+{ Args: { "p_collector_id": string,"p_reason": string }; Returns: {
+              "dni": string,"full_name": string,"id": string
+            }[]
+                           },
 "admin_set_collector_active":
 { Args: { "p_active": boolean,"p_collector_id": string,"p_reason": string }; Returns: {
               "active": boolean,"active_customer_count": number,"created_at": string,"dni": string,"full_name": string,"id": string,"phone": string
@@ -319,6 +324,9 @@ isOneToOne: false
 { Args: { "p_amount": number,"p_loan_id": string,"p_notes"?: string,"p_paid_at"?: string,"p_payment_method": string }; Returns: {
               "allocated_amount": number,"payment_id": string,"remaining_balance": number,"resulting_loan_status": Database["public"]['Enums']["loan_status"]
             }[]
+                           },
+"service_complete_collector_pin_change":
+{ Args: { "p_user_id": string }; Returns: undefined
                            },
 "submit_cash_closure":
 { Args: { "p_business_date": string,"p_delivered_amount": number,"p_observation"?: string }; Returns: {

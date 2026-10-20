@@ -6,11 +6,17 @@ export type InstallmentStatus = 'PENDIENTE' | 'PAGADO' | 'PAGO_PARCIAL' | 'VENCI
 export type FrequencyType = 'DIARIO' | 'SEMANAL' | 'MENSUAL' | 'ANUAL';
 export type RiskLevel = 'current' | 'warning' | 'late' | 'defaulted' | 'paid' | 'none' | 'green' | 'yellow' | 'orange' | 'red' | 'gray';
 
-    export interface Profile {
-      id: string;
-      dni: string;
-      fullName: string;
-      role: UserRole;
-      active: boolean;
-      phone?: string;
-    }
+export interface Profile {
+  id: string;
+  dni: string;
+  fullName: string;
+  role: UserRole;
+  active: boolean;
+  mustChangePin: boolean;
+  phone?: string;
+}
+
+export interface ChangePinInput {
+  currentPin: string;
+  newPin: string;
+}

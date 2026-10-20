@@ -4,6 +4,8 @@ import { AppError } from '../errors/app-error';
 import {
   Collector,
   CreateCollectorInput,
+  ResetCollectorPinInput,
+  ResetCollectorPinResult,
   SetCollectorActiveInput,
 } from '../models/collector.model';
 import { CollectorRepository } from '../repositories/collector.repository';
@@ -32,18 +34,7 @@ export class SupabaseCollectorRepository implements CollectorRepository {
     }>('admin-create-collector', { body: input });
 
     if (error) {
-      let message = 'No se pudo crear el cobrador.';
-
-      if (error instanceof FunctionsHttpError) {
-        try {
-          const body = (await error.context.json()) as { message?: string };
-          message = body.message ?? message;
-        } catch {
-          // The response can be empty for infrastructure errors.
-        }
-      }
-
-      throw new AppError('SUPABASE_RPC', message, error);
+      throw await this.functionError(error, 'No se pudo crear el cobrador.');
     }
 
     if (!data?.collector) {
@@ -51,6 +42,23 @@ export class SupabaseCollectorRepository implements CollectorRepository {
     }
 
     return this.toCollector(data.collector);
+  }
+
+  async resetPin(input: ResetCollectorPinInput): Promise<ResetCollectorPinResult> {
+    const { data, error } = await this.supabase.functions.invoke<ResetCollectorPinResult>(
+      'admin-reset-collector-pin',
+      { body: input },
+    );
+
+    if (error) {
+      throw await this.functionError(error, 'No se pudo restablecer el PIN.');
+    }
+
+    if (!data?.temporaryPin) {
+      throw new AppError('SUPABASE_RPC', 'El restablecimiento no devolvió un PIN temporal.');
+    }
+
+    return data;
   }
 
   async setActive(input: SetCollectorActiveInput): Promise<Collector> {
@@ -95,5 +103,20 @@ export class SupabaseCollectorRepository implements CollectorRepository {
   private toAppError(error: unknown, fallbackMessage: string) {
     const message = error instanceof Error ? error.message : fallbackMessage;
     return new AppError('SUPABASE_RPC', message || fallbackMessage, error);
+  }
+
+  private async functionError(error: unknown, fallback: string): Promise<AppError> {
+    let message = fallback;
+
+    if (error instanceof FunctionsHttpError) {
+      try {
+        const body = (await error.context.json()) as { message?: string };
+        message = body.message ?? message;
+      } catch {
+        // Infrastructure errors may return an empty response.
+      }
+    }
+
+    return new AppError('SUPABASE_RPC', message, error);
   }
 }

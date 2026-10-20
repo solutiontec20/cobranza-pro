@@ -20,3 +20,14 @@ export interface SetCollectorActiveInput {
   active: boolean;
   reason: string;
 }
+
+export interface ResetCollectorPinInput {
+  collectorId: string;
+  reason: string;
+}
+
+export interface ResetCollectorPinResult {
+  collectorId: string;
+  collectorName: string;
+  temporaryPin: string;
+}

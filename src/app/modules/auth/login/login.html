@@ -1,4 +1,12 @@
 <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-5">
+  @if (successMessage()) {
+  <div role="status"
+    class="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-800/50 dark:bg-green-950/30 dark:text-green-300">
+    <i class="pi pi-check-circle shrink-0" aria-hidden="true"></i>
+    <span>{{ successMessage() }}</span>
+  </div>
+  }
+
   <!-- Error message -->
   @if (errorMessage()) {
   <div role="alert"
@@ -42,10 +50,10 @@
           formControlName="pin"
           [type]="showPin() ? 'text' : 'password'"
           inputmode="numeric"
-          maxlength="8"
+          maxlength="6"
           (keydown)="onNumericKeyDown($event)"
           (input)="onNumericInput($event, 'pin')"
-          placeholder="PIN (••••)"
+          placeholder="PIN de 6 dígitos"
           [fluid]="true"
           class="pr-10"
         />

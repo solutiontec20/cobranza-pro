@@ -12,6 +12,7 @@ import { AuthService } from '../../auth/auth.service';
 import { CollectorsStore } from './collectors.store';
 
 const EMPTY_CREATE_MODEL = { fullName: '', dni: '', phone: '', temporaryPin: '' };
+const EMPTY_RESET_MODEL = { reason: '' };
 
 @Component({
   selector: 'app-collectors',
@@ -156,16 +157,29 @@ const EMPTY_CREATE_MODEL = { fullName: '', dni: '', phone: '', temporaryPin: '' 
                   </div>
                 </dl>
                 @if (authService.isAdmin()) {
-                  <p-button
-                    fluid
-                    size="small"
-                    [severity]="collector.active ? 'danger' : 'success'"
-                    variant="outlined"
-                    [label]="collector.active ? 'Desactivar' : 'Activar'"
-                    [icon]="collector.active ? 'pi pi-user-minus' : 'pi pi-user-plus'"
-                    [loading]="store.updatingCollectorId() === collector.id"
-                    (onClick)="openStatusDialog(collector)"
-                  />
+                  <div class="grid gap-2 sm:grid-cols-2">
+                    <p-button
+                      fluid
+                      size="small"
+                      severity="secondary"
+                      variant="outlined"
+                      label="Restablecer PIN"
+                      icon="pi pi-key"
+                      [disabled]="!collector.active"
+                      [loading]="store.resettingCollectorId() === collector.id"
+                      (onClick)="openResetDialog(collector)"
+                    />
+                    <p-button
+                      fluid
+                      size="small"
+                      [severity]="collector.active ? 'danger' : 'success'"
+                      variant="outlined"
+                      [label]="collector.active ? 'Desactivar' : 'Activar'"
+                      [icon]="collector.active ? 'pi pi-user-minus' : 'pi pi-user-plus'"
+                      [loading]="store.updatingCollectorId() === collector.id"
+                      (onClick)="openStatusDialog(collector)"
+                    />
+                  </div>
                 }
               </article>
             }
@@ -210,7 +224,18 @@ const EMPTY_CREATE_MODEL = { fullName: '', dni: '', phone: '', temporaryPin: '' 
                       />
                     </td>
                     @if (authService.isAdmin()) {
-                      <td class="px-5 py-4 text-right">
+                      <td class="px-5 py-4">
+                        <div class="flex justify-end gap-2">
+                          <p-button
+                            size="small"
+                            severity="secondary"
+                            variant="outlined"
+                            label="Restablecer PIN"
+                            icon="pi pi-key"
+                            [disabled]="!collector.active"
+                            [loading]="store.resettingCollectorId() === collector.id"
+                            (onClick)="openResetDialog(collector)"
+                          />
                         <p-button
                           size="small"
                           [severity]="collector.active ? 'danger' : 'success'"
@@ -219,6 +244,7 @@ const EMPTY_CREATE_MODEL = { fullName: '', dni: '', phone: '', temporaryPin: '' 
                           [loading]="store.updatingCollectorId() === collector.id"
                           (onClick)="openStatusDialog(collector)"
                         />
+                        </div>
                       </td>
                     }
                   </tr>
@@ -331,6 +357,77 @@ const EMPTY_CREATE_MODEL = { fullName: '', dni: '', phone: '', temporaryPin: '' 
     </p-dialog>
 
     <p-dialog
+      header="Restablecer PIN"
+      [modal]="true"
+      [visible]="resetVisible()"
+      (visibleChange)="setResetVisible($event)"
+      styleClass="w-[calc(100vw-2rem)] max-w-lg"
+    >
+      @if (selectedCollector(); as collector) {
+        @if (resetResult(); as result) {
+          <div class="flex flex-col gap-4" aria-live="polite">
+            <p-message severity="success" styleClass="w-full">
+              El PIN de {{ result.collectorName }} fue restablecido.
+            </p-message>
+            <div class="rounded-xl border border-primary-200 bg-primary-50 p-5 text-center dark:border-primary-800 dark:bg-primary-950/30">
+              <p class="text-sm text-muted-color">PIN temporal — se muestra una sola vez</p>
+              <p class="mt-2 font-mono text-3xl font-bold tracking-[0.35em] text-color">
+                {{ result.temporaryPin }}
+              </p>
+            </div>
+            <p class="text-sm text-muted-color">
+              Entregalo al cobrador por un canal seguro. Deberá cambiarlo al iniciar sesión.
+            </p>
+            <div class="flex justify-end">
+              <p-button label="Cerrar" (onClick)="setResetVisible(false)" />
+            </div>
+          </div>
+        } @else {
+          <form class="flex flex-col gap-4" (submit)="resetPin(); $event.preventDefault()">
+            <p class="text-sm text-muted-color">
+              Se invalidará el acceso anterior de
+              <strong class="text-color">{{ collector.fullName }}</strong> y se generará un PIN temporal.
+            </p>
+            @if (!collector.active) {
+              <p-message severity="warn" styleClass="w-full">
+                Activá al cobrador antes de restablecer su PIN.
+              </p-message>
+            }
+            <div>
+              <label for="reset-pin-reason" class="mb-2 block text-sm font-medium text-color">Motivo</label>
+              <textarea
+                id="reset-pin-reason"
+                pInputText
+                rows="3"
+                class="w-full resize-y"
+                [formField]="resetForm.reason"
+              ></textarea>
+              @if (resetForm.reason().touched() && resetForm.reason().invalid()) {
+                <small class="mt-1 block text-red-600">{{ resetForm.reason().errors()[0]?.message }}</small>
+              }
+            </div>
+            <div class="flex justify-end gap-2">
+              <p-button
+                type="button"
+                label="Cancelar"
+                severity="secondary"
+                variant="text"
+                (onClick)="setResetVisible(false)"
+              />
+              <p-button
+                type="submit"
+                label="Generar PIN temporal"
+                icon="pi pi-key"
+                [loading]="store.resettingCollectorId() === collector.id"
+                [disabled]="resetForm().invalid() || !collector.active"
+              />
+            </div>
+          </form>
+        }
+      }
+    </p-dialog>
+
+    <p-dialog
       [header]="selectedCollector()?.active ? 'Desactivar cobrador' : 'Activar cobrador'"
       [modal]="true"
       [visible]="statusVisible()"
@@ -396,6 +493,8 @@ export default class Collectors {
   protected readonly loadingRows = [1, 2, 3];
   protected readonly createVisible = signal(false);
   protected readonly statusVisible = signal(false);
+  protected readonly resetVisible = signal(false);
+  protected readonly resetResult = signal<{ collectorName: string; temporaryPin: string } | null>(null);
   protected readonly selectedCollector = signal<Collector | null>(null);
 
   protected readonly createModel = signal({ ...EMPTY_CREATE_MODEL });
@@ -413,6 +512,11 @@ export default class Collectors {
   protected readonly statusModel = signal({ reason: '' });
   protected readonly statusForm = form(this.statusModel, (path) => {
     required(path.reason, { message: 'Ingresá el motivo del cambio.' });
+    minLength(path.reason, 5, { message: 'Detallá el motivo en al menos 5 caracteres.' });
+  });
+  protected readonly resetModel = signal({ ...EMPTY_RESET_MODEL });
+  protected readonly resetForm = form(this.resetModel, (path) => {
+    required(path.reason, { message: 'Ingresá el motivo del restablecimiento.' });
     minLength(path.reason, 5, { message: 'Detallá el motivo en al menos 5 caracteres.' });
   });
 
@@ -445,7 +549,7 @@ export default class Collectors {
         this.messageService.add({
           severity: 'success',
           summary: 'Cobrador creado',
-          detail: 'El acceso fue creado correctamente.',
+          detail: 'El acceso fue creado. Deberá cambiar el PIN temporal al iniciar sesión.',
         });
       }
     });
@@ -474,6 +578,41 @@ export default class Collectors {
           severity: 'success',
           summary: 'Estado actualizado',
           detail: `El cobrador quedó ${collector.active ? 'inactivo' : 'activo'}.`,
+        });
+      }
+    });
+  }
+
+  protected openResetDialog(collector: Collector): void {
+    this.store.clearError();
+    this.selectedCollector.set(collector);
+    this.resetResult.set(null);
+    this.resetForm().reset();
+    this.resetModel.set({ ...EMPTY_RESET_MODEL });
+    this.resetVisible.set(true);
+  }
+
+  protected setResetVisible(visible: boolean): void {
+    this.resetVisible.set(visible);
+    if (!visible) {
+      this.resetResult.set(null);
+    }
+  }
+
+  protected resetPin(): void {
+    const collector = this.selectedCollector();
+    if (!collector) return;
+
+    void submit(this.resetForm, async () => {
+      const result = await this.store.resetPin({
+        collectorId: collector.id,
+        reason: this.resetModel().reason.trim(),
+      });
+
+      if (result) {
+        this.resetResult.set({
+          collectorName: result.collectorName,
+          temporaryPin: result.temporaryPin,
         });
       }
     });
