@@ -56,7 +56,7 @@ import { CommonModule } from '@angular/common';
                                             </p-sidebar-menu>
                                         </p-sidebar-group-content>
                                     </p-sidebar-group>
-                                } @else if (authService.isAdmin() || authService.isSupervisor()) {
+                                } @else {
                                     <p-sidebar-group>
                                         <p-sidebar-group-label>Administración</p-sidebar-group-label>
                                         <p-sidebar-group-content>
@@ -105,10 +105,27 @@ import { CommonModule } from '@angular/common';
                             <p-sidebar-footer>
                                 <p-sidebar-menu>
                                     <p-sidebar-menu-item>
-                                        <button pSidebarMenuButton class="p-1!">
-                                            <p-avatar [label]="authService.currentUser()?.fullName?.charAt(0) || 'U'" shape="circle" class="size-6 shrink-0 text-xs font-bold bg-gradient-to-br from-indigo-500 to-purple-600 text-white" />
-                                            <span class="font-semibold text-sm">{{ authService.currentUser()?.fullName || 'Usuario' }}</span>
-                                        </button>
+                                        <div class="flex items-center justify-between w-full px-2 py-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors">
+                                            <div class="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
+                                                <p-avatar [label]="authService.currentUser()?.fullName?.charAt(0) || 'U'" shape="circle" class="size-7 shrink-0 text-xs font-bold bg-gradient-to-br from-indigo-500 to-purple-600 text-white" />
+                                                <div class="flex flex-col min-w-0">
+                                                    <span class="font-semibold text-xs truncate text-surface-800 dark:text-surface-100">{{ authService.currentUser()?.fullName || 'Usuario' }}</span>
+                                                    <span class="text-[10px] text-surface-400 capitalize truncate">{{ authService.currentUser()?.role || '' }}</span>
+                                                </div>
+                                            </div>
+                                            <button
+                                                pButton
+                                                type="button"
+                                                [text]="true"
+                                                [rounded]="true"
+                                                severity="danger"
+                                                class="text-surface-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 w-8 h-8 p-0 shrink-0 flex items-center justify-center transition-colors cursor-pointer ml-1"
+                                                (click)="authService.logout()"
+                                                title="Cerrar sesión"
+                                                aria-label="Cerrar sesión">
+                                                <i class="pi pi-sign-out text-base"></i>
+                                            </button>
+                                        </div>
                                     </p-sidebar-menu-item>
                                 </p-sidebar-menu>
                             </p-sidebar-footer>

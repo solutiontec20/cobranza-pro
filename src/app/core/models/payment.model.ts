@@ -1,6 +1,6 @@
 import { Client } from './client.model';
 import { Installment } from './installment.model';
-import { Loan } from './loan.model';
+import { LegacyLoan } from './legacy-loan.model';
 import { Profile } from './profile.model';
 
 export interface Payment {
@@ -29,7 +29,7 @@ export interface AuditLog {
 export interface AppDatabase {
   profiles: Profile[];
   clients: Client[];
-  loans: Loan[];
+  loans: LegacyLoan[];
   loanInstallments: Installment[];
   payments: Payment[];
   auditLogs: AuditLog[];

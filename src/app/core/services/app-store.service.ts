@@ -1,7 +1,7 @@
 import {  Service, computed, signal } from '@angular/core';
-import { Profile, RiskLevel, FrequencyType } from '../models/profile.model';
+import { Profile, RiskLevel } from '../models/profile.model';
 import { Client } from '../models/client.model';
-import { Loan } from '../models/loan.model';
+import { LegacyLoan } from '../models/legacy-loan.model';
 import { Installment } from '../models/installment.model';
 import { Payment, AuditLog, AppDatabase } from '../models/payment.model';
 
@@ -155,88 +155,6 @@ export class AppStoreService {
     };
   }
 
-  createLoan(params: { clientId: string; principal: number; interestRate: number; frequency: FrequencyType; numberOfInstallments: number; startDate: string }, userId: string): Loan {
-    let { principal, interestRate, numberOfInstallments } = params;
-    principal = parseFloat(principal.toString());
-    interestRate = parseFloat(interestRate.toString());
-    numberOfInstallments = parseInt(numberOfInstallments.toString(), 10);
-
-    const data = this._data();
-    const client = data.clients.find(c => c.id === params.clientId);
-    if (!client) throw new Error('Cliente no encontrado');
-
-    const existingActive = data.loans.find(l => l.clientId === params.clientId && l.status === 'ACTIVE');
-    if (existingActive) {
-      throw new Error('El cliente ya tiene un préstamo ACTIVO. No se permite más de uno a la vez.');
-    }
-
-    const interestAmount = parseFloat((principal * (interestRate / 100)).toFixed(2));
-    const totalAmount = parseFloat((principal + interestAmount).toFixed(2));
-    const installmentAmount = parseFloat((totalAmount / numberOfInstallments).toFixed(2));
-
-    const loanId = 'loan-' + Date.now();
-    const loan: Loan = {
-      id: loanId,
-      clientId: params.clientId,
-      collectorId: client.collectorId,
-      principal,
-      interestRate,
-      interestAmount,
-      totalAmount,
-      installmentAmount,
-      frequency: params.frequency,
-      numberOfInstallments,
-      startDate: params.startDate,
-      endDate: params.startDate,
-      balance: totalAmount,
-      status: 'ACTIVE',
-      createdAt: SYSTEM_DATE
-    };
-
-    const installments = this.generateSchedule(loan);
-    loan.endDate = installments[installments.length - 1].dueDate;
-
-    const currentUser = data.profiles.find(p => p.id === userId);
-
-    const newAuditLog: AuditLog = {
-      id: 'aud-' + Date.now(),
-      userId: userId,
-      userName: currentUser ? currentUser.fullName : 'Desconocido',
-      action: 'CREAR_PRESTAMO',
-      entity: 'loans',
-      entityId: loanId,
-      details: `Préstamo creado de S/ ${principal} al ${interestRate}% (${numberOfInstallments} cuotas de S/ ${installmentAmount}) para ${client.fullName}`,
-      createdAt: new Date().toLocaleString('es-PE')
-    };
-
-    this._data.set({
-      ...data,
-      loans: [loan, ...data.loans],
-      loanInstallments: [...data.loanInstallments, ...installments],
-      auditLogs: [newAuditLog, ...data.auditLogs]
-    });
-
-    this.save();
-    return loan;
-  }
-
-  addClient(client: Omit<Client, 'id' | 'createdAt'>): Client {
-    const data = this._data();
-    const newClient: Client = {
-      ...client,
-      id: 'cli-' + Date.now(),
-      createdAt: SYSTEM_DATE
-    };
-
-    this._data.set({
-      ...data,
-      clients: [newClient, ...data.clients]
-    });
-
-    this.save();
-    return newClient;
-  }
-
   resetData(): void {
     const initial = this.getInitialDatabase();
     this._data.set(initial);
@@ -261,7 +179,7 @@ export class AppStoreService {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(this._data()));
   }
 
-  private generateSchedule(loan: Loan): Installment[] {
+  private generateSchedule(loan: LegacyLoan): Installment[] {
     const list: Installment[] = [];
     let d = new Date(loan.startDate + 'T00:00:00');
     let count = 0;
@@ -309,7 +227,7 @@ export class AppStoreService {
       { id: 'cli-8', dni: '42345678', fullName: 'Lucía Díaz', phone: '998899001', address: 'Ca. Los Cedros 123, Trujillo', addressReference: 'Mz B Lote 4', collectorId: 'prof-cobrador-2', notes: 'Atraso de 2 cuotas por viaje', active: true, createdAt: '2026-09-10' }
     ];
 
-    const loans: Loan[] = [
+    const loans: LegacyLoan[] = [
       { id: 'loan-1', clientId: 'cli-1', collectorId: 'prof-cobrador-1', principal: 200, interestRate: 20, interestAmount: 40, totalAmount: 240, installmentAmount: 10, frequency: 'DIARIO', numberOfInstallments: 24, startDate: '2026-09-15', endDate: '2026-10-16', balance: 150, status: 'ACTIVE', createdAt: '2026-09-15' },
       { id: 'loan-2', clientId: 'cli-2', collectorId: 'prof-cobrador-1', principal: 300, interestRate: 20, interestAmount: 60, totalAmount: 360, installmentAmount: 15, frequency: 'DIARIO', numberOfInstallments: 24, startDate: '2026-09-15', endDate: '2026-10-16', balance: 300, status: 'ACTIVE', createdAt: '2026-09-15' },
       { id: 'loan-3', clientId: 'cli-3', collectorId: 'prof-cobrador-1', principal: 400, interestRate: 20, interestAmount: 80, totalAmount: 480, installmentAmount: 20, frequency: 'DIARIO', numberOfInstallments: 24, startDate: '2026-09-10', endDate: '2026-10-13', balance: 420, status: 'ACTIVE', createdAt: '2026-09-10' },
