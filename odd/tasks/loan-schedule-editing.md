@@ -36,8 +36,8 @@ Administrators need to inspect the customer's real payment schedule and correct 
 - Strategy: `ask-on-risk`
 - Forecast: approximately 900 authored changed lines across SQL, tests, types, repository/store, and UI.
 - Chain strategy: `feature-branch-chain` on the existing `felix` branch.
-- Running authored changed lines: 1,409 (`d2130b9`, `ce00f2c`; 27 generated `database.types.ts` lines excluded).
-- Pull request slices: slice 1 candidate contains `d2130b9`; slice 2 candidate contains `ce00f2c`; no pull request created because remote delivery remains user-owned.
+- Running authored changed lines: 1,817 through the three implementation commits (`d2130b9`, `ce00f2c`, `d9f01de`; 27 generated `database.types.ts` lines and final bookkeeping excluded).
+- Pull request slices: slice 1 candidate contains `d2130b9`; slice 2 candidate contains `ce00f2c`; slice 3 candidate contains `d9f01de`; no pull request created because remote delivery remains user-owned.
 
 ## Testing mode
 
@@ -83,7 +83,7 @@ Administrators need to inspect the customer's real payment schedule and correct 
   - Runtime harness: a headless Chromium smoke test rendered the loans page with intercepted Supabase responses, opened the schedule, verified start/end labels and installment status, changed the installment count to four, observed the recalculated `S/ 27.50` installment, supplied an audit reason, saved, and observed the success confirmation.
   - Rollback boundary: revert `src/app/modules/admin/loans/loans.ts`; backend and data-layer capabilities remain independently usable.
   - RDD: disabled/unmanaged.
-  - Work-unit commit: pending.
+  - Work-unit commit: `d9f01de` (`feat(loans): add schedule and editing UI`).
 
 ## Progress
 
@@ -105,4 +105,4 @@ Administrators need to inspect the customer's real payment schedule and correct 
 
 ## Next step
 
-Commit LOAN-3, record its commit evidence, and close the feature recovery document.
+Feature implementation and local verification are complete. Remote push and pull-request creation remain user-owned decisions.
