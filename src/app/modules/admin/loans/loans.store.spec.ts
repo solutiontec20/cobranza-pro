@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { LoanListItem } from '../../../core/models/loan.model';
+import { AppError } from '../../../core/errors/app-error';
+import { LoanInstallment, LoanListItem } from '../../../core/models/loan.model';
 import { LOAN_REPOSITORY, LoanRepository } from '../../../core/repositories/loan.repository';
 import { calculateLoanSummary, firstDueOn } from './loan-calculations';
 import { LoansStore } from './loans.store';
@@ -23,19 +24,37 @@ const loan: LoanListItem = {
   createdAt: '2026-10-19T12:00:00Z',
 };
 
+const schedule: LoanInstallment[] = [
+  {
+    id: 'installment-1',
+    loanId: loan.id,
+    installmentNumber: 1,
+    dueDate: loan.startedOn,
+    scheduledAmount: 36.67,
+    paidAmount: 0,
+    outstandingAmount: 36.67,
+    status: 'pending',
+    overdueDays: 0,
+  },
+];
+
 describe('LoansStore', () => {
   let store: LoansStore;
   let repository: {
     list: ReturnType<typeof vi.fn<LoanRepository['list']>>;
     listAvailableClients: ReturnType<typeof vi.fn<LoanRepository['listAvailableClients']>>;
+    getSchedule: ReturnType<typeof vi.fn<LoanRepository['getSchedule']>>;
     create: ReturnType<typeof vi.fn<LoanRepository['create']>>;
+    update: ReturnType<typeof vi.fn<LoanRepository['update']>>;
   };
 
   beforeEach(() => {
     repository = {
       list: vi.fn<LoanRepository['list']>().mockResolvedValue([loan]),
       listAvailableClients: vi.fn<LoanRepository['listAvailableClients']>().mockResolvedValue([]),
+      getSchedule: vi.fn<LoanRepository['getSchedule']>().mockResolvedValue(schedule),
       create: vi.fn<LoanRepository['create']>(),
+      update: vi.fn<LoanRepository['update']>(),
     };
     TestBed.configureTestingModule({
       providers: [LoansStore, { provide: LOAN_REPOSITORY, useValue: repository }],
@@ -76,6 +95,71 @@ describe('LoansStore', () => {
         firstDueOn: loan.startedOn,
       }),
     ).toBe(true);
+    expect(repository.list).toHaveBeenCalledOnce();
+  });
+
+  it('loads the selected payment schedule', async () => {
+    await store.loadSchedule(loan.id);
+
+    expect(repository.getSchedule).toHaveBeenCalledWith(loan.id);
+    expect(store.selectedScheduleLoanId()).toBe(loan.id);
+    expect(store.selectedSchedule()).toEqual(schedule);
+    expect(store.loadingSchedule()).toBe(false);
+  });
+
+  it('updates a loan and reloads its list and selected schedule', async () => {
+    repository.update.mockResolvedValue({
+      id: loan.id,
+      clientId: loan.clientId,
+      principal: 120,
+      interestRate: loan.interestRate,
+      totalAmount: 132,
+      disbursedAmount: 120,
+      installmentCount: 4,
+      frequency: loan.frequency,
+      startedOn: loan.startedOn,
+      firstDueOn: loan.startedOn,
+      status: loan.status,
+      createdAt: loan.createdAt,
+    });
+    await store.loadSchedule(loan.id);
+    repository.getSchedule.mockClear();
+
+    const updated = await store.update({
+      loanId: loan.id,
+      principal: 120,
+      interestRate: loan.interestRate,
+      frequency: loan.frequency,
+      installmentCount: 4,
+      startedOn: loan.startedOn,
+      reason: 'Corregir datos del contrato',
+    });
+
+    expect(updated).toBe(true);
+    expect(repository.list).toHaveBeenCalledOnce();
+    expect(repository.getSchedule).toHaveBeenCalledWith(loan.id);
+    expect(store.saving()).toBe(false);
+  });
+
+  it('exposes repository errors without replacing the current loan list', async () => {
+    await store.load();
+    repository.update.mockRejectedValue(
+      new AppError('VALIDATION', 'Solo se pueden editar préstamos activos.'),
+    );
+
+    const updated = await store.update({
+      loanId: loan.id,
+      principal: loan.principal,
+      interestRate: loan.interestRate,
+      frequency: loan.frequency,
+      installmentCount: loan.installmentCount,
+      startedOn: loan.startedOn,
+      reason: 'Corregir datos del contrato',
+    });
+
+    expect(updated).toBe(false);
+    expect(store.error()).toBe('Solo se pueden editar préstamos activos.');
+    expect(store.loans()).toEqual([loan]);
     expect(repository.list).toHaveBeenCalledOnce();
   });
 });

@@ -36,8 +36,8 @@ Administrators need to inspect the customer's real payment schedule and correct 
 - Strategy: `ask-on-risk`
 - Forecast: approximately 900 authored changed lines across SQL, tests, types, repository/store, and UI.
 - Chain strategy: `feature-branch-chain` on the existing `felix` branch.
-- Running authored changed lines: 0
-- Pull request slices: none
+- Running authored changed lines: 937 (`d2130b9`; 27 generated `database.types.ts` lines excluded).
+- Pull request slices: slice 1 candidate contains `d2130b9`; no pull request created because remote delivery remains user-owned.
 
 ## Testing mode
 
@@ -60,14 +60,18 @@ Administrators need to inspect the customer's real payment schedule and correct 
   - Runtime harness: local Supabase PostgreSQL reset plus pgTAP RPC scenarios passed.
   - Rollback boundary: remove `20261020181747_update_loan_schedule.sql` and revert its pgTAP/schema assertions and generated type additions before the migration is deployed.
   - RDD: disabled/unmanaged.
+  - Work-unit commit: `d2130b9` (`feat(loans): add audited schedule updates`).
 
-- [ ] **LOAN-2 — Expose schedule and update operations through the Angular data layer**
+- [x] **LOAN-2 — Expose schedule and update operations through the Angular data layer**
   - Add schedule/update models and repository methods.
   - Implement Supabase mapping and domain error translation.
   - Extend the loan store with schedule loading and update state.
   - Acceptance: typed repository/store APIs load ordered installment balances and refresh the list after a successful edit.
   - Checks: focused Vitest suite and TypeScript build.
-  - Evidence: pending.
+  - Evidence: repository and store APIs cover ordered installment loading, partial-status normalization, audited updates, list refresh, selected-schedule refresh, and translated domain errors; `pnpm test:ci` passed 5 files / 19 tests and `pnpm build` passed.
+  - Rollback boundary: revert the loan model/repository/store API additions and their focused tests; no database rollback is required for this work unit.
+  - RDD: disabled/unmanaged.
+  - Work-unit commit: pending.
 
 - [ ] **LOAN-3 — Build accessible schedule and edit experiences**
   - Add row actions for viewing the schedule and editing eligible loans.
@@ -89,9 +93,9 @@ Administrators need to inspect the customer's real payment schedule and correct 
 - `pnpm supabase db reset` — passed; all migrations applied on local PostgreSQL 17.
 - `pnpm supabase test db` — passed; 5 files and 86 tests.
 - `pnpm supabase db lint --level warning` — new `admin_update_loan` clean; existing `admin_create_loan` has two prior loop-variable warnings.
-- `pnpm test:ci` — passed; 4 files and 11 tests.
-- `pnpm build` — passed with the pre-existing initial-bundle budget warning (784.33 kB vs 500 kB).
+- `pnpm test:ci` — passed; 5 files and 19 tests.
+- `pnpm build` — passed with the pre-existing initial-bundle budget warning (784.35 kB vs 500 kB).
 
 ## Next step
 
-Commit LOAN-1 as a work unit, then implement LOAN-2.
+Commit LOAN-2, then implement LOAN-3 UI as the next feature-branch-chain slice.
