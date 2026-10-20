@@ -155,23 +155,6 @@ export class AppStoreService {
     };
   }
 
-  addClient(client: Omit<Client, 'id' | 'createdAt'>): Client {
-    const data = this._data();
-    const newClient: Client = {
-      ...client,
-      id: 'cli-' + Date.now(),
-      createdAt: SYSTEM_DATE
-    };
-
-    this._data.set({
-      ...data,
-      clients: [newClient, ...data.clients]
-    });
-
-    this.save();
-    return newClient;
-  }
-
   resetData(): void {
     const initial = this.getInitialDatabase();
     this._data.set(initial);

@@ -1,228 +1,340 @@
+import { CurrencyPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { TableModule } from 'primeng/table';
+import {
+  form,
+  FormField,
+  maxLength,
+  pattern,
+  required,
+  submit,
+} from '@angular/forms/signals';
+import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
-import { TagModule } from 'primeng/tag';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
+import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
-import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { CurrencyPipe } from '@angular/common';
-import { AppStoreService, SYSTEM_DATE } from '../../../core/services/app-store.service';
-import { MessageService } from 'primeng/api';
+import { SkeletonModule } from 'primeng/skeleton';
+import { TableModule } from 'primeng/table';
+import { TagModule } from 'primeng/tag';
+import { ClientListItem } from '../../../core/models/client.model';
+import { ClientsStore } from './clients.store';
+
+interface ClientFormModel {
+  dni: string;
+  fullName: string;
+  phone: string;
+  collectorId: string;
+  address: string;
+  notes: string;
+}
+
+const emptyModel = (): ClientFormModel => ({
+  dni: '',
+  fullName: '',
+  phone: '',
+  collectorId: '',
+  address: '',
+  notes: '',
+});
 
 @Component({
   selector: 'app-admin-clients',
   imports: [
-    TableModule, ButtonModule, TagModule, DialogModule, InputTextModule,
-    IconFieldModule, InputIconModule, SelectModule, FormsModule, ReactiveFormsModule, CurrencyPipe
+    ButtonModule,
+    CurrencyPipe,
+    DialogModule,
+    FormField,
+    InputTextModule,
+    MessageModule,
+    SelectModule,
+    SkeletonModule,
+    TableModule,
+    TagModule,
   ],
-  providers: [MessageService],
   template: `
-    <div class="p-4 max-w-7xl mx-auto flex flex-col gap-4">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 sm:p-6" aria-labelledby="clients-title">
+      <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-surface-900 dark:text-surface-0 m-0">Mantenedor de Clientes</h1>
-          <p class="text-sm text-surface-500 mt-1">Administra el padrón de clientes y su asignación a cobradores.</p>
+          <p class="mb-1 text-sm font-medium text-primary">Cartera</p>
+          <h1 id="clients-title" class="text-2xl font-bold text-color sm:text-3xl">Clientes</h1>
+          <p class="mt-1 text-sm text-muted-color">
+            Registrá clientes y asignales un cobrador antes de crear sus préstamos.
+          </p>
         </div>
-        <p-button (click)="openNewDialog()"><i class="pi pi-plus mr-2"></i>Nuevo Cliente</p-button>
-      </div>
+        <p-button
+          label="Nuevo cliente"
+          icon="pi pi-user-plus"
+          [disabled]="store.loading() || store.collectors().length === 0"
+          (onClick)="openDialog()"
+        />
+      </header>
 
-      <div class="card bg-surface-0 dark:bg-surface-900 p-4 border-round-xl shadow-sm">
-        <div class="flex flex-wrap gap-3 mb-4">
-          <p-iconfield styleClass="w-full md:w-auto flex-1 md:flex-none md:w-64">
-            <p-inputicon styleClass="pi pi-search" />
-            <input pInputText type="text" placeholder="Buscar cliente o DNI..." [(ngModel)]="searchQuery" class="w-full" />
-          </p-iconfield>
-          <p-select 
-            [options]="collectorOptions()" 
-            [(ngModel)]="selectedCollector" 
-            placeholder="Todos los cobradores"
-            optionLabel="label" 
-            optionValue="value"
-            showClear="true"
-            class="w-full md:w-56"
-          ></p-select>
-        </div>
+      @if (store.error()) {
+        <p-message severity="error" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
+      }
 
-        <p-table [value]="filteredClients()" [rows]="10" [paginator]="true" responsiveLayout="scroll" styleClass="p-datatable-sm">
-          <ng-template #header>
-            <tr>
-              <th>DNI</th>
-              <th>Nombre</th>
-              <th>Teléfono</th>
-              <th>Cobrador asignado</th>
-              <th>Estado Riesgo</th>
-              <th>Saldo</th>
-              <th>Días Atraso</th>
-              <th class="text-center">Acciones</th>
-            </tr>
-          </ng-template>
-          <ng-template #body let-client>
-            <tr>
-              <td class="font-bold">{{ client.dni }}</td>
-              <td [class.text-red-500]="client.risk.isMoroso">
-                @if (client.risk.isMoroso) { 🔴 } {{ client.fullName }}
-              </td>
-              <td>{{ client.phone || '-' }}</td>
-              <td>
-                <p-tag severity="secondary" [value]="client.collectorName"></p-tag>
-              </td>
-              <td>
-                <p-tag [severity]="getRiskSeverity(client.risk.level)" [value]="client.risk.text"></p-tag>
-              </td>
-              <td class="font-bold" [class.text-red-500]="client.balance > 0">{{ client.balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-              <td>
-                <span [class.text-red-500]="client.risk.days > 0">{{ client.risk.days }} días</span>
-              </td>
-              <td class="text-center">
-                <div class="flex gap-2 justify-center">
-                  <p-button severity="secondary" variant="outlined" size="small"><i class="pi pi-eye mr-2"></i>Ver</p-button>
-                  <p-button severity="secondary" variant="outlined" size="small" (click)="openEditDialog(client)"><i class="pi pi-pencil mr-2"></i>Editar</p-button>
-                </div>
-              </td>
-            </tr>
-          </ng-template>
-          <ng-template #empty>
-            <tr>
-              <td colspan="8" class="text-center p-4">No se encontraron clientes.</td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </div>
-    </div>
+      <section class="rounded-xl border border-surface bg-surface-0 p-4 shadow-sm dark:bg-surface-900" aria-label="Filtros de clientes">
+        <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_18rem]">
+          <label class="flex flex-col gap-2 text-sm font-medium text-color">
+            Buscar
+            <input
+              pInputText
+              type="search"
+              placeholder="Nombre o DNI"
+              [value]="searchQuery()"
+              (input)="updateSearch($event)"
+            />
+          </label>
+          <label class="flex flex-col gap-2 text-sm font-medium text-color">
+            Cobrador
+            <select
+              class="h-10 rounded-md border border-surface bg-surface-0 px-3 text-color outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-surface-950"
+              [value]="selectedCollector()"
+              (change)="updateCollector($event)"
+            >
+              <option value="">Todos los cobradores</option>
+              @for (collector of store.collectors(); track collector.id) {
+                <option [value]="collector.id">{{ collector.fullName }}</option>
+              }
+            </select>
+          </label>
+        </div>
+      </section>
 
-    <p-dialog [(visible)]="dialogVisible" [header]="dialogMode() === 'new' ? 'Nuevo Cliente' : 'Editar Cliente'" [modal]="true" [style]="{width: '500px'}">
-      <form [formGroup]="clientForm" (ngSubmit)="saveClient()" class="flex flex-col gap-4 mt-2">
-        <div class="flex flex-col gap-1">
-          <label for="dni" class="font-medium text-sm">DNI</label>
-          <input pInputText id="dni" formControlName="dni" />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label for="fullName" class="font-medium text-sm">Nombre Completo</label>
-          <input pInputText id="fullName" formControlName="fullName" />
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex flex-col gap-1">
-            <label for="phone" class="font-medium text-sm">Teléfono</label>
-            <input pInputText id="phone" formControlName="phone" />
+      <section class="overflow-hidden rounded-xl border border-surface bg-surface-0 shadow-sm dark:bg-surface-900">
+        @if (store.loading()) {
+          <div class="space-y-3 p-4" aria-label="Cargando clientes">
+            @for (row of loadingRows; track row) {
+              <p-skeleton height="4rem" borderRadius="0.75rem" />
+            }
           </div>
-          <div class="flex flex-col gap-1">
-            <label for="collectorId" class="font-medium text-sm">Cobrador Asignado</label>
-            <p-select id="collectorId" formControlName="collectorId" [options]="collectorList()" optionLabel="fullName" optionValue="id" placeholder="Seleccionar" appendTo="body" class="w-full"></p-select>
+        } @else if (filteredClients().length === 0) {
+          <div class="flex flex-col items-center px-6 py-14 text-center">
+            <i class="pi pi-users mb-4 text-4xl text-muted-color" aria-hidden="true"></i>
+            <h2 class="text-lg font-semibold text-color">No hay clientes para mostrar</h2>
+            <p class="mt-1 text-sm text-muted-color">
+              Ajustá los filtros o registrá el primer cliente de la cartera.
+            </p>
+          </div>
+        } @else {
+          <p-table
+            [value]="filteredClients()"
+            [rows]="10"
+            [paginator]="filteredClients().length > 10"
+            responsiveLayout="scroll"
+            styleClass="p-datatable-sm"
+          >
+            <ng-template #header>
+              <tr>
+                <th>DNI</th>
+                <th>Cliente</th>
+                <th>Teléfono</th>
+                <th>Cobrador</th>
+                <th>Riesgo</th>
+                <th>Saldo</th>
+                <th>Estado</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-client>
+              <tr>
+                <td class="font-semibold">{{ client.dni }}</td>
+                <td>
+                  <span class="font-semibold">{{ client.fullName }}</span><br />
+                  <small class="text-muted-color">{{ client.address || 'Sin dirección' }}</small>
+                </td>
+                <td>{{ client.phone || '—' }}</td>
+                <td><p-tag severity="secondary" [value]="client.collectorName" /></td>
+                <td><p-tag [severity]="riskSeverity(client)" [value]="riskLabel(client)" /></td>
+                <td class="font-semibold" [class.text-red-600]="client.outstandingAmount > 0">
+                  {{ client.outstandingAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                </td>
+                <td>
+                  <p-tag
+                    [severity]="client.active ? 'success' : 'secondary'"
+                    [value]="client.active ? 'Activo' : 'Inactivo'"
+                  />
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        }
+      </section>
+    </main>
+
+    <p-dialog
+      header="Registrar cliente"
+      [modal]="true"
+      [visible]="dialogVisible()"
+      (visibleChange)="dialogVisible.set($event)"
+      styleClass="w-[calc(100vw-2rem)] max-w-2xl"
+    >
+      <form class="flex flex-col gap-5" (submit)="createClient(); $event.preventDefault()">
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="client-dni" class="mb-2 block text-sm font-medium text-color">DNI</label>
+            <input pInputText id="client-dni" [formField]="clientForm.dni" class="w-full" inputmode="numeric" />
+            @if (clientForm.dni().touched() && clientForm.dni().invalid()) {
+              <small class="mt-1 block text-red-600">{{ clientForm.dni().errors()[0]?.message }}</small>
+            }
+          </div>
+          <div>
+            <label for="client-name" class="mb-2 block text-sm font-medium text-color">Nombre completo</label>
+            <input pInputText id="client-name" [formField]="clientForm.fullName" class="w-full" />
+            @if (clientForm.fullName().touched() && clientForm.fullName().invalid()) {
+              <small class="mt-1 block text-red-600">{{ clientForm.fullName().errors()[0]?.message }}</small>
+            }
           </div>
         </div>
-        <div class="flex flex-col gap-1">
-          <label for="address" class="font-medium text-sm">Dirección</label>
-          <input pInputText id="address" formControlName="address" />
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="client-phone" class="mb-2 block text-sm font-medium text-color">Teléfono</label>
+            <input pInputText id="client-phone" [formField]="clientForm.phone" class="w-full" inputmode="tel" />
+            @if (clientForm.phone().touched() && clientForm.phone().invalid()) {
+              <small class="mt-1 block text-red-600">{{ clientForm.phone().errors()[0]?.message }}</small>
+            }
+          </div>
+          <div>
+            <label for="client-collector" class="mb-2 block text-sm font-medium text-color">Cobrador asignado</label>
+            <p-select
+              inputId="client-collector"
+              [formField]="clientForm.collectorId"
+              [options]="store.collectors()"
+              optionLabel="fullName"
+              optionValue="id"
+              placeholder="Seleccioná un cobrador"
+              appendTo="body"
+              styleClass="w-full"
+            />
+            @if (clientForm.collectorId().touched() && clientForm.collectorId().invalid()) {
+              <small class="mt-1 block text-red-600">{{ clientForm.collectorId().errors()[0]?.message }}</small>
+            }
+          </div>
         </div>
-        <div class="flex justify-end gap-2 mt-4">
-          <p-button type="button" label="Cancelar" severity="secondary" variant="text" (click)="dialogVisible.set(false)"></p-button>
-          <p-button type="submit" label="Guardar" [disabled]="clientForm.invalid"></p-button>
+
+        <div>
+          <label for="client-address" class="mb-2 block text-sm font-medium text-color">Dirección</label>
+          <input pInputText id="client-address" [formField]="clientForm.address" class="w-full" />
+          @if (clientForm.address().touched() && clientForm.address().invalid()) {
+            <small class="mt-1 block text-red-600">{{ clientForm.address().errors()[0]?.message }}</small>
+          }
+        </div>
+
+        <div>
+          <label for="client-notes" class="mb-2 block text-sm font-medium text-color">Observaciones</label>
+          <textarea
+            id="client-notes"
+            [formField]="clientForm.notes"
+            rows="3"
+            class="w-full rounded-md border border-surface bg-surface-0 px-3 py-2 text-color outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-surface-950"
+          ></textarea>
+          @if (clientForm.notes().touched() && clientForm.notes().invalid()) {
+            <small class="mt-1 block text-red-600">{{ clientForm.notes().errors()[0]?.message }}</small>
+          }
+        </div>
+
+        <div class="flex justify-end gap-2">
+          <p-button type="button" label="Cancelar" severity="secondary" variant="text" (onClick)="dialogVisible.set(false)" />
+          <p-button
+            type="submit"
+            label="Guardar cliente"
+            icon="pi pi-check"
+            [loading]="store.creating()"
+            [disabled]="clientForm().invalid() || store.collectors().length === 0"
+          />
         </div>
       </form>
     </p-dialog>
-  `
+  `,
 })
 export default class Clients {
-  appStore = inject(AppStoreService);
-  fb = inject(FormBuilder);
-  messageService = inject(MessageService);
+  protected readonly store = inject(ClientsStore);
+  private readonly messageService = inject(MessageService);
 
-  searchQuery = signal('');
-  selectedCollector = signal<string | null>(null);
-
-  dialogVisible = signal(false);
-  dialogMode = signal<'new' | 'edit'>('new');
-  currentClientId = signal<string | null>(null);
-
-  clientForm = this.fb.nonNullable.group({
-    dni: ['', [Validators.required]],
-    fullName: ['', [Validators.required]],
-    phone: [''],
-    collectorId: ['', [Validators.required]],
-    address: ['', [Validators.required]]
+  protected readonly loadingRows = [1, 2, 3];
+  protected readonly searchQuery = signal('');
+  protected readonly selectedCollector = signal('');
+  protected readonly dialogVisible = signal(false);
+  protected readonly clientModel = signal<ClientFormModel>(emptyModel());
+  protected readonly clientForm = form(this.clientModel, (path) => {
+    required(path.dni, { message: 'Ingresá el DNI.' });
+    pattern(path.dni, /^\d{8,12}$/, { message: 'El DNI debe contener entre 8 y 12 dígitos.' });
+    required(path.fullName, { message: 'Ingresá el nombre completo.' });
+    maxLength(path.fullName, 160, { message: 'El nombre es demasiado largo.' });
+    pattern(path.phone, /^\d{0,15}$/, { message: 'El teléfono solo puede contener dígitos.' });
+    required(path.collectorId, { message: 'Seleccioná un cobrador.' });
+    required(path.address, { message: 'Ingresá la dirección.' });
+    maxLength(path.notes, 500, { message: 'Las observaciones no pueden superar 500 caracteres.' });
   });
 
-  collectorList = computed(() => this.appStore.profiles().filter(p => p.role === 'collector'));
-  
-  collectorOptions = computed(() => {
-    return this.collectorList().map(c => ({ label: c.fullName, value: c.id }));
-  });
+  protected readonly filteredClients = computed(() => {
+    const query = this.normalize(this.searchQuery());
+    const collectorId = this.selectedCollector();
 
-  readonly clientsWithDetails = computed(() => {
-    const clients = this.appStore.clients();
-    const loans = this.appStore.loans();
-    const profiles = this.appStore.profiles();
-
-    return clients.map(client => {
-      const activeLoan = loans.find(l => l.clientId === client.id && l.status === 'ACTIVE');
-      const collector = profiles.find(p => p.id === client.collectorId);
-      
-      const riskStatus = this.appStore.getClientRiskStatus(client);
-
-      return {
-        ...client,
-        collectorName: collector ? collector.fullName : 'Sin asignar',
-        balance: activeLoan ? activeLoan.balance : 0,
-        risk: { 
-          level: riskStatus.level, 
-          text: riskStatus.text, 
-          isMoroso: riskStatus.isMoroso, 
-          days: riskStatus.days 
-        }
-      };
+    return this.store.clients().filter((client) => {
+      const matchesQuery =
+        !query ||
+        this.normalize(client.fullName).includes(query) ||
+        client.dni.includes(query);
+      const matchesCollector = !collectorId || client.collectorId === collectorId;
+      return matchesQuery && matchesCollector;
     });
   });
 
-  readonly filteredClients = computed(() => {
-    let result = this.clientsWithDetails();
-    const query = this.searchQuery().toLowerCase();
-    const colFilter = this.selectedCollector();
-
-    if (query) {
-      result = result.filter(c => c.fullName.toLowerCase().includes(query) || c.dni.includes(query));
-    }
-    if (colFilter) {
-      result = result.filter(c => c.collectorId === colFilter);
-    }
-    return result;
-  });
-
-  getRiskSeverity(level: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
-    switch (level) {
-      case 'green': return 'success';
-      case 'yellow': return 'warn';
-      case 'orange': return 'warn';
-      case 'red': return 'danger';
-      default: return 'secondary';
-    }
+  constructor() {
+    void this.store.load();
   }
 
-  openNewDialog() {
-    this.dialogMode.set('new');
-    this.currentClientId.set(null);
-    this.clientForm.reset();
+  protected updateSearch(event: Event): void {
+    this.searchQuery.set((event.target as HTMLInputElement).value);
+  }
+
+  protected updateCollector(event: Event): void {
+    this.selectedCollector.set((event.target as HTMLSelectElement).value);
+  }
+
+  protected openDialog(): void {
+    this.store.clearError();
+    this.clientModel.set(emptyModel());
+    this.clientForm().reset();
     this.dialogVisible.set(true);
   }
 
-  openEditDialog(client: any) {
-    this.dialogMode.set('edit');
-    this.currentClientId.set(client.id);
-    this.clientForm.patchValue({
-      dni: client.dni,
-      fullName: client.fullName,
-      phone: client.phone || '',
-      collectorId: client.collectorId,
-      address: client.address
+  protected createClient(): void {
+    void submit(this.clientForm, async () => {
+      const created = await this.store.create(this.clientModel());
+
+      if (created) {
+        this.dialogVisible.set(false);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Cliente registrado',
+          detail: 'El cliente ya está disponible para crear un préstamo.',
+        });
+      }
     });
-    this.dialogVisible.set(true);
   }
 
-  saveClient() {
-    if (this.clientForm.invalid) return;
-    this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Cliente guardado correctamente' });
-    this.dialogVisible.set(false);
+  protected riskLabel(client: ClientListItem): string {
+    if (client.isBlacklisted) return `Moroso (${client.overdueDays} d)`;
+    if (client.overdueDays > 0) return `Atraso (${client.overdueDays} d)`;
+    if (client.outstandingAmount > 0) return 'Al día';
+    return 'Sin préstamo';
+  }
+
+  protected riskSeverity(client: ClientListItem): 'success' | 'warn' | 'danger' | 'secondary' {
+    if (client.isBlacklisted) return 'danger';
+    if (client.overdueDays > 0) return 'warn';
+    if (client.outstandingAmount > 0) return 'success';
+    return 'secondary';
+  }
+
+  private normalize(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase('es-PE')
+      .trim();
   }
 }
