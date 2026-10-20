@@ -3,14 +3,14 @@ import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { ProgressBarModule } from 'primeng/progressbar';
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { CurrencyPipe } from '@angular/common';
 import { AppStoreService, SYSTEM_DATE } from '../../../core/services/app-store.service';
 import { AuthService } from '../../auth/auth.service';
 import Chart from 'chart.js/auto';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CardModule, ButtonModule, TableModule, ProgressBarModule, CurrencyPipe, DatePipe],
+  imports: [CardModule, ButtonModule, TableModule, ProgressBarModule, CurrencyPipe],
   templateUrl: './dashboard.html'
 })
 export default class Dashboard implements AfterViewInit, OnDestroy {

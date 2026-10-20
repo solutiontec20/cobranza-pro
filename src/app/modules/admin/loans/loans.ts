@@ -1,232 +1,266 @@
-import { Component, computed, inject, signal, effect } from '@angular/core';
-import { TableModule } from 'primeng/table';
-import { ButtonModule } from 'primeng/button';
-import { TagModule } from 'primeng/tag';
-import { DialogModule } from 'primeng/dialog';
-import { SelectModule } from 'primeng/select';
-import { InputNumberModule } from 'primeng/inputnumber';
-import { DatePickerModule } from 'primeng/datepicker';
-import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { CurrencyPipe, DatePipe } from '@angular/common';
-import { AppStoreService, SYSTEM_DATE } from '../../../core/services/app-store.service';
+import { CurrencyPipe } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
+import { form, FormField, max, min, required, submit, validate } from '@angular/forms/signals';
 import { MessageService } from 'primeng/api';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { AuthService } from '../../auth/auth.service';
+import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { MessageModule } from 'primeng/message';
+import { SelectModule } from 'primeng/select';
+import { SkeletonModule } from 'primeng/skeleton';
+import { TableModule } from 'primeng/table';
+import { TagModule } from 'primeng/tag';
+import { LoanFrequency, LoanStatus } from '../../../core/models/loan.model';
+import { calculateLoanSummary, firstDueOn, toDateInput } from './loan-calculations';
+import { LoansStore } from './loans.store';
+
+interface LoanFormModel {
+  clientId: string;
+  principal: number;
+  interestRate: number;
+  frequency: LoanFrequency;
+  installmentCount: number;
+  startedOn: string;
+}
+
+const emptyModel = (): LoanFormModel => ({
+  clientId: '',
+  principal: 100,
+  interestRate: 20,
+  frequency: 'daily',
+  installmentCount: 24,
+  startedOn: toDateInput(new Date()),
+});
 
 @Component({
   selector: 'app-admin-loans',
   imports: [
-    TableModule, ButtonModule, TagModule, DialogModule, SelectModule,
-    InputNumberModule, DatePickerModule, FormsModule, ReactiveFormsModule, CurrencyPipe
+    ButtonModule,
+    CurrencyPipe,
+    DialogModule,
+    FormField,
+    InputNumberModule,
+    MessageModule,
+    SelectModule,
+    SkeletonModule,
+    TableModule,
+    TagModule,
   ],
-  providers: [MessageService],
   template: `
-    <div class="p-4 max-w-7xl mx-auto flex flex-col gap-4">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <main class="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 sm:p-6" aria-labelledby="loans-title">
+      <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-surface-900 dark:text-surface-0 m-0">Administración de Préstamos</h1>
-          <p class="text-sm text-surface-500 mt-1">Creación de créditos y seguimiento.</p>
+          <p class="mb-1 text-sm font-medium text-primary">Créditos</p>
+          <h1 id="loans-title" class="text-2xl font-bold text-color sm:text-3xl">Préstamos</h1>
+          <p class="mt-1 text-sm text-muted-color">
+            Creá créditos y consultá capital, cuotas y saldo con información de Supabase.
+          </p>
         </div>
-        <p-button (click)="openNewDialog()"><i class="pi pi-plus mr-2"></i>Nuevo Préstamo</p-button>
-      </div>
+        <p-button label="Nuevo préstamo" icon="pi pi-plus" [disabled]="store.loading()" (onClick)="openDialog()" />
+      </header>
 
-      <div class="card bg-surface-0 dark:bg-surface-900 p-4 border-round-xl shadow-sm">
-        <p-table [value]="loansWithDetails()" [rows]="10" [paginator]="true" responsiveLayout="scroll" styleClass="p-datatable-sm">
-          <ng-template #header>
-            <tr>
-              <th>Cliente</th>
-              <th>Cobrador</th>
-              <th>Capital</th>
-              <th>Tasa</th>
-              <th>Total Pagar</th>
-              <th>Cuota</th>
-              <th>Frecuencia</th>
-              <th>Saldo</th>
-              <th>Estado</th>
-              <th class="text-center">Acciones</th>
-            </tr>
-          </ng-template>
-          <ng-template #body let-loan>
-            <tr>
-              <td class="font-bold">{{ loan.clientName }}</td>
-              <td>{{ loan.collectorName }}</td>
-              <td class="font-bold">{{ loan.principal | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-              <td>{{ loan.interestRate }}%</td>
-              <td class="font-bold">{{ loan.totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-              <td class="text-primary font-bold">{{ loan.installmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-              <td><p-tag severity="secondary" [value]="loan.frequency"></p-tag></td>
-              <td class="font-bold" [class.text-red-500]="loan.balance > 0">{{ loan.balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-              <td>
-                <p-tag [severity]="loan.status === 'ACTIVE' ? 'success' : 'secondary'" [value]="loan.status"></p-tag>
-              </td>
-              <td class="text-center">
-                <p-button variant="outlined" size="small"><i class="pi pi-calendar mr-2"></i>Cronograma</p-button>
-              </td>
-            </tr>
-          </ng-template>
-          <ng-template #empty>
-            <tr>
-              <td colspan="10" class="text-center p-4">No hay préstamos registrados.</td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </div>
-    </div>
+      @if (store.error()) {
+        <p-message severity="error" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
+      }
 
-    <p-dialog [(visible)]="dialogVisible" header="Nuevo Préstamo" [modal]="true" [style]="{width: '550px'}">
-      <form [formGroup]="loanForm" (ngSubmit)="saveLoan()" class="flex flex-col gap-4 mt-2">
-        <div class="flex flex-col gap-1">
-          <label for="clientId" class="font-medium text-sm">Cliente</label>
-          <p-select id="clientId" formControlName="clientId" [options]="clientOptions()" optionLabel="label" optionValue="value" placeholder="Seleccionar cliente" appendTo="body" class="w-full" [filter]="true" filterBy="label"></p-select>
-        </div>
-        
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex flex-col gap-1">
-            <label for="principal" class="font-medium text-sm">Monto Capital (S/)</label>
-            <p-inputnumber id="principal" formControlName="principal" mode="currency" currency="PEN" locale="es-PE" class="w-full"></p-inputnumber>
+      <section class="overflow-hidden rounded-xl border border-surface bg-surface-0 shadow-sm dark:bg-surface-900">
+        @if (store.loading()) {
+          <div class="space-y-3 p-4" aria-label="Cargando préstamos">
+            @for (row of loadingRows; track row) {
+              <p-skeleton height="4rem" borderRadius="0.75rem" />
+            }
           </div>
-          <div class="flex flex-col gap-1">
-            <label for="interestRate" class="font-medium text-sm">Tasa de Interés (%)</label>
-            <p-inputnumber id="interestRate" formControlName="interestRate" suffix="%" class="w-full"></p-inputnumber>
+        } @else if (store.loans().length === 0) {
+          <div class="flex flex-col items-center px-6 py-14 text-center">
+            <i class="pi pi-wallet mb-4 text-4xl text-muted-color" aria-hidden="true"></i>
+            <h2 class="text-lg font-semibold text-color">Todavía no hay préstamos</h2>
+            <p class="mt-1 text-sm text-muted-color">
+              Creá el primero para un cliente activo sin crédito vigente.
+            </p>
           </div>
-        </div>
+        } @else {
+          <p-table [value]="store.loans()" [rows]="10" [paginator]="store.loans().length > 10" responsiveLayout="scroll" styleClass="p-datatable-sm">
+            <ng-template #header>
+              <tr>
+                <th>Cliente</th><th>Cobrador</th><th>Capital</th><th>Tasa</th><th>Total</th>
+                <th>Primera cuota</th><th>Saldo</th><th>Frecuencia</th><th>Estado</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-loan>
+              <tr>
+                <td><span class="font-semibold">{{ loan.clientName }}</span><br><small class="text-muted-color">{{ formatDate(loan.startedOn) }}</small></td>
+                <td>{{ loan.collectorName }}</td>
+                <td>{{ loan.principal | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+                <td>{{ loan.interestRate }}%</td>
+                <td class="font-semibold">{{ loan.totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+                <td>{{ loan.installmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+                <td class="font-semibold" [class.text-red-600]="loan.balance > 0">{{ loan.balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+                <td><p-tag severity="secondary" [value]="frequencyLabel(loan.frequency)" /></td>
+                <td><p-tag [severity]="loan.status === 'active' ? 'success' : 'secondary'" [value]="statusLabel(loan.status)" /></td>
+              </tr>
+            </ng-template>
+          </p-table>
+        }
+      </section>
+    </main>
 
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex flex-col gap-1">
-            <label for="frequency" class="font-medium text-sm">Frecuencia</label>
-            <p-select id="frequency" formControlName="frequency" [options]="frequencyOptions" appendTo="body" class="w-full"></p-select>
-          </div>
-          <div class="flex flex-col gap-1">
-            <label for="installmentsCount" class="font-medium text-sm">N° de Cuotas</label>
-            <p-inputnumber id="installmentsCount" formControlName="installmentsCount" class="w-full"></p-inputnumber>
-          </div>
-        </div>
-        
-        <div class="flex flex-col gap-1">
-          <label for="startDate" class="font-medium text-sm">Fecha de Inicio</label>
-          <p-datepicker id="startDate" formControlName="startDate" dateFormat="dd/mm/yy" appendTo="body" class="w-full"></p-datepicker>
+    <p-dialog header="Nuevo préstamo" [modal]="true" [visible]="dialogVisible()" (visibleChange)="dialogVisible.set($event)" styleClass="w-[calc(100vw-2rem)] max-w-2xl">
+      <form class="flex flex-col gap-5" (submit)="createLoan(); $event.preventDefault()">
+        @if (store.availableClients().length === 0) {
+          <p-message severity="warn" styleClass="w-full">No hay clientes disponibles sin un préstamo vigente.</p-message>
+        }
+
+        <div>
+          <label for="loan-client" class="mb-2 block text-sm font-medium text-color">Cliente</label>
+          <p-select inputId="loan-client" [formField]="loanForm.clientId" [options]="clientOptions()" optionLabel="label" optionValue="value" placeholder="Seleccioná un cliente" appendTo="body" styleClass="w-full" [filter]="true" filterBy="label" />
+          @if (loanForm.clientId().touched() && loanForm.clientId().invalid()) {
+            <small class="mt-1 block text-red-600">{{ loanForm.clientId().errors()[0]?.message }}</small>
+          }
         </div>
 
-        <!-- Resumen -->
-        <div class="mt-4 p-4 bg-surface-50 dark:bg-surface-800 border-round-lg grid grid-cols-2 gap-4 text-sm">
+        <div class="grid gap-4 sm:grid-cols-2">
           <div>
-            <span class="text-surface-500 block">Total a Pagar:</span>
-            <span class="font-bold text-lg">{{ computedTotal() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</span>
+            <label for="loan-principal" class="mb-2 block text-sm font-medium text-color">Capital</label>
+            <p-inputnumber inputId="loan-principal" [formField]="loanForm.principal" mode="currency" currency="PEN" locale="es-PE" styleClass="w-full" />
+            @if (loanForm.principal().touched() && loanForm.principal().invalid()) {
+              <small class="mt-1 block text-red-600">{{ loanForm.principal().errors()[0]?.message }}</small>
+            }
           </div>
           <div>
-            <span class="text-surface-500 block">Valor de Cuota:</span>
-            <span class="font-bold text-lg text-primary">{{ computedInstallment() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</span>
+            <label for="loan-interest" class="mb-2 block text-sm font-medium text-color">Tasa de interés</label>
+            <p-inputnumber inputId="loan-interest" [formField]="loanForm.interestRate" suffix="%" [maxFractionDigits]="4" styleClass="w-full" />
+            @if (loanForm.interestRate().touched() && loanForm.interestRate().invalid()) {
+              <small class="mt-1 block text-red-600">{{ loanForm.interestRate().errors()[0]?.message }}</small>
+            }
           </div>
         </div>
 
-        <div class="flex justify-end gap-2 mt-4">
-          <p-button type="button" label="Cancelar" severity="secondary" variant="text" (click)="dialogVisible.set(false)"></p-button>
-          <p-button type="submit" label="Crear Préstamo" [disabled]="loanForm.invalid"></p-button>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="loan-frequency" class="mb-2 block text-sm font-medium text-color">Frecuencia</label>
+            <p-select inputId="loan-frequency" [formField]="loanForm.frequency" [options]="frequencyOptions" optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full" />
+          </div>
+          <div>
+            <label for="loan-count" class="mb-2 block text-sm font-medium text-color">Cantidad de cuotas</label>
+            <p-inputnumber inputId="loan-count" [formField]="loanForm.installmentCount" [useGrouping]="false" styleClass="w-full" />
+            @if (loanForm.installmentCount().touched() && loanForm.installmentCount().invalid()) {
+              <small class="mt-1 block text-red-600">{{ loanForm.installmentCount().errors()[0]?.message }}</small>
+            }
+          </div>
+        </div>
+
+        <div>
+          <label for="loan-start" class="mb-2 block text-sm font-medium text-color">Fecha de inicio</label>
+          <input id="loan-start" type="date" class="w-full rounded-md border border-surface px-3 py-2 text-color outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-surface-950" [formField]="loanForm.startedOn" />
+          @if (loanForm.startedOn().touched() && loanForm.startedOn().invalid()) {
+            <small class="mt-1 block text-red-600">{{ loanForm.startedOn().errors()[0]?.message }}</small>
+          }
+        </div>
+
+        <section class="grid gap-3 rounded-xl border border-surface bg-surface-50 p-4 text-sm dark:bg-surface-800 sm:grid-cols-3" aria-label="Resumen del préstamo">
+          <div><p class="text-muted-color">Total a pagar</p><p class="mt-1 text-lg font-semibold">{{ summary().totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p></div>
+          <div><p class="text-muted-color">Cuota base</p><p class="mt-1 text-lg font-semibold text-primary">{{ summary().baseInstallmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p></div>
+          <div><p class="text-muted-color">Primera fecha de pago</p><p class="mt-1 text-lg font-semibold">{{ formatDate(firstDueDate()) }}</p></div>
+        </section>
+
+        <div class="flex justify-end gap-2">
+          <p-button type="button" label="Cancelar" severity="secondary" variant="text" (onClick)="dialogVisible.set(false)" />
+          <p-button type="submit" label="Crear préstamo" icon="pi pi-check" [loading]="store.creating()" [disabled]="loanForm().invalid() || store.availableClients().length === 0" />
         </div>
       </form>
     </p-dialog>
-  `
+  `,
 })
 export default class Loans {
-  appStore = inject(AppStoreService);
-  fb = inject(FormBuilder);
-  messageService = inject(MessageService);
-  authService = inject(AuthService);
-
-  dialogVisible = signal(false);
-
-  frequencyOptions = [
-    { label: 'Diario', value: 'DIARIO' },
-    { label: 'Semanal', value: 'SEMANAL' },
-    { label: 'Mensual', value: 'MENSUAL' }
+  protected readonly store = inject(LoansStore);
+  private readonly messageService = inject(MessageService);
+  protected readonly loadingRows = [1, 2, 3];
+  protected readonly dialogVisible = signal(false);
+  protected readonly frequencyOptions: Array<{ label: string; value: LoanFrequency }> = [
+    { label: 'Diario', value: 'daily' },
+    { label: 'Semanal', value: 'weekly' },
+    { label: 'Mensual', value: 'monthly' },
   ];
 
-  loanForm = this.fb.nonNullable.group({
-    clientId: ['', [Validators.required]],
-    principal: [100, [Validators.required, Validators.min(10)]],
-    interestRate: [20, [Validators.required, Validators.min(1)]],
-    frequency: ['DIARIO', [Validators.required]],
-    installmentsCount: [24, [Validators.required, Validators.min(1)]],
-    startDate: [new Date(), [Validators.required]]
-  });
-
-  // Watch form changes to compute totals
-  formChanges = toSignal(this.loanForm.valueChanges, { initialValue: this.loanForm.value });
-
-  computedTotal = computed(() => {
-    const vals = this.formChanges();
-    const principal = vals.principal || 0;
-    const rate = vals.interestRate || 0;
-    return principal + (principal * (rate / 100));
-  });
-
-  computedInstallment = computed(() => {
-    const vals = this.formChanges();
-    const total = this.computedTotal();
-    const count = vals.installmentsCount || 1;
-    return total / count;
-  });
-
-  clientOptions = computed(() => {
-    return this.appStore.clients()
-      .filter(c => c.active)
-      .map(c => ({ label: `${c.dni} - ${c.fullName}`, value: c.id }));
-  });
-
-  readonly loansWithDetails = computed(() => {
-    const loans = this.appStore.loans();
-    const clients = this.appStore.clients();
-    const profiles = this.appStore.profiles();
-
-    return loans.map(loan => {
-      const client = clients.find(c => c.id === loan.clientId);
-      const collector = profiles.find(p => p.id === loan.collectorId);
-      
-      return {
-        ...loan,
-        clientName: client ? client.fullName : loan.clientId,
-        collectorName: collector ? collector.fullName : 'Sin asignar'
-      };
-    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  });
-
-  openNewDialog() {
-    this.loanForm.reset({
-      clientId: '',
-      principal: 100,
-      interestRate: 20,
-      frequency: 'DIARIO',
-      installmentsCount: 24,
-      startDate: new Date()
+  protected readonly loanModel = signal<LoanFormModel>(emptyModel());
+  protected readonly loanForm = form(this.loanModel, (path) => {
+    required(path.clientId, { message: 'Seleccioná un cliente.' });
+    min(path.principal, 0.01, { message: 'El capital debe ser mayor que cero.' });
+    min(path.interestRate, 0, { message: 'La tasa no puede ser negativa.' });
+    min(path.installmentCount, 1, { message: 'Debe existir al menos una cuota.' });
+    max(path.installmentCount, 32767, { message: 'La cantidad de cuotas es demasiado alta.' });
+    required(path.startedOn, { message: 'Seleccioná la fecha de inicio.' });
+    validate(path.installmentCount, ({ valueOf }) => {
+      const summary = calculateLoanSummary(
+        valueOf(path.principal),
+        valueOf(path.interestRate),
+        valueOf(path.installmentCount),
+      );
+      return summary.baseInstallmentAmount > 0 && summary.lastInstallmentAmount > 0
+        ? undefined
+        : { kind: 'invalidSchedule', message: 'La cantidad de cuotas genera importes inválidos.' };
     });
+  });
+
+  protected readonly summary = computed(() => {
+    const model = this.loanModel();
+    return calculateLoanSummary(model.principal, model.interestRate, model.installmentCount);
+  });
+  protected readonly firstDueDate = computed(() => {
+    const model = this.loanModel();
+    return firstDueOn(model.startedOn, model.frequency);
+  });
+  protected readonly clientOptions = computed(() =>
+    this.store.availableClients().map((client) => ({
+      label: `${client.dni} · ${client.fullName} — ${client.collectorName}`,
+      value: client.id,
+    })),
+  );
+
+  constructor() {
+    void this.store.load();
+  }
+
+  protected openDialog(): void {
+    this.store.clearError();
+    this.loanModel.set(emptyModel());
+    this.loanForm().reset();
     this.dialogVisible.set(true);
   }
 
-  saveLoan() {
-    if (this.loanForm.invalid) return;
+  protected createLoan(): void {
+    void submit(this.loanForm, async () => {
+      const model = this.loanModel();
+      const created = await this.store.create({
+        clientId: model.clientId,
+        principal: model.principal,
+        interestRate: model.interestRate,
+        frequency: model.frequency,
+        installmentCount: model.installmentCount,
+        startedOn: model.startedOn,
+        firstDueOn: firstDueOn(model.startedOn, model.frequency),
+      });
+      if (created) {
+        this.dialogVisible.set(false);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Préstamo creado',
+          detail: 'El préstamo y su cronograma fueron registrados correctamente.',
+        });
+      }
+    });
+  }
 
-    const val = this.loanForm.getRawValue();
-    const userId = this.authService.currentUser()?.id;
+  protected frequencyLabel(frequency: LoanFrequency): string {
+    return this.frequencyOptions.find((option) => option.value === frequency)?.label ?? frequency;
+  }
 
-    if (!userId) {
-      this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No hay usuario autenticado.' });
-      return;
-    }
+  protected statusLabel(status: LoanStatus): string {
+    return { active: 'Activo', paid: 'Pagado', renewed: 'Renovado', voided: 'Anulado' }[status];
+  }
 
-    try {
-      this.appStore.createLoan({
-        clientId: val.clientId,
-        principal: val.principal,
-        interestRate: val.interestRate,
-        frequency: val.frequency as any,
-        numberOfInstallments: val.installmentsCount,
-        startDate: val.startDate.toISOString().split('T')[0]
-      }, userId);
-
-      this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Préstamo creado correctamente' });
-      this.dialogVisible.set(false);
-    } catch (e: any) {
-      this.messageService.add({ severity: 'error', summary: 'Error', detail: e.message || 'Error al crear préstamo' });
-    }
+  protected formatDate(value: string): string {
+    if (!value) return '—';
+    return new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium' }).format(new Date(`${value}T00:00:00`));
   }
 }

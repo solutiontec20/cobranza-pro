@@ -25,12 +25,13 @@ export class CollectionDashboardStore {
     
     return allClients.map(client => {
       const riskStatus = this.appStore.getClientRiskStatus(client);
-      const todayInstallment = this.appStore.getClientTodayInstallment(client.id);
-      const paidToday = this.appStore.hasClientPaidToday(client.id);
-      
       const activeLoan = this.appStore.loans().find(l => l.clientId === client.id && l.status === 'ACTIVE');
       const paidLoan = this.appStore.loans().find(l => l.clientId === client.id && l.status === 'PAID');
       const loan = activeLoan || paidLoan;
+      const todayInstallment = activeLoan
+        ? this.appStore.getClientTodayInstallment(activeLoan.id)
+        : undefined;
+      const paidToday = this.appStore.hasClientPaidToday(client.id);
 
       let risk: CollectionRisk = 'current';
       if (riskStatus.level === 'yellow' || riskStatus.level === 'warning') risk = 'warning';

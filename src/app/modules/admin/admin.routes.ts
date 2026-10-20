@@ -1,13 +1,23 @@
 import { Routes } from '@angular/router';
 import { SupabaseCollectorRepository } from '../../core/adapters/supabase-collector.repository';
+import { SupabaseLoanRepository } from '../../core/adapters/supabase-loan.repository';
 import { COLLECTOR_REPOSITORY } from '../../core/repositories/collector.repository';
+import { LOAN_REPOSITORY } from '../../core/repositories/loan.repository';
 import { CollectorsStore } from './collectors/collectors.store';
+import { LoansStore } from './loans/loans.store';
 
 export const ADMIN_ROUTES: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: 'dashboard', loadComponent: () => import('./dashboard/dashboard') },
   { path: 'clientes', loadComponent: () => import('./clients/clients') },
-  { path: 'prestamos', loadComponent: () => import('./loans/loans') },
+  {
+    path: 'prestamos',
+    loadComponent: () => import('./loans/loans'),
+    providers: [
+      LoansStore,
+      { provide: LOAN_REPOSITORY, useClass: SupabaseLoanRepository },
+    ],
+  },
   {
     path: 'cobradores',
     loadComponent: () => import('./collectors/collectors'),
