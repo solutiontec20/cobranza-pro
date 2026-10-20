@@ -27,6 +27,7 @@ interface ClientFormModel {
   collectorId: string;
   address: string;
   notes: string;
+  active: boolean;
 }
 
 const emptyModel = (): ClientFormModel => ({
@@ -36,6 +37,7 @@ const emptyModel = (): ClientFormModel => ({
   collectorId: '',
   address: '',
   notes: '',
+  active: true,
 });
 
 @Component({
@@ -66,7 +68,7 @@ const emptyModel = (): ClientFormModel => ({
           label="Nuevo cliente"
           icon="pi pi-user-plus"
           [disabled]="store.loading() || store.collectors().length === 0"
-          (onClick)="openDialog()"
+          (onClick)="openCreateDialog()"
         />
       </header>
 
@@ -134,6 +136,7 @@ const emptyModel = (): ClientFormModel => ({
                 <th>Riesgo</th>
                 <th>Saldo</th>
                 <th>Estado</th>
+                <th class="text-center">Acciones</th>
               </tr>
             </ng-template>
             <ng-template #body let-client>
@@ -155,6 +158,16 @@ const emptyModel = (): ClientFormModel => ({
                     [value]="client.active ? 'Activo' : 'Inactivo'"
                   />
                 </td>
+                <td class="text-center">
+                  <p-button
+                    label="Editar"
+                    icon="pi pi-pencil"
+                    severity="secondary"
+                    variant="outlined"
+                    size="small"
+                    (onClick)="openEditDialog(client)"
+                  />
+                </td>
               </tr>
             </ng-template>
           </p-table>
@@ -163,13 +176,13 @@ const emptyModel = (): ClientFormModel => ({
     </main>
 
     <p-dialog
-      header="Registrar cliente"
+      [header]="dialogMode() === 'create' ? 'Registrar cliente' : 'Editar cliente'"
       [modal]="true"
       [visible]="dialogVisible()"
       (visibleChange)="dialogVisible.set($event)"
       styleClass="w-[calc(100vw-2rem)] max-w-2xl"
     >
-      <form class="flex flex-col gap-5" (submit)="createClient(); $event.preventDefault()">
+      <form class="flex flex-col gap-5" (submit)="saveClient(); $event.preventDefault()">
         <div class="grid gap-4 sm:grid-cols-2">
           <div>
             <label for="client-dni" class="mb-2 block text-sm font-medium text-color">DNI</label>
@@ -234,13 +247,27 @@ const emptyModel = (): ClientFormModel => ({
           }
         </div>
 
+        @if (dialogMode() === 'edit') {
+          <div class="rounded-xl border border-surface bg-surface-50 p-4 dark:bg-surface-800">
+            <label class="flex items-center gap-3 text-sm font-medium text-color">
+              <input type="checkbox" [formField]="clientForm.active" class="h-4 w-4 accent-primary" />
+              Cliente activo
+            </label>
+            @if (editingClient()?.outstandingAmount) {
+              <p class="mt-2 text-sm text-orange-700 dark:text-orange-300">
+                Un cliente con préstamo activo no puede desactivarse hasta cerrar su crédito.
+              </p>
+            }
+          </div>
+        }
+
         <div class="flex justify-end gap-2">
           <p-button type="button" label="Cancelar" severity="secondary" variant="text" (onClick)="dialogVisible.set(false)" />
           <p-button
             type="submit"
-            label="Guardar cliente"
+            [label]="dialogMode() === 'create' ? 'Guardar cliente' : 'Guardar cambios'"
             icon="pi pi-check"
-            [loading]="store.creating()"
+            [loading]="store.saving()"
             [disabled]="clientForm().invalid() || store.collectors().length === 0"
           />
         </div>
@@ -256,15 +283,19 @@ export default class Clients {
   protected readonly searchQuery = signal('');
   protected readonly selectedCollector = signal('');
   protected readonly dialogVisible = signal(false);
+  protected readonly dialogMode = signal<'create' | 'edit'>('create');
+  protected readonly editingClientId = signal('');
   protected readonly clientModel = signal<ClientFormModel>(emptyModel());
   protected readonly clientForm = form(this.clientModel, (path) => {
     required(path.dni, { message: 'Ingresá el DNI.' });
     pattern(path.dni, /^\d{8,12}$/, { message: 'El DNI debe contener entre 8 y 12 dígitos.' });
     required(path.fullName, { message: 'Ingresá el nombre completo.' });
+    pattern(path.fullName, /.*\S.*/, { message: 'Ingresá un nombre válido.' });
     maxLength(path.fullName, 160, { message: 'El nombre es demasiado largo.' });
     pattern(path.phone, /^\d{0,15}$/, { message: 'El teléfono solo puede contener dígitos.' });
     required(path.collectorId, { message: 'Seleccioná un cobrador.' });
     required(path.address, { message: 'Ingresá la dirección.' });
+    pattern(path.address, /.*\S.*/, { message: 'Ingresá una dirección válida.' });
     maxLength(path.notes, 500, { message: 'Las observaciones no pueden superar 500 caracteres.' });
   });
 
@@ -281,6 +312,9 @@ export default class Clients {
       return matchesQuery && matchesCollector;
     });
   });
+  protected readonly editingClient = computed(() =>
+    this.store.clients().find((client) => client.id === this.editingClientId()),
+  );
 
   constructor() {
     void this.store.load();
@@ -294,23 +328,51 @@ export default class Clients {
     this.selectedCollector.set((event.target as HTMLSelectElement).value);
   }
 
-  protected openDialog(): void {
+  protected openCreateDialog(): void {
     this.store.clearError();
-    this.clientModel.set(emptyModel());
+    this.dialogMode.set('create');
+    this.editingClientId.set('');
     this.clientForm().reset();
+    this.clientModel.set(emptyModel());
     this.dialogVisible.set(true);
   }
 
-  protected createClient(): void {
-    void submit(this.clientForm, async () => {
-      const created = await this.store.create(this.clientModel());
+  protected openEditDialog(client: ClientListItem): void {
+    this.store.clearError();
+    this.dialogMode.set('edit');
+    this.editingClientId.set(client.id);
+    this.clientForm().reset();
+    this.clientModel.set({
+      dni: client.dni,
+      fullName: client.fullName,
+      phone: client.phone,
+      collectorId: client.collectorId,
+      address: client.address,
+      notes: client.notes,
+      active: client.active,
+    });
+    this.dialogVisible.set(true);
+  }
 
-      if (created) {
+  protected saveClient(): void {
+    void submit(this.clientForm, async () => {
+      const model = this.clientModel();
+      const saved = this.dialogMode() === 'create'
+        ? await this.store.create(model)
+        : await this.store.update({
+            ...model,
+            id: this.editingClientId(),
+          });
+
+      if (saved) {
         this.dialogVisible.set(false);
+        const isCreate = this.dialogMode() === 'create';
         this.messageService.add({
           severity: 'success',
-          summary: 'Cliente registrado',
-          detail: 'El cliente ya está disponible para crear un préstamo.',
+          summary: isCreate ? 'Cliente registrado' : 'Cliente actualizado',
+          detail: isCreate
+            ? 'El cliente ya está disponible para crear un préstamo.'
+            : 'Los datos y la asignación del cliente fueron actualizados.',
         });
       }
     });

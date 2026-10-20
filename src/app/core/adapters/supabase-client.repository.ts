@@ -6,6 +6,7 @@ import {
   ClientCollectorOption,
   ClientListItem,
   CreateClientInput,
+  UpdateClientInput,
 } from '../models/client.model';
 import { ClientRepository } from '../repositories/client.repository';
 import { Database } from '../supabase/database.types';
@@ -133,6 +134,29 @@ export class SupabaseClientRepository implements ClientRepository {
     return this.toClient(data);
   }
 
+  async update(input: UpdateClientInput): Promise<Client> {
+    const { data, error } = await this.supabase
+      .from('customers')
+      .update({
+        document_number: input.dni.trim(),
+        full_name: input.fullName.trim(),
+        phone: input.phone.trim() || null,
+        address: input.address.trim(),
+        notes: input.notes.trim() || null,
+        collector_id: input.collectorId,
+        active: input.active,
+      })
+      .eq('id', input.id)
+      .select('*')
+      .single();
+
+    if (error) {
+      throw this.mutationError(error, 'No se pudo actualizar el cliente.');
+    }
+
+    return this.toClient(data);
+  }
+
   private toClient(row: CustomerRow): Client {
     return {
       id: row.id,
@@ -148,6 +172,10 @@ export class SupabaseClientRepository implements ClientRepository {
   }
 
   private createError(error: unknown): AppError {
+    return this.mutationError(error, 'No se pudo registrar el cliente.');
+  }
+
+  private mutationError(error: unknown, fallbackMessage: string): AppError {
     const code = this.errorCode(error);
     const message = this.errorMessage(error);
 
@@ -163,7 +191,15 @@ export class SupabaseClientRepository implements ClientRepository {
       );
     }
 
-    return this.toAppError(error, 'No se pudo registrar el cliente.');
+    if (code === '23514' && message.includes('CUSTOMER_HAS_ACTIVE_LOAN')) {
+      return new AppError(
+        'VALIDATION',
+        'No podés desactivar al cliente mientras tenga un préstamo activo.',
+        error,
+      );
+    }
+
+    return this.toAppError(error, fallbackMessage);
   }
 
   private toAppError(error: unknown, fallbackMessage: string): AppError {

@@ -28,6 +28,7 @@ describe('ClientsStore', () => {
     list: ReturnType<typeof vi.fn<ClientRepository['list']>>;
     listActiveCollectors: ReturnType<typeof vi.fn<ClientRepository['listActiveCollectors']>>;
     create: ReturnType<typeof vi.fn<ClientRepository['create']>>;
+    update: ReturnType<typeof vi.fn<ClientRepository['update']>>;
   };
 
   beforeEach(() => {
@@ -37,6 +38,7 @@ describe('ClientsStore', () => {
         .fn<ClientRepository['listActiveCollectors']>()
         .mockResolvedValue([{ id: 'collector-1', fullName: 'María Quispe' }]),
       create: vi.fn<ClientRepository['create']>().mockResolvedValue(client),
+      update: vi.fn<ClientRepository['update']>().mockResolvedValue(client),
     };
 
     TestBed.configureTestingModule({
@@ -64,6 +66,23 @@ describe('ClientsStore', () => {
 
     expect(created).toBe(true);
     expect(repository.create).toHaveBeenCalledOnce();
+    expect(repository.list).toHaveBeenCalledOnce();
+  });
+
+  it('updates a client and reloads server state', async () => {
+    const updated = await store.update({
+      id: client.id,
+      dni: client.dni,
+      fullName: 'Ana Flores actualizada',
+      phone: client.phone,
+      address: client.address,
+      collectorId: client.collectorId,
+      notes: client.notes,
+      active: client.active,
+    });
+
+    expect(updated).toBe(true);
+    expect(repository.update).toHaveBeenCalledOnce();
     expect(repository.list).toHaveBeenCalledOnce();
   });
 });

@@ -32,3 +32,8 @@ export interface CreateClientInput {
   collectorId: string;
   notes: string;
 }
+
+export interface UpdateClientInput extends CreateClientInput {
+  id: string;
+  active: boolean;
+}
