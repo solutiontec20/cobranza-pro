@@ -94,4 +94,62 @@ describe('SupabaseLoanRepository', () => {
       message: expectedMessage,
     });
   });
+
+  it('registers and maps a transactional payment result', async () => {
+    rpc.mockResolvedValue({
+      data: [
+        {
+          payment_id: 'payment-1',
+          allocated_amount: 36.67,
+          remaining_balance: 73.33,
+          resulting_loan_status: 'active',
+        },
+      ],
+      error: null,
+    });
+
+    await expect(
+      repository.registerPayment({
+        loanId: 'loan-1',
+        amount: 36.67,
+        paymentMethod: 'cash',
+        notes: ' Pago en oficina ',
+      }),
+    ).resolves.toEqual({
+      paymentId: 'payment-1',
+      allocatedAmount: 36.67,
+      remainingBalance: 73.33,
+      resultingLoanStatus: 'active',
+    });
+
+    expect(rpc).toHaveBeenCalledWith('register_payment', {
+      p_loan_id: 'loan-1',
+      p_amount: 36.67,
+      p_payment_method: 'cash',
+      p_notes: 'Pago en oficina',
+    });
+  });
+
+  it.each([
+    ['Payment exceeds outstanding loan balance', 'El monto no puede superar el saldo pendiente.'],
+    ['Payments can only be registered on active loans', 'Solo se pueden registrar pagos en préstamos activos.'],
+    ['Loan has no outstanding balance', 'El préstamo no tiene saldo pendiente.'],
+  ])('translates the payment error %s', async (databaseMessage, expectedMessage) => {
+    rpc.mockResolvedValue({
+      data: null,
+      error: { code: '22023', message: databaseMessage },
+    });
+
+    const promise = repository.registerPayment({
+      loanId: 'loan-1',
+      amount: 36.67,
+      paymentMethod: 'cash',
+      notes: '',
+    });
+
+    await expect(promise).rejects.toMatchObject({
+      code: 'VALIDATION',
+      message: expectedMessage,
+    });
+  });
 });

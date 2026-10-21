@@ -1,6 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { AppError } from '../../../core/errors/app-error';
-import { LoanDetail, LoanInstallment, LoanListItem } from '../../../core/models/loan.model';
+import {
+  LoanDetail,
+  LoanInstallment,
+  LoanListItem,
+  RegisterLoanPaymentResult,
+} from '../../../core/models/loan.model';
 import { LOAN_REPOSITORY, LoanRepository } from '../../../core/repositories/loan.repository';
 import { calculateLoanSummary, firstDueOn } from './loan-calculations';
 import { LoansStore } from './loans.store';
@@ -63,6 +68,7 @@ describe('LoansStore', () => {
     getDetail: ReturnType<typeof vi.fn<LoanRepository['getDetail']>>;
     create: ReturnType<typeof vi.fn<LoanRepository['create']>>;
     update: ReturnType<typeof vi.fn<LoanRepository['update']>>;
+    registerPayment: ReturnType<typeof vi.fn<LoanRepository['registerPayment']>>;
   };
 
   beforeEach(() => {
@@ -73,6 +79,7 @@ describe('LoansStore', () => {
       getDetail: vi.fn<LoanRepository['getDetail']>().mockResolvedValue(detail),
       create: vi.fn<LoanRepository['create']>(),
       update: vi.fn<LoanRepository['update']>(),
+      registerPayment: vi.fn<LoanRepository['registerPayment']>(),
     };
     TestBed.configureTestingModule({
       providers: [LoansStore, { provide: LOAN_REPOSITORY, useValue: repository }],
@@ -187,6 +194,58 @@ describe('LoansStore', () => {
     expect(store.error()).toBe('Solo se pueden editar préstamos activos.');
     expect(store.loans()).toEqual([loan]);
     expect(repository.list).toHaveBeenCalledOnce();
+  });
+
+  it('registers a payment and refreshes the complete server state', async () => {
+    const paymentResult: RegisterLoanPaymentResult = {
+      paymentId: 'payment-1',
+      allocatedAmount: 36.67,
+      remainingBalance: 73.33,
+      resultingLoanStatus: 'active',
+    };
+    repository.registerPayment.mockResolvedValue(paymentResult);
+
+    await expect(
+      store.registerPayment({
+        loanId: loan.id,
+        amount: 36.67,
+        paymentMethod: 'cash',
+        notes: 'Pago en oficina',
+      }),
+    ).resolves.toEqual(paymentResult);
+
+    expect(repository.registerPayment).toHaveBeenCalledWith({
+      loanId: loan.id,
+      amount: 36.67,
+      paymentMethod: 'cash',
+      notes: 'Pago en oficina',
+    });
+    expect(repository.list).toHaveBeenCalledOnce();
+    expect(repository.listAvailableClients).toHaveBeenCalledOnce();
+    expect(repository.getDetail).toHaveBeenCalledWith(loan.id);
+    expect(store.paying()).toBe(false);
+  });
+
+  it('keeps a committed payment result when the subsequent refresh fails', async () => {
+    const paymentResult: RegisterLoanPaymentResult = {
+      paymentId: 'payment-1',
+      allocatedAmount: 36.67,
+      remainingBalance: 73.33,
+      resultingLoanStatus: 'active',
+    };
+    repository.registerPayment.mockResolvedValue(paymentResult);
+    repository.getDetail.mockRejectedValue(new AppError('SUPABASE_RPC', 'Sin conexión'));
+
+    await expect(
+      store.registerPayment({
+        loanId: loan.id,
+        amount: 36.67,
+        paymentMethod: 'cash',
+        notes: '',
+      }),
+    ).resolves.toEqual(paymentResult);
+
+    expect(store.error()).toContain('El pago se registró');
   });
 });
 

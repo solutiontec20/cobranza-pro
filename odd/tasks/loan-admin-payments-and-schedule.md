@@ -36,8 +36,8 @@ The collection calendar must match the business operation, audit reasons should 
 - Strategy: `ask-on-risk`.
 - Forecast: approximately 1,900 authored changed lines across the schedule migration, pgTAP/Vitest coverage, typed repository/store operations, and responsive payment/edit UI.
 - Chain strategy: reuse `feature-branch-chain` on the existing `felix` branch, as previously selected for the loans feature.
-- Running authored changed lines: 758 through LOAN-5 (task-document bookkeeping excluded).
-- Pull request slices: slice 1 candidate contains `b008c3f`; none created because remote delivery remains user-owned.
+- Running authored changed lines: 870 through LOAN-6 (task-document bookkeeping excluded).
+- Pull request slices: slice 1 candidate contains `b008c3f`; slice 2 candidate starts with `dadf23c`; none created because remote delivery remains user-owned.
 
 ## Testing mode
 
@@ -70,15 +70,18 @@ The collection calendar must match the business operation, audit reasons should 
   - Runtime harness: Vitest passed 7 files / 24 tests; Angular build passed; a 390×844 Chromium scenario verified every option, conditional justification, disabled/enabled save states, and switching back to a predefined reason.
   - Rollback boundary: revert the loan-detail edit-form reason controls and tests; no database rollback is required.
   - RDD: disabled/unmanaged.
-  - Work-unit commit: pending.
+  - Work-unit commit: `dadf23c` (`feat(loans): add predefined edit reasons`).
 
-- [ ] **LOAN-7 — Register administrator payments from loan detail**
+- [x] **LOAN-7 — Register administrator payments from loan detail**
   - Add typed payment input/result contracts and a repository method for `register_payment`.
   - Add store payment state that treats the committed RPC result separately from subsequent refresh failures.
   - Add a responsive payment action/form with amount, method, notes, quick amounts, balance preview, and success feedback.
   - Add pgTAP proof that an administrator can register a payment for another collector's portfolio while the payment remains attributed to that assigned collector.
   - Acceptance: an administrator can register a valid payment for any visible active loan, receives clear validation errors, and sees the refreshed balance, schedule, status, and history without creating duplicate payments.
   - Checks: pgTAP, focused Vitest coverage, Angular build, and mobile/desktop payment smoke verification.
+  - Evidence: the typed repository calls the existing transactional `register_payment` RPC; the store returns a committed payment result even if a subsequent refresh fails; the responsive detail page now provides payment amount, quick amounts, method, notes, remaining-balance preview, and success state.
+  - Runtime harness: pgTAP proved an admin can pay another collector's portfolio while the assigned collector and actual admin actor remain distinct; Vitest passed 7 files / 30 tests; Angular build passed; Chromium passed mobile payment submission plus desktop form usability.
+  - Rationale: the data contract, store semantics, UI, and security proof remain one coherent financial work unit; splitting them would leave an intermediate commit without an operable or safely verified payment path.
   - Rollback boundary: revert the typed payment operation and loan-detail payment UI; the existing database RPC remains independently usable.
   - RDD: disabled/unmanaged.
   - Work-unit commit: pending.
@@ -91,6 +94,7 @@ The collection calendar must match the business operation, audit reasons should 
 - Supabase function/RLS guidance and the October 2026 breaking-change feed were reviewed; no relevant RPC signature break applies, and existing explicit function grants remain necessary.
 - LOAN-5 is implemented without backfilling existing schedules; only newly created or explicitly edited eligible loans receive the Monday-through-Saturday calendar.
 - LOAN-6 is implemented with a pure reason resolver so the audit text is independently unit-tested from the PrimeNG selector.
+- LOAN-7 is implemented on the existing transactional RPC; no new payment migration was needed because administrator cross-portfolio authorization was already enforced correctly in the database.
 
 ## Verification evidence
 
@@ -103,7 +107,11 @@ The collection calendar must match the business operation, audit reasons should 
 - `pnpm test:ci` after LOAN-6 — passed; 7 files / 24 tests.
 - `pnpm build` after LOAN-6 — passed with the existing initial-bundle budget warning (809.31 kB vs 500 kB). The first build attempt exposed a readonly-array incompatibility with PrimeNG options; the array contract was corrected and the retry passed.
 - Temporary mobile Playwright/Chromium edit-reason smoke — passed; the temporary spec was removed after verification.
+- `pnpm supabase test db` after LOAN-7 — passed; 5 files / 101 tests.
+- `pnpm test:ci` after LOAN-7 — passed; 7 files / 30 tests.
+- `pnpm build` after LOAN-7 — passed with the existing initial-bundle budget warning (809.50 kB vs 500 kB).
+- Temporary payment Playwright/Chromium smoke — passed; mobile 390×844 submitted and refreshed a payment, and desktop 1280×900 verified the action and form. The temporary spec was removed.
 
 ## Next step
 
-Commit LOAN-6, record its identity, and implement administrator payment registration in LOAN-7.
+Commit LOAN-7, record its identity, and close the feature. Remote push and pull-request creation remain user-owned decisions.

@@ -10,6 +10,8 @@ import {
   LoanInstallment,
   LoanInstallmentStatus,
   LoanListItem,
+  RegisterLoanPaymentInput,
+  RegisterLoanPaymentResult,
   UpdateLoanInput,
 } from '../models/loan.model';
 import { LoanRepository } from '../repositories/loan.repository';
@@ -20,6 +22,8 @@ type CreateLoanRow =
   Database['public']['Functions']['admin_create_loan']['Returns'][number];
 type UpdateLoanRow =
   Database['public']['Functions']['admin_update_loan']['Returns'][number];
+type RegisterPaymentRow =
+  Database['public']['Functions']['register_payment']['Returns'][number];
 
 @Service({ autoProvided: false })
 export class SupabaseLoanRepository implements LoanRepository {
@@ -534,6 +538,39 @@ export class SupabaseLoanRepository implements LoanRepository {
     return this.toLoan(row);
   }
 
+  async registerPayment(
+    input: RegisterLoanPaymentInput,
+  ): Promise<RegisterLoanPaymentResult> {
+    const { data, error } = await this.supabase.rpc(
+      'register_payment',
+      {
+        p_loan_id: input.loanId,
+        p_amount: input.amount,
+        p_payment_method: input.paymentMethod,
+        p_notes: input.notes.trim() || undefined,
+      },
+    );
+
+    if (error) {
+      throw this.registerPaymentError(error);
+    }
+
+    const row: RegisterPaymentRow | undefined = data?.[0];
+    if (!row) {
+      throw new AppError(
+        'SUPABASE_RPC',
+        'El registro no devolvió la confirmación del pago.',
+      );
+    }
+
+    return {
+      paymentId: row.payment_id,
+      allocatedAmount: Number(row.allocated_amount),
+      remainingBalance: Number(row.remaining_balance),
+      resultingLoanStatus: row.resulting_loan_status,
+    };
+  }
+
   // ==========================================================
   // MAPPERS
   // ==========================================================
@@ -698,6 +735,55 @@ export class SupabaseLoanRepository implements LoanRepository {
       error,
       'No se pudo editar el préstamo.',
     );
+  }
+
+  private registerPaymentError(error: unknown): AppError {
+    const message = this.errorMessage(error);
+
+    if (message.includes('Payment exceeds outstanding loan balance')) {
+      return new AppError(
+        'VALIDATION',
+        'El monto no puede superar el saldo pendiente.',
+        error,
+      );
+    }
+
+    if (message.includes('Payments can only be registered on active loans')) {
+      return new AppError(
+        'VALIDATION',
+        'Solo se pueden registrar pagos en préstamos activos.',
+        error,
+      );
+    }
+
+    if (message.includes('Loan has no outstanding balance')) {
+      return new AppError(
+        'VALIDATION',
+        'El préstamo no tiene saldo pendiente.',
+        error,
+      );
+    }
+
+    if (
+      message.includes('Payment amount must be greater than zero') ||
+      message.includes('Payment amount may contain at most two decimals')
+    ) {
+      return new AppError(
+        'VALIDATION',
+        'Ingresa un monto válido con máximo dos decimales.',
+        error,
+      );
+    }
+
+    if (message.includes('Insufficient privileges')) {
+      return new AppError(
+        'AUTH_UNAUTHORIZED',
+        'No tenés permisos para registrar este pago.',
+        error,
+      );
+    }
+
+    return this.toAppError(error, 'No se pudo registrar el pago.');
   }
 
   private toAppError(

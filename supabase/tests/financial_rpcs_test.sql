@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(11);
+select plan(13);
 
 -- ============================================================
 -- DATOS DE PRUEBA
@@ -320,6 +320,48 @@ set local request.jwt.claim.sub =
 
 -- ============================================================
 -- TEST 9
+-- El administrador puede cobrar una cartera ajena
+-- ============================================================
+
+select lives_ok(
+  $$
+    select *
+    from public.register_payment(
+      'bbbbbbbb-1111-1111-1111-111111111111'::uuid,
+      20.00,
+      'cash',
+      now(),
+      'Pago recibido por administración'
+    )
+  $$,
+  'El administrador puede registrar pagos para cualquier cartera'
+);
+
+
+-- ============================================================
+-- TEST 10
+-- El pago conserva al cobrador asignado y audita al administrador
+-- ============================================================
+
+select results_eq(
+  $$
+    select
+      collector_id,
+      created_by
+    from public.payments
+    where loan_id =
+      'bbbbbbbb-1111-1111-1111-111111111111'::uuid
+  $$,
+  $$ values (
+    '22222222-2222-2222-2222-222222222222'::uuid,
+    '44444444-4444-4444-4444-444444444444'::uuid
+  ) $$,
+  'El pago administrativo conserva la cartera y registra al actor real'
+);
+
+
+-- ============================================================
+-- TEST 11
 -- Anulación de pago
 -- ============================================================
 
@@ -342,7 +384,7 @@ select lives_ok(
 
 
 -- ============================================================
--- TEST 10
+-- TEST 12
 -- El pago no se elimina: queda voided
 -- ============================================================
 
@@ -359,7 +401,7 @@ select results_eq(
 
 
 -- ============================================================
--- TEST 11
+-- TEST 13
 -- El préstamo vuelve a quedar activo
 -- ============================================================
 
