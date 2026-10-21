@@ -35,10 +35,11 @@ Payment allocation is financial state: cumulative payments, advance payments, an
   replacement RPC, pgTAP coverage, UI copy, and focused tests.
 - Chain strategy: reuse `feature-branch-chain` on the existing `felix` branch, as selected for
   the referenced loans work.
-- Running authored changed lines: 0.
-- Pull request slices: PAY-1 is the first candidate; its versioned migration cannot be split
+- Running authored changed lines: 957 through PAY-2 (generated types and task-document
+  bookkeeping excluded).
+- Pull request slices: slice 1 candidate contains `9a085e6`; its versioned migration cannot be split
   without separating the transactional fix, historical repair, and the tests that prove them,
-  so a `size:exception` is recommended if a PR is created.
+  so a `size:exception` is recommended if a PR is created. Slice 2 candidate contains `4e324cb`.
 
 ## Testing mode
 
@@ -60,16 +61,24 @@ Payment allocation is financial state: cumulative payments, advance payments, an
     share installment numbers; added a versioned migration that restricts balance/allocation to
     active installments, supersedes and audit-logs erroneous allocations, rebuilds posted-payment
     allocations oldest-first, and exposes partial installment state.
-  - Runtime harness: pending work-unit commit; pgTAP passed 5 files / 108 tests and database lint
-    reported no schema errors. The migration was applied incrementally to the local database.
+  - Runtime harness: pgTAP passed 5 files / 108 tests and database lint reported no schema errors.
+    The migration was applied incrementally to the local database.
   - Rollback boundary: the new payment-balance migration and its focused pgTAP assertions.
+  - RDD: disabled/unmanaged.
+  - Work-unit commit: `9a085e6` (`fix(payments): allocate payments to active schedules`).
 
-- [ ] **PAY-2 — Clarify selected-loan balance in payment feedback**
+- [x] **PAY-2 — Clarify selected-loan balance in payment feedback**
   - Label the preview and confirmation as the balance of the selected loan.
   - Include a stable loan identifier that helps the operator distinguish it from the customer's aggregate debt.
   - Add focused UI/unit coverage where practical.
   - Checks: `pnpm test:ci`, `pnpm build`, and a responsive payment-dialog smoke scenario.
+  - Evidence: the form, balance preview, and success confirmation explicitly identify the selected
+    loan with an eight-character reference and no longer use an ambiguous general-balance label.
+  - Runtime harness: Vitest passed 7 files / 30 tests; Angular build passed; temporary Chromium
+    smoke scenarios passed at 390×844 and 1280×900 and were removed after verification.
   - Rollback boundary: selected-loan payment feedback copy and its focused coverage.
+  - RDD: disabled/unmanaged.
+  - Work-unit commit: `4e324cb` (`fix(loans): identify selected loan payment balance`).
 
 ## Progress
 
@@ -84,6 +93,8 @@ Payment allocation is financial state: cumulative payments, advance payments, an
 - Five separate S/ 4.00 payments now return S/ 116.00, 112.00, 108.00, 104.00, and 100.00.
 - A S/ 2.00 partial payment leaves S/ 2.00 on the current installment; the following S/ 6.00
   completes that remainder before advancing S/ 4.00 to the next installment.
+- The payment dialog now shows `Préstamo #<referencia>` and labels both preview and confirmation as
+  the balance of that selected loan.
 
 ## Verification evidence
 
@@ -93,7 +104,10 @@ Payment allocation is financial state: cumulative payments, advance payments, an
 - `pnpm supabase db lint --local --level error` — no schema errors.
 - `pnpm test:ci` — passed 7 files / 30 tests after rerunning outside the filesystem sandbox.
 - `pnpm build` — passed; existing initial bundle warning remains (809.50 kB vs 500 kB).
+- Temporary Chromium payment-dialog smoke — passed mobile 390×844 and desktop 1280×900; the
+  temporary spec was removed.
 
 ## Next step
 
-Commit PAY-1, then complete and verify selected-loan payment feedback in PAY-2.
+Implementation and local verification are complete. Remote push and pull-request creation remain
+user-owned decisions.
