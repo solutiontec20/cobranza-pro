@@ -13,9 +13,9 @@ import { CommonModule } from '@angular/common';
   imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet, Topbar, ToastModule, SidebarModule, AvatarModule, ButtonModule],
   template: `
       <p-toast />
-      <div class="h-screen w-full bg-surface-50 dark:bg-surface-900 overflow-hidden font-sans text-surface-900 dark:text-surface-0 flex">
-        <div class="border border-surface-200 dark:border-surface-700 rounded-lg overflow-hidden w-full h-full flex flex-col relative">
-            <p-sidebar-layout class="min-h-192! relative! flex-1">
+      <div class="app-shell flex h-screen w-full overflow-hidden font-sans text-surface-900 dark:text-surface-0">
+        <div class="app-shell-frame relative flex h-full w-full flex-col overflow-hidden">
+            <p-sidebar-layout class="app-sidebar-layout min-h-192! relative! flex-1">
                 @if (isMobile() && open()) {
                     <p-sidebar-backdrop class="absolute!" />
                 }
@@ -26,11 +26,11 @@ import { CommonModule } from '@angular/common';
                             <p-sidebar-header>
                                 <p-sidebar-menu>
                                     <p-sidebar-menu-item>
-                                        <button pSidebarMenuButton class="p-1!">
-                                            <div class="flex size-6 shrink-0 items-center justify-center rounded-md bg-linear-to-br from-violet-500 to-indigo-600 text-white text-xs font-bold leading-none">
+                                        <button pSidebarMenuButton class="app-sidebar-brand p-1!">
+                                            <div class="app-brand-mark">
                                               <i class="pi pi-wallet"></i>
                                             </div>
-                                            <span class="font-semibold text-sm">CobranzaPro</span>
+                                            <span class="text-base font-extrabold tracking-tight text-primary">CobranzaPro</span>
                                         </button>
                                     </p-sidebar-menu-item>
                                 </p-sidebar-menu>
@@ -149,14 +149,14 @@ import { CommonModule } from '@angular/common';
                         </p-sidebar-panel>
                     </p-sidebar-aside>
                 </p-sidebar>
-                <p-sidebar-main>
-                    <div class="flex items-center gap-2 border-b border-surface-200 dark:border-surface-700 px-4 py-2">
-                        <button pButton class="w-8 h-8 p-0 flex items-center justify-center bg-transparent border-0 text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800 rounded-md transition-colors" (click)="open.set(!open())"><i class="pi pi-bars text-xl"></i></button>
+                <p-sidebar-main class="app-workspace">
+                    <div class="app-topbar flex items-center gap-2 px-3 sm:px-4">
+                        <button pButton class="app-menu-button flex h-10 w-10 items-center justify-center rounded-lg bg-transparent p-0 transition-colors" (click)="open.set(!open())" aria-label="Abrir o cerrar navegación"><i class="pi pi-bars text-lg"></i></button>
                         <div class="flex-1">
                           <app-topbar />
                         </div>
                     </div>
-                    <div class="p-4 md:p-6 overflow-auto h-[calc(100%-60px)]">
+                    <div class="app-content p-3 sm:p-5 lg:p-7">
                         <router-outlet />
                     </div>
                 </p-sidebar-main>

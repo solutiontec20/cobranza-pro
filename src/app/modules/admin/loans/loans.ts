@@ -104,6 +104,7 @@ const emptyModel = (): LoanFormModel => ({
       </section>
     </main>
 
+    @defer (when dialogVisible()) {
     <p-dialog header="Nuevo préstamo" [modal]="true" [visible]="dialogVisible()" (visibleChange)="dialogVisible.set($event)" styleClass="w-[calc(100vw-2rem)] max-w-2xl">
       <form class="flex flex-col gap-5" (submit)="createLoan(); $event.preventDefault()">
         @if (store.availableClients().length === 0) {
@@ -169,6 +170,9 @@ const emptyModel = (): LoanFormModel => ({
         </div>
       </form>
     </p-dialog>
+    } @error {
+      <p-message severity="error" styleClass="w-full">No se pudo cargar el formulario de nuevo préstamo.</p-message>
+    }
   `,
 })
 export default class Loans {
