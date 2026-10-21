@@ -22,10 +22,21 @@ export const ADMIN_ROUTES: Routes = [
   },
   {
     path: 'prestamos',
-    loadComponent: () => import('./loans/loans'),
     providers: [
       LoansStore,
       { provide: LOAN_REPOSITORY, useClass: SupabaseLoanRepository },
+    ],
+    children: [
+      {
+        path: '',
+        title: 'Préstamos | CobranzaPro',
+        loadComponent: () => import('./loans/loans'),
+      },
+      {
+        path: ':loanId',
+        title: 'Detalle del préstamo | CobranzaPro',
+        loadComponent: () => import('./loans/loan-detail'),
+      },
     ],
   },
   {

@@ -40,8 +40,8 @@ Administrators need to inspect the customer's real payment schedule and correct 
 - Strategy: `ask-on-risk`
 - Forecast: approximately 2,700 accumulated authored changed lines across SQL, tests, types, repository/store, routing, and responsive UI.
 - Chain strategy: `feature-branch-chain` on the existing `felix` branch.
-- Running authored changed lines: 1,817 through the three implementation commits (`d2130b9`, `ce00f2c`, `d9f01de`; 27 generated `database.types.ts` lines and final bookkeeping excluded).
-- Pull request slices: slice 1 candidate contains `d2130b9`; slice 2 candidate contains `ce00f2c`; slice 3 candidate contains `d9f01de`; no pull request created because remote delivery remains user-owned.
+- Running authored changed lines: 2,203 through the first LOAN-4 work unit (`d2130b9`, `ce00f2c`, `d9f01de`, `8ea05ed`; 27 generated `database.types.ts` lines and bookkeeping excluded). The responsive UI commit is pending.
+- Pull request slices: slice 1 candidate contains `d2130b9`; slice 2 candidate contains `ce00f2c`; slice 3 candidate contains `d9f01de`; slice 4 starts with `8ea05ed`; no pull request created because remote delivery remains user-owned.
 
 ## Testing mode
 
@@ -89,14 +89,19 @@ Administrators need to inspect the customer's real payment schedule and correct 
   - RDD: disabled/unmanaged.
   - Work-unit commit: `d9f01de` (`feat(loans): add schedule and editing UI`).
 
-- [ ] **LOAN-4 — Replace loan dialogs with a responsive detail page**
+- [x] **LOAN-4 — Replace loan dialogs with a responsive detail page**
   - Add a routed loan detail under `/admin/prestamos/:loanId` and navigate to it from the loan list.
   - Load customer context, active installment balances, and auditable payment history from Supabase.
   - Present customer detail, loan summary, schedule, and received-payment history using mobile cards and desktop tables.
   - Move audited editing into an inline page section and keep installment recalculation visible while editing.
   - Acceptance: no schedule/edit modal is used; the detail page follows the MVP information hierarchy and remains readable and operable at mobile and desktop widths.
   - Checks: focused Vitest coverage, `pnpm build`, and Playwright smoke scenarios at mobile and desktop viewports.
-  - Evidence: pending.
+  - Evidence: `/admin/prestamos/:loanId` now loads customer contact/address context, active installments, and posted/voided payment history from Supabase; the list navigates to a full detail page; loan edits run in an inline section with live installment recalculation.
+  - Responsive evidence: mobile renders the loan list, installment schedule, and payment history as touch-friendly cards; desktop uses denser tables and a split customer/financial summary layout.
+  - Runtime harness: headless Chromium passed mobile (390×844) and desktop (1280×900) scenarios, verified all four MVP sections, confirmed no detail/edit dialog exists, edited the installment count to four, and observed the refreshed four-installment schedule.
+  - Rollback boundary: revert the LOAN-4 data contract/store work unit and the routed detail/list UI work unit; the transactional update RPC remains unaffected.
+  - RDD: disabled/unmanaged.
+  - Work-unit commits: `8ea05ed` (`feat(loans): load complete loan detail data`) and responsive UI commit pending.
 
 ## Progress
 
@@ -116,7 +121,11 @@ Administrators need to inspect the customer's real payment schedule and correct 
 - `pnpm build` — passed with the pre-existing initial-bundle budget warning (784.62 kB vs 500 kB).
 - `pnpm supabase test db` — passed after the UI integration; 5 files and 86 tests.
 - Temporary Playwright/Chromium UI smoke — passed; 1 scenario. The temporary harness was removed after verification and is not a committed E2E suite.
+- `pnpm test:ci` after LOAN-4 — passed; 6 files and 21 tests.
+- `pnpm build` after LOAN-4 — passed with the existing initial-bundle budget warning (786.80 kB vs 500 kB).
+- `pnpm supabase test db` after LOAN-4 — passed; 5 files and 86 tests.
+- Temporary responsive Playwright/Chromium smoke — passed; 2 scenarios at mobile and desktop widths. The temporary harness was removed after verification.
 
 ## Next step
 
-Implement LOAN-4 as the next feature-branch-chain slice. Remote push and pull-request creation remain user-owned decisions.
+Commit the responsive route/UI work unit, record its identity, and close LOAN-4. Remote push and pull-request creation remain user-owned decisions.
