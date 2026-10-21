@@ -36,8 +36,8 @@ The collection calendar must match the business operation, audit reasons should 
 - Strategy: `ask-on-risk`.
 - Forecast: approximately 1,900 authored changed lines across the schedule migration, pgTAP/Vitest coverage, typed repository/store operations, and responsive payment/edit UI.
 - Chain strategy: reuse `feature-branch-chain` on the existing `felix` branch, as previously selected for the loans feature.
-- Running authored changed lines: 870 through LOAN-6 (task-document bookkeeping excluded).
-- Pull request slices: slice 1 candidate contains `b008c3f`; slice 2 candidate starts with `dadf23c`; none created because remote delivery remains user-owned.
+- Running authored changed lines: 1,488 through LOAN-7 (task-document bookkeeping excluded).
+- Pull request slices: slice 1 candidate contains `b008c3f`; slice 2 candidate contains `dadf23c`; slice 3 candidate contains `e887eaa`; none created because remote delivery remains user-owned.
 
 ## Testing mode
 
@@ -84,7 +84,7 @@ The collection calendar must match the business operation, audit reasons should 
   - Rationale: the data contract, store semantics, UI, and security proof remain one coherent financial work unit; splitting them would leave an intermediate commit without an operable or safely verified payment path.
   - Rollback boundary: revert the typed payment operation and loan-detail payment UI; the existing database RPC remains independently usable.
   - RDD: disabled/unmanaged.
-  - Work-unit commit: pending.
+  - Work-unit commit: `e887eaa` (`feat(loans): let admins register client payments`).
 
 ## Progress
 
@@ -114,4 +114,4 @@ The collection calendar must match the business operation, audit reasons should 
 
 ## Next step
 
-Commit LOAN-7, record its identity, and close the feature. Remote push and pull-request creation remain user-owned decisions.
+Feature implementation and local verification are complete. Remote push and pull-request creation remain user-owned decisions.
