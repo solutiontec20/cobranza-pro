@@ -19,7 +19,11 @@ import {
   LoanStatus,
   RegisterLoanPaymentResult,
 } from '../../../core/models/loan.model';
-import { calculateLoanSummary, firstDueOn } from './loan-calculations';
+import {
+  calculateLoanPaymentSummary,
+  calculateLoanSummary,
+  firstDueOn,
+} from './loan-calculations';
 import {
   LoanEditReasonCode,
   LOAN_EDIT_REASON_OPTIONS,
@@ -112,7 +116,7 @@ const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
           </div>
 
           <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            @if (detail.loan.status === 'active' && detail.loan.balance > 0) {
+            @if (detail.loan.status === 'active' && remainingBalance() > 0) {
               <p-button
                 label="Registrar pago"
                 icon="pi pi-money-bill"
@@ -186,7 +190,7 @@ const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
               <div class="mt-5 flex flex-col gap-1">
                 <span class="text-sm text-muted-color">Saldo pendiente</span>
                 <span class="text-3xl font-bold tracking-tight text-color sm:text-4xl">
-                  {{ detail.loan.balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                  {{ remainingBalance() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
                 </span>
                 <span class="text-sm text-muted-color">
                   Pagado {{ totalPaid() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }} de
@@ -577,7 +581,7 @@ const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
                 Nuevo saldo del préstamo #{{ selectedLoanReference() }}
               </dt>
               <dd class="font-bold tabular-nums text-color">
-                {{ result.remainingBalance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                {{ confirmedPaymentBalance() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
               </dd>
             </div>
             @if (result.resultingLoanStatus === 'paid') {
@@ -614,7 +618,7 @@ const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
                 <div class="text-right">
                   <p class="text-muted-color">Saldo de este préstamo</p>
                   <p class="mt-1 text-lg font-bold tabular-nums text-color">
-                    {{ currentDetail.loan.balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                    {{ remainingBalance() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
                   </p>
                 </div>
               </div>
@@ -634,7 +638,7 @@ const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
               currency="PEN"
               locale="es-PE"
               [min]="0.01"
-              [max]="detail()?.loan?.balance ?? 0"
+              [max]="remainingBalance()"
               styleClass="w-full"
               inputStyleClass="w-full text-xl font-bold tabular-nums"
             />
@@ -777,10 +781,12 @@ export default class LoanDetailPage {
     });
   });
 
-  protected readonly totalPaid = computed(() => {
-    const loan = this.detail()?.loan;
-    return loan ? loan.totalAmount - loan.balance : 0;
+  protected readonly paymentSummary = computed(() => {
+    const detail = this.detail();
+    return calculateLoanPaymentSummary(detail?.loan.totalAmount ?? 0, detail?.payments ?? []);
   });
+  protected readonly totalPaid = computed(() => this.paymentSummary().paidAmount);
+  protected readonly remainingBalance = computed(() => this.paymentSummary().remainingBalance);
   protected readonly paidPercentage = computed(() => {
     const loan = this.detail()?.loan;
     if (!loan || loan.totalAmount <= 0) return 0;
@@ -813,29 +819,38 @@ export default class LoanDetailPage {
   });
   protected readonly quickPaymentAmounts = computed(() => {
     const detail = this.detail();
-    if (!detail || detail.loan.balance <= 0) return [];
+    const balance = this.remainingBalance();
+    if (!detail || balance <= 0) return [];
 
     const nextInstallment =
       detail.installments.find((installment) => installment.outstandingAmount > 0)?.outstandingAmount ??
       detail.loan.installmentAmount;
 
-    return [...new Set([5, 10, 15, nextInstallment, detail.loan.balance])]
-      .filter((amount) => amount > 0 && amount <= detail.loan.balance)
+    return [...new Set([5, 10, 15, nextInstallment, balance])]
+      .filter((amount) => amount > 0 && amount <= balance)
       .map((amount) => Math.round(amount * 100) / 100);
   });
   protected readonly paymentAmountIsValid = computed(() => {
-    const balance = this.detail()?.loan.balance ?? 0;
+    const balance = this.remainingBalance();
     const amount = this.paymentModel().amount;
     return Number.isFinite(amount) && amount > 0 && amount <= balance;
   });
   protected readonly paymentBalancePreview = computed(() => {
-    const balance = this.detail()?.loan.balance ?? 0;
+    const balance = this.remainingBalance();
     const amount = this.paymentModel().amount;
     return Math.max(0, Math.round((balance - (Number.isFinite(amount) ? amount : 0)) * 100) / 100);
   });
   protected readonly selectedLoanReference = computed(() =>
     (this.detail()?.loan.id ?? '').slice(0, 8).toUpperCase(),
   );
+  protected readonly confirmedPaymentBalance = computed(() => {
+    const result = this.paymentResult();
+    if (!result) return 0;
+
+    return this.detail()?.payments.some((payment) => payment.id === result.paymentId)
+      ? this.remainingBalance()
+      : result.remainingBalance;
+  });
 
   constructor() {
     void this.store.loadDetail(this.loanId);
@@ -866,7 +881,8 @@ export default class LoanDetailPage {
 
   protected openPaymentDialog(): void {
     const detail = this.detail();
-    if (!detail || detail.loan.status !== 'active' || detail.loan.balance <= 0) return;
+    const balance = this.remainingBalance();
+    if (!detail || detail.loan.status !== 'active' || balance <= 0) return;
 
     const suggestedAmount =
       detail.installments.find((installment) => installment.outstandingAmount > 0)?.outstandingAmount ??
@@ -875,7 +891,7 @@ export default class LoanDetailPage {
     this.editing.set(false);
     this.store.clearError();
     this.paymentResult.set(null);
-    this.paymentModel.set(emptyPaymentModel(Math.min(suggestedAmount, detail.loan.balance)));
+    this.paymentModel.set(emptyPaymentModel(Math.min(suggestedAmount, balance)));
     this.paymentForm().reset();
     this.paymentDialogVisible.set(true);
   }

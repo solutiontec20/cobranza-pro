@@ -7,7 +7,11 @@ import {
   RegisterLoanPaymentResult,
 } from '../../../core/models/loan.model';
 import { LOAN_REPOSITORY, LoanRepository } from '../../../core/repositories/loan.repository';
-import { calculateLoanSummary, firstDueOn } from './loan-calculations';
+import {
+  calculateLoanPaymentSummary,
+  calculateLoanSummary,
+  firstDueOn,
+} from './loan-calculations';
 import { LoansStore } from './loans.store';
 
 const loan: LoanListItem = {
@@ -250,6 +254,30 @@ describe('LoansStore', () => {
 });
 
 describe('loan calculations', () => {
+  it('subtracts every posted same-day payment from the remaining loan balance', () => {
+    const payments = Array.from({ length: 7 }, () => ({
+      amount: 4,
+      status: 'posted' as const,
+    }));
+
+    expect(calculateLoanPaymentSummary(120, payments)).toEqual({
+      paidAmount: 28,
+      remainingBalance: 92,
+    });
+  });
+
+  it('excludes voided payments from the paid and remaining amounts', () => {
+    expect(
+      calculateLoanPaymentSummary(120, [
+        { amount: 4, status: 'posted' },
+        { amount: 4, status: 'voided' },
+      ]),
+    ).toEqual({
+      paidAmount: 4,
+      remainingBalance: 116,
+    });
+  });
+
   it('keeps the rounding difference in the last installment', () => {
     expect(calculateLoanSummary(100, 10, 3)).toEqual({
       totalAmount: 110,

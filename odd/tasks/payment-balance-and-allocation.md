@@ -80,6 +80,16 @@ Payment allocation is financial state: cumulative payments, advance payments, an
   - RDD: disabled/unmanaged.
   - Work-unit commit: `4e324cb` (`fix(loans): identify selected loan payment balance`).
 
+- [ ] **PAY-3 — Reconcile the loan summary with posted payment history**
+  - Derive the selected-loan summary from every posted payment in its loaded history, regardless
+    of how many payments share the same business date.
+  - Exclude voided payments and keep the displayed balance, payment limits, preview, and
+    confirmation consistent with that derived amount.
+  - Add focused unit coverage for repeated same-day payments and voided-payment exclusion.
+  - Checks: `pnpm test:ci`, `pnpm build`, and focused responsive smoke verification.
+  - Rollback boundary: pure payment-summary calculation and its loan-detail consumers.
+  - RDD: disabled/unmanaged.
+
 ## Progress
 
 - CodeGraph traced the Angular payment flow from the loan detail page through `LoansStore` and `SupabaseLoanRepository` to `register_payment`.
@@ -95,6 +105,10 @@ Payment allocation is financial state: cumulative payments, advance payments, an
   completes that remainder before advancing S/ 4.00 to the next installment.
 - The payment dialog now shows `Préstamo #<referencia>` and labels both preview and confirmation as
   the balance of that selected loan.
+- Follow-up evidence from the user shows the detail history can contain seven or eight payments
+  while the installment-derived summary still shows only one S/ 4.00 reduction. PAY-3 therefore
+  treats posted payment history as the immediate source for the selected-loan summary while the
+  schedule remains the allocation breakdown.
 
 ## Verification evidence
 
@@ -109,5 +123,5 @@ Payment allocation is financial state: cumulative payments, advance payments, an
 
 ## Next step
 
-Implementation and local verification are complete. Remote push and pull-request creation remain
-user-owned decisions.
+Implement PAY-3 and verify the selected-loan summary reflects all posted same-day payments.
+Remote push and pull-request creation remain user-owned decisions.
