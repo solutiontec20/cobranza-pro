@@ -40,8 +40,8 @@ Administrators need to inspect the customer's real payment schedule and correct 
 - Strategy: `ask-on-risk`
 - Forecast: approximately 2,700 accumulated authored changed lines across SQL, tests, types, repository/store, routing, and responsive UI.
 - Chain strategy: `feature-branch-chain` on the existing `felix` branch.
-- Running authored changed lines: 2,203 through the first LOAN-4 work unit (`d2130b9`, `ce00f2c`, `d9f01de`, `8ea05ed`; 27 generated `database.types.ts` lines and bookkeeping excluded). The responsive UI commit is pending.
-- Pull request slices: slice 1 candidate contains `d2130b9`; slice 2 candidate contains `ce00f2c`; slice 3 candidate contains `d9f01de`; slice 4 starts with `8ea05ed`; no pull request created because remote delivery remains user-owned.
+- Running authored changed lines: 3,399 through LOAN-4 (`d2130b9`, `ce00f2c`, `d9f01de`, `8ea05ed`, `aa540bb`; 27 generated `database.types.ts` lines and bookkeeping excluded).
+- Pull request slices: slice 1 candidate contains `d2130b9`; slice 2 candidate contains `ce00f2c`; slice 3 candidate contains `d9f01de`; slice 4 contains `8ea05ed` and `aa540bb`; no pull request created because remote delivery remains user-owned.
 
 ## Testing mode
 
@@ -101,14 +101,14 @@ Administrators need to inspect the customer's real payment schedule and correct 
   - Runtime harness: headless Chromium passed mobile (390×844) and desktop (1280×900) scenarios, verified all four MVP sections, confirmed no detail/edit dialog exists, edited the installment count to four, and observed the refreshed four-installment schedule.
   - Rollback boundary: revert the LOAN-4 data contract/store work unit and the routed detail/list UI work unit; the transactional update RPC remains unaffected.
   - RDD: disabled/unmanaged.
-  - Work-unit commits: `8ea05ed` (`feat(loans): load complete loan detail data`) and responsive UI commit pending.
+  - Work-unit commits: `8ea05ed` (`feat(loans): load complete loan detail data`) and `aa540bb` (`feat(loans): add responsive loan detail page`).
 
 ## Progress
 
 - Exploration completed against the two MVP HTML files, README, migration guide, current Angular module, generated Supabase types, and all loan-related migrations.
 - Confirmed that the MVP contains schedule viewing but no editing behavior; the editing rules above come from the user's explicit decision and financial-integrity constraints.
-- UI implementation completed with PrimeNG dialogs/tables, Signal Forms, mobile-first responsive layout, and Spanish `es-PE` formatting.
-- User review superseded the dialog-based interaction: LOAN-4 reopens the UI work as a routed, mobile-first detail experience based on the MVP client-detail hierarchy.
+- The first UI implementation used PrimeNG dialogs; user review superseded that interaction and LOAN-4 replaced it with a routed, mobile-first detail experience based on the MVP client-detail hierarchy.
+- LOAN-4 is complete: detail and editing no longer use dialogs, while the new-loan creation flow remains in its focused creation dialog.
 
 ## Verification evidence
 
@@ -128,4 +128,4 @@ Administrators need to inspect the customer's real payment schedule and correct 
 
 ## Next step
 
-Commit the responsive route/UI work unit, record its identity, and close LOAN-4. Remote push and pull-request creation remain user-owned decisions.
+Feature implementation and local verification are complete. Remote push and pull-request creation remain user-owned decisions.
