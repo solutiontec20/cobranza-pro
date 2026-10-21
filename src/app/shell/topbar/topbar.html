@@ -1,12 +1,12 @@
-<div class="h-full px-4 flex items-center justify-between">
+<div class="flex h-full items-center justify-between px-1 sm:px-2">
   <!-- Left side (Mobile Logo) -->
   <div class="flex items-center gap-3">
 
-    <div class="md:hidden flex items-center gap-2">
-      <div class="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center shadow-sm">
+    <div class="flex items-center gap-2 md:hidden">
+      <div class="app-brand-mark size-8! rounded-lg! shadow-sm!">
         <i class="pi pi-wallet text-sm text-white"></i>
       </div>
-      <span class="font-bold text-surface-900 dark:text-surface-0 tracking-tight">CobranzaPro</span>
+      <span class="font-extrabold tracking-tight text-primary">CobranzaPro</span>
     </div>
   </div>
 
@@ -17,7 +17,7 @@
       pButton 
       [rounded]="true" 
       [text]="true" 
-      class="text-surface-500 w-10 h-10 p-0 flex items-center justify-center" 
+      class="app-icon-button flex h-10 w-10 items-center justify-center p-0" 
       (click)="themeService.toggleTheme()"
       pTooltip="Cambiar tema">
       <i [class]="themeService.isDark() ? 'pi pi-sun text-xl' : 'pi pi-moon text-xl'"></i>
@@ -25,7 +25,7 @@
 
     <!-- Notification bell -->
     <div class="relative">
-      <button pButton [rounded]="true" [text]="true" class="text-surface-500 w-10 h-10 p-0 flex items-center justify-center" pTooltip="Notificaciones">
+      <button pButton [rounded]="true" [text]="true" class="app-icon-button flex h-10 w-10 items-center justify-center p-0" pTooltip="Notificaciones">
         <i class="pi pi-bell text-xl"></i>
       </button>
       <span class="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-surface-0 dark:border-surface-900 pointer-events-none"></span>
@@ -34,12 +34,12 @@
     <div class="h-8 w-px bg-surface-200 dark:bg-surface-700 hidden md:block mx-1"></div>
 
     <!-- User Profile Info Desktop -->
-    <div class="hidden md:flex flex-col items-end mr-1">
+    <div class="mr-1 hidden flex-col items-end md:flex">
       <span class="text-sm font-bold text-surface-900 dark:text-surface-0">{{ authService.currentUser()?.fullName || 'Usuario' }}</span>
-      <span class="text-[10px] text-surface-500">{{ authService.currentUser()?.role || '' }}</span>
+      <span class="mt-0.5 rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-bold capitalize text-primary-700 dark:bg-primary-950/40 dark:text-primary-300">{{ authService.currentUser()?.role || '' }}</span>
     </div>
 
-    <button pButton [rounded]="true" [text]="true" class="text-surface-500 w-10 h-10 p-0 flex items-center justify-center ml-1" pTooltip="Perfil de usuario">
+    <button pButton [rounded]="true" [text]="true" class="app-icon-button ml-1 flex h-10 w-10 items-center justify-center p-0" pTooltip="Perfil de usuario">
       <i class="pi pi-user text-xl"></i>
     </button>
   </div>

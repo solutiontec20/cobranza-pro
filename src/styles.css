@@ -2,3 +2,389 @@
 @import 'tailwindcss-primeui';
 
 @custom-variant dark (&:where(.app-dark, .app-dark *));
+
+:root {
+  color-scheme: light;
+  --cp-app-bg: #f4f7fb;
+  --cp-panel: #ffffff;
+  --cp-panel-muted: #f8fafc;
+  --cp-border: #dce5f0;
+  --cp-text: #0f172a;
+  --cp-muted: #64748b;
+  --cp-brand: #2563eb;
+  --cp-brand-strong: #1d4ed8;
+  --cp-brand-soft: #eff6ff;
+  --cp-shadow: 0 1px 2px rgb(15 23 42 / 4%), 0 10px 30px rgb(15 23 42 / 6%);
+  --cp-shadow-raised: 0 18px 45px rgb(15 23 42 / 10%);
+}
+
+.app-dark {
+  color-scheme: dark;
+  --cp-app-bg: #0b1220;
+  --cp-panel: #111b2e;
+  --cp-panel-muted: #162238;
+  --cp-border: #263653;
+  --cp-text: #f8fafc;
+  --cp-muted: #94a3b8;
+  --cp-brand: #60a5fa;
+  --cp-brand-strong: #93c5fd;
+  --cp-brand-soft: rgb(37 99 235 / 16%);
+  --cp-shadow: 0 1px 2px rgb(0 0 0 / 24%), 0 14px 35px rgb(0 0 0 / 20%);
+  --cp-shadow-raised: 0 20px 55px rgb(0 0 0 / 35%);
+}
+
+html,
+body {
+  min-height: 100%;
+  background: var(--cp-app-bg);
+}
+
+body {
+  margin: 0;
+  color: var(--cp-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  color: #ffffff;
+  background: #2563eb;
+}
+
+.app-shell {
+  background: var(--cp-app-bg);
+}
+
+.app-shell-frame {
+  isolation: isolate;
+}
+
+.app-shell .p-sidebar-aside {
+  border-right: 1px solid var(--cp-border);
+  background: var(--cp-panel);
+  box-shadow: 8px 0 28px rgb(15 23 42 / 3%);
+}
+
+.app-dark .app-shell .p-sidebar-aside {
+  box-shadow: 8px 0 28px rgb(0 0 0 / 16%);
+}
+
+.app-shell .p-sidebar-panel,
+.app-shell .p-sidebar-header,
+.app-shell .p-sidebar-content,
+.app-shell .p-sidebar-footer {
+  background: transparent;
+}
+
+.app-shell .p-sidebar-header {
+  padding: 1rem 0.75rem 0.8rem;
+}
+
+.app-shell .p-sidebar-content {
+  padding: 0.4rem 0.65rem;
+}
+
+.app-shell .p-sidebar-footer {
+  border-top: 1px solid var(--cp-border);
+  padding: 0.85rem 0.65rem;
+}
+
+.app-sidebar-brand {
+  min-height: 3rem;
+  gap: 0.75rem !important;
+  color: var(--cp-text) !important;
+}
+
+.app-brand-mark {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.75rem;
+  color: #ffffff;
+  background: #2563eb;
+  box-shadow: 0 7px 18px rgb(37 99 235 / 30%);
+}
+
+.app-shell .p-sidebar-group-label {
+  padding: 1.05rem 0.75rem 0.45rem;
+  color: var(--cp-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.app-shell .p-sidebar-menu {
+  gap: 0.25rem;
+}
+
+.app-shell .p-sidebar-menu-button {
+  position: relative;
+  min-height: 2.65rem;
+  border-radius: 0.7rem;
+  color: #475569;
+  font-size: 0.9rem;
+  font-weight: 550;
+  transition: color 150ms ease, background-color 150ms ease, transform 150ms ease;
+}
+
+.app-dark .app-shell .p-sidebar-menu-button {
+  color: #cbd5e1;
+}
+
+.app-shell .p-sidebar-menu-button:hover {
+  color: var(--cp-brand-strong);
+  background: var(--cp-brand-soft);
+}
+
+.app-shell .p-sidebar-menu-button[data-active='true'] {
+  color: #1d4ed8;
+  background: #e8f1ff;
+  font-weight: 700;
+}
+
+.app-shell .p-sidebar-menu-button[data-active='true']::before {
+  position: absolute;
+  top: 0.55rem;
+  bottom: 0.55rem;
+  left: -0.3rem;
+  width: 0.2rem;
+  border-radius: 999px;
+  background: #2563eb;
+  content: '';
+}
+
+.app-dark .app-shell .p-sidebar-menu-button[data-active='true'] {
+  color: #bfdbfe;
+  background: rgb(37 99 235 / 20%);
+}
+
+.app-workspace {
+  min-width: 0;
+  background: var(--cp-app-bg);
+}
+
+.app-topbar {
+  position: relative;
+  z-index: 10;
+  min-height: 4rem;
+  border-bottom: 1px solid var(--cp-border);
+  background: color-mix(in srgb, var(--cp-panel) 92%, transparent);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 70%);
+  backdrop-filter: blur(14px);
+}
+
+.app-dark .app-topbar {
+  box-shadow: 0 1px 0 rgb(255 255 255 / 3%);
+}
+
+.app-menu-button,
+.app-icon-button {
+  border: 1px solid transparent !important;
+  color: #52627a !important;
+}
+
+.app-menu-button:hover,
+.app-icon-button:hover {
+  border-color: #bfdbfe !important;
+  color: #1d4ed8 !important;
+  background: #eff6ff !important;
+}
+
+.app-dark .app-menu-button,
+.app-dark .app-icon-button {
+  color: #a9b7ca !important;
+}
+
+.app-dark .app-menu-button:hover,
+.app-dark .app-icon-button:hover {
+  border-color: #334e75 !important;
+  color: #bfdbfe !important;
+  background: rgb(37 99 235 / 15%) !important;
+}
+
+.app-content {
+  height: calc(100% - 4rem);
+  overflow: auto;
+  background-image: linear-gradient(rgb(37 99 235 / 2.5%) 1px, transparent 1px);
+  background-size: 100% 3.5rem;
+}
+
+.app-content > * {
+  animation: cp-content-in 240ms ease-out both;
+}
+
+.dashboard-page {
+  width: 100%;
+  max-width: 82rem;
+  margin-inline: auto;
+}
+
+.dashboard-heading {
+  letter-spacing: -0.035em;
+}
+
+.dashboard-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: fit-content;
+  margin-top: 0.75rem;
+  padding: 0.42rem 0.7rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  color: #1e40af;
+  background: #eff6ff;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.app-dark .dashboard-date {
+  border-color: #294a78;
+  color: #bfdbfe;
+  background: rgb(37 99 235 / 15%);
+}
+
+.metric-card {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--cp-border);
+  border-radius: 1rem;
+  background: var(--cp-panel);
+  box-shadow: var(--cp-shadow);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.metric-card::after {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.22rem;
+  background: var(--metric-accent, #2563eb);
+  content: '';
+}
+
+.metric-card:hover {
+  border-color: color-mix(in srgb, var(--metric-accent, #2563eb) 32%, var(--cp-border));
+  box-shadow: var(--cp-shadow-raised);
+  transform: translateY(-2px);
+}
+
+.metric-card .p-card-body {
+  padding: 1.15rem 1.2rem 1.1rem 1.35rem;
+}
+
+.metric-card--blue { --metric-accent: #2563eb; --metric-soft: #eff6ff; }
+.metric-card--cyan { --metric-accent: #0891b2; --metric-soft: #ecfeff; }
+.metric-card--green { --metric-accent: #059669; --metric-soft: #ecfdf5; }
+.metric-card--red { --metric-accent: #dc2626; --metric-soft: #fef2f2; }
+.metric-card--orange { --metric-accent: #ea580c; --metric-soft: #fff7ed; }
+
+.app-dark .metric-card {
+  --metric-soft: rgb(30 41 59 / 72%);
+}
+
+.metric-icon {
+  display: grid;
+  width: 2.15rem;
+  height: 2.15rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.7rem;
+  color: var(--metric-accent, #2563eb);
+  background: var(--metric-soft, #eff6ff);
+}
+
+.metric-label {
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.app-dark .metric-label {
+  color: #cbd5e1;
+}
+
+.metric-value {
+  margin-top: 0.9rem;
+  color: var(--cp-text);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(1.45rem, 2vw, 1.8rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.metric-value--accent {
+  color: var(--metric-accent, var(--cp-text));
+}
+
+.metric-caption {
+  margin-top: 0.45rem;
+  color: var(--cp-muted);
+  font-size: 0.75rem;
+}
+
+.insight-card,
+.table-card {
+  overflow: hidden;
+  border: 1px solid var(--cp-border);
+  border-radius: 1rem;
+  background: var(--cp-panel);
+  box-shadow: var(--cp-shadow);
+}
+
+.insight-card .p-card-title,
+.table-card .p-card-title {
+  color: var(--cp-text);
+  font-size: 1.05rem;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+}
+
+.app-content .p-datatable-thead > tr > th {
+  border-color: var(--cp-border);
+  color: #52627a;
+  background: var(--cp-panel-muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.app-content .p-datatable-tbody > tr {
+  transition: background-color 120ms ease;
+}
+
+.app-content .p-datatable-tbody > tr:hover {
+  background: var(--cp-brand-soft);
+}
+
+.app-content .p-dialog {
+  border-color: var(--cp-border);
+  box-shadow: var(--cp-shadow-raised);
+}
+
+@keyframes cp-content-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 767px) {
+  .app-topbar {
+    min-height: 3.75rem;
+  }
+
+  .app-content {
+    height: calc(100% - 3.75rem);
+    background-image: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-content > *,
+  .metric-card {
+    animation: none;
+    transition: none;
+  }
+}

@@ -142,45 +142,57 @@
         <h2 class="m-0 p-5 pb-4 text-lg font-semibold text-surface-950 dark:text-surface-0">
           Cronograma de Cuotas <span class="text-sm font-normal text-surface-500">({{ installments().length }} cuotas)</span>
         </h2>
-        <p-table
-          [value]="installments()"
-          [scrollable]="true"
-          scrollHeight="300px"
-          styleClass="text-sm"
-          [tableStyle]="{ 'min-width': '40rem' }"
-        >
-          <ng-template #header>
-            <tr>
-              <th class="w-12">N°</th>
-              <th>Vencimiento</th>
-              <th class="text-right">Esperado</th>
-              <th class="text-right">Pagado</th>
-              <th class="text-right">Saldo</th>
-              <th>Estado</th>
-            </tr>
-          </ng-template>
-          <ng-template #body let-inst>
-            <tr [class.bg-red-50]="inst.dueDate < today && inst.status === 'PENDIENTE'" [class.dark:bg-red-950/20]="inst.dueDate < today && inst.status === 'PENDIENTE'">
-              <td class="font-bold">#{{ inst.installmentNumber }}</td>
-              <td>{{ inst.dueDate | date: 'dd/MM/yyyy' }}</td>
-              <td class="text-right tabular-nums">
-                {{ inst.expectedAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
-              </td>
-              <td class="text-right tabular-nums text-green-700 dark:text-green-400">
-                {{ inst.paidAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
-              </td>
-              <td class="text-right tabular-nums">
-                {{ inst.remainingAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
-              </td>
-              <td>
-                <p-tag
-                  [severity]="getInstallmentSeverity(inst.status, inst.dueDate)"
-                  [value]="getInstallmentLabel(inst.status, inst.dueDate)"
-                />
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
+        @defer (on viewport) {
+          <p-table
+            [value]="installments()"
+            [scrollable]="true"
+            scrollHeight="300px"
+            styleClass="text-sm"
+            [tableStyle]="{ 'min-width': '40rem' }"
+          >
+            <ng-template #header>
+              <tr>
+                <th class="w-12">N°</th>
+                <th>Vencimiento</th>
+                <th class="text-right">Esperado</th>
+                <th class="text-right">Pagado</th>
+                <th class="text-right">Saldo</th>
+                <th>Estado</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-inst>
+              <tr [class.bg-red-50]="inst.dueDate < today && inst.status === 'PENDIENTE'" [class.dark:bg-red-950/20]="inst.dueDate < today && inst.status === 'PENDIENTE'">
+                <td class="font-bold">#{{ inst.installmentNumber }}</td>
+                <td>{{ inst.dueDate | date: 'dd/MM/yyyy' }}</td>
+                <td class="text-right tabular-nums">
+                  {{ inst.expectedAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                </td>
+                <td class="text-right tabular-nums text-green-700 dark:text-green-400">
+                  {{ inst.paidAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                </td>
+                <td class="text-right tabular-nums">
+                  {{ inst.remainingAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                </td>
+                <td>
+                  <p-tag
+                    [severity]="getInstallmentSeverity(inst.status, inst.dueDate)"
+                    [value]="getInstallmentLabel(inst.status, inst.dueDate)"
+                  />
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        } @placeholder {
+          <div class="space-y-2 px-5 pb-5" aria-hidden="true">
+            @for (row of loadingRows; track row) {
+              <p-skeleton height="2.5rem" borderRadius="0.5rem" />
+            }
+          </div>
+        } @error {
+          <p class="px-5 pb-5 text-sm text-red-600 dark:text-red-400" role="alert">
+            No se pudo cargar el cronograma de cuotas.
+          </p>
+        }
       </div>
 
       <!-- Payment history -->
@@ -193,28 +205,40 @@
             Aún no se han registrado pagos para este préstamo.
           </p>
         } @else {
-          <p-table
-            [value]="clientPayments()"
-            [tableStyle]="{ 'min-width': '32rem' }"
-            styleClass="text-sm"
-          >
-            <ng-template #header>
-              <tr>
-                <th>Fecha</th>
-                <th class="text-right">Monto</th>
-                <th>Observación</th>
-              </tr>
-            </ng-template>
-            <ng-template #body let-pago>
-              <tr>
-                <td>{{ pago.date | date: 'dd/MM/yyyy' }}</td>
-                <td class="text-right font-bold tabular-nums text-green-700 dark:text-green-400">
-                  {{ pago.amount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
-                </td>
-                <td class="text-surface-500 dark:text-surface-400">{{ pago.notes || '—' }}</td>
-              </tr>
-            </ng-template>
-          </p-table>
+          @defer (on viewport) {
+            <p-table
+              [value]="clientPayments()"
+              [tableStyle]="{ 'min-width': '32rem' }"
+              styleClass="text-sm"
+            >
+              <ng-template #header>
+                <tr>
+                  <th>Fecha</th>
+                  <th class="text-right">Monto</th>
+                  <th>Observación</th>
+                </tr>
+              </ng-template>
+              <ng-template #body let-pago>
+                <tr>
+                  <td>{{ pago.date | date: 'dd/MM/yyyy' }}</td>
+                  <td class="text-right font-bold tabular-nums text-green-700 dark:text-green-400">
+                    {{ pago.amount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                  </td>
+                  <td class="text-surface-500 dark:text-surface-400">{{ pago.notes || '—' }}</td>
+                </tr>
+              </ng-template>
+            </p-table>
+          } @placeholder {
+            <div class="space-y-2 px-5 pb-5" aria-hidden="true">
+              @for (row of loadingRows; track row) {
+                <p-skeleton height="2.5rem" borderRadius="0.5rem" />
+              }
+            </div>
+          } @error {
+            <p class="px-5 pb-5 text-sm text-red-600 dark:text-red-400" role="alert">
+              No se pudo cargar el historial de pagos.
+            </p>
+          }
         }
       </div>
     } @else {
@@ -229,6 +253,7 @@
 </div>
 
 <!-- Payment Modal -->
+@defer (when showPaymentModal()) {
 <p-dialog
   [visible]="showPaymentModal()"
   (visibleChange)="showPaymentModal.set($event)"
@@ -372,3 +397,8 @@
     </ng-template>
   }
 </p-dialog>
+} @error {
+  <p class="px-4 text-sm text-red-600 dark:text-red-400" role="alert">
+    No se pudo cargar el formulario de pago.
+  </p>
+}

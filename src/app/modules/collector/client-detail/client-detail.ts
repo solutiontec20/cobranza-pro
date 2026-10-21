@@ -7,6 +7,7 @@ import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TextareaModule } from 'primeng/textarea';
 import { MessageService } from 'primeng/api';
+import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
@@ -23,6 +24,7 @@ import { AuthService } from '../../auth/auth.service';
     FormsModule,
     InputNumberModule,
     TextareaModule,
+    SkeletonModule,
     TableModule,
     TagModule,
     ToastModule,
@@ -38,6 +40,7 @@ export default class ClientDetail {
   private messageService = inject(MessageService);
 
   readonly today = SYSTEM_DATE;
+  protected readonly loadingRows = [1, 2, 3];
 
   readonly clientId = signal(this.route.snapshot.paramMap.get('id') ?? '');
 

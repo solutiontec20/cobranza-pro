@@ -1,175 +1,212 @@
-<div class="flex flex-col gap-5 p-4 max-w-7xl mx-auto">
-  <div class="mb-2">
-    <h1 class="text-3xl font-bold text-surface-900 dark:text-surface-0 m-0">Dashboard General</h1>
-    <p class="text-sm text-surface-500 dark:text-surface-400 mt-1">Métricas consolidadas de la cartera al {{ today }}</p>
-  </div>
+<div class="dashboard-page flex flex-col gap-5">
+  <header class="flex flex-col gap-3 border-b border-surface-200 pb-5 dark:border-surface-700 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h1 class="dashboard-heading m-0 text-3xl font-extrabold text-surface-950 dark:text-surface-0 sm:text-4xl">
+        Dashboard general
+      </h1>
+      <p class="mt-2 max-w-2xl text-sm text-surface-500 dark:text-surface-400">
+        Una vista clara del capital, la recuperación y el riesgo de toda la cartera.
+      </p>
+    </div>
+    <span class="dashboard-date">
+      <i class="pi pi-calendar" aria-hidden="true"></i>
+      Corte al {{ today }}
+    </span>
+  </header>
 
-  <!-- Tarjetas KPI Superiores (8 KPIs) -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-    <p-card styleClass="shadow-sm border-round-xl h-full">
-      <div class="flex items-center gap-2 mb-2 text-primary font-medium">
-        <i class="pi pi-wallet"></i>
-        <span class="text-sm">Capital Prestado</span>
+  <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicadores principales">
+    <p-card class="metric-card metric-card--blue">
+      <div class="flex items-center gap-3">
+        <span class="metric-icon"><i class="pi pi-wallet" aria-hidden="true"></i></span>
+        <span class="metric-label">Capital prestado</span>
       </div>
-      <div class="text-2xl font-bold text-surface-900 dark:text-surface-0">{{ kpis().capitalPrestado | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</div>
-      <div class="text-xs text-surface-500 mt-1">Monto base otorgado</div>
+      <p class="metric-value">{{ kpis().capitalPrestado | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+      <p class="metric-caption">Monto base otorgado</p>
     </p-card>
 
-    <p-card styleClass="shadow-sm border-round-xl h-full">
-      <div class="flex items-center gap-2 mb-2 text-surface-500 font-medium">
-        <i class="pi pi-money-bill"></i>
-        <span class="text-sm">Total a Cobrar</span>
+    <p-card class="metric-card metric-card--cyan">
+      <div class="flex items-center gap-3">
+        <span class="metric-icon"><i class="pi pi-money-bill" aria-hidden="true"></i></span>
+        <span class="metric-label">Total a cobrar</span>
       </div>
-      <div class="text-2xl font-bold text-primary">{{ kpis().totalEsperado | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</div>
-      <div class="text-xs text-surface-500 mt-1">Capital + Intereses</div>
+      <p class="metric-value metric-value--accent">{{ kpis().totalEsperado | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+      <p class="metric-caption">Capital más intereses</p>
     </p-card>
 
-    <p-card styleClass="shadow-sm border-round-xl h-full">
-      <div class="flex items-center gap-2 mb-2 text-green-500 font-medium">
-        <i class="pi pi-check"></i>
-        <span class="text-sm">Total Cobrado</span>
+    <p-card class="metric-card metric-card--green">
+      <div class="flex items-center gap-3">
+        <span class="metric-icon"><i class="pi pi-check-circle" aria-hidden="true"></i></span>
+        <span class="metric-label">Total cobrado</span>
       </div>
-      <div class="text-2xl font-bold text-green-500">{{ kpis().totalCobrado | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</div>
-      <div class="text-xs text-surface-500 mt-1">Recuperado a la fecha</div>
+      <p class="metric-value metric-value--accent">{{ kpis().totalCobrado | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+      <p class="metric-caption">Recuperado a la fecha</p>
     </p-card>
 
-    <p-card styleClass="shadow-sm border-round-xl h-full">
-      <div class="flex items-center gap-2 mb-2 text-red-500 font-medium">
-        <i class="pi pi-clock"></i>
-        <span class="text-sm">Saldo Pendiente</span>
+    <p-card class="metric-card metric-card--red">
+      <div class="flex items-center gap-3">
+        <span class="metric-icon"><i class="pi pi-clock" aria-hidden="true"></i></span>
+        <span class="metric-label">Saldo pendiente</span>
       </div>
-      <div class="text-2xl font-bold text-red-500">{{ kpis().saldoPendiente | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</div>
-      <div class="text-xs text-surface-500 mt-1">Por cobrar en campo</div>
+      <p class="metric-value metric-value--accent">{{ kpis().saldoPendiente | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+      <p class="metric-caption">Por cobrar en campo</p>
     </p-card>
 
-    <p-card styleClass="shadow-sm border-round-xl h-full">
-      <div class="flex items-center gap-2 mb-2 text-orange-500 font-medium">
-        <i class="pi pi-exclamation-triangle"></i>
-        <span class="text-sm">Morosidad (+10d)</span>
+    <p-card class="metric-card metric-card--orange">
+      <div class="flex items-center gap-3">
+        <span class="metric-icon"><i class="pi pi-exclamation-triangle" aria-hidden="true"></i></span>
+        <span class="metric-label">Morosidad mayor a 10 días</span>
       </div>
-      <div class="text-2xl font-bold text-orange-500">{{ kpis().morosidad }}</div>
-      <div class="text-xs text-surface-500 mt-1">Clientes en riesgo alto</div>
+      <p class="metric-value metric-value--accent">{{ kpis().morosidad }}</p>
+      <p class="metric-caption">Clientes en riesgo alto</p>
     </p-card>
 
-    <p-card styleClass="shadow-sm border-round-xl h-full">
-      <div class="flex items-center gap-2 mb-2 text-primary font-medium">
-        <i class="pi pi-users"></i>
-        <span class="text-sm">Total Clientes</span>
+    <p-card class="metric-card metric-card--blue">
+      <div class="flex items-center gap-3">
+        <span class="metric-icon"><i class="pi pi-users" aria-hidden="true"></i></span>
+        <span class="metric-label">Clientes activos</span>
       </div>
-      <div class="text-2xl font-bold text-surface-900 dark:text-surface-0">{{ kpis().totalClientes }}</div>
-      <div class="text-xs text-surface-500 mt-1">Con crédito activo</div>
+      <p class="metric-value">{{ kpis().totalClientes }}</p>
+      <p class="metric-caption">Con crédito activo</p>
     </p-card>
 
-    <p-card styleClass="shadow-sm border-round-xl h-full">
-      <div class="flex items-center gap-2 mb-2 text-green-500 font-medium">
-        <i class="pi pi-verified"></i>
-        <span class="text-sm">Préstamos Pagados</span>
+    <p-card class="metric-card metric-card--green">
+      <div class="flex items-center gap-3">
+        <span class="metric-icon"><i class="pi pi-verified" aria-hidden="true"></i></span>
+        <span class="metric-label">Préstamos pagados</span>
       </div>
-      <div class="text-2xl font-bold text-surface-900 dark:text-surface-0">{{ kpis().prestamosPagados }}</div>
-      <div class="text-xs text-surface-500 mt-1">Histórico finalizados</div>
+      <p class="metric-value">{{ kpis().prestamosPagados }}</p>
+      <p class="metric-caption">Créditos finalizados</p>
     </p-card>
 
-    <p-card styleClass="shadow-sm border-round-xl h-full">
-      <div class="flex items-center gap-2 mb-2 text-blue-500 font-medium">
-        <i class="pi pi-id-card"></i>
-        <span class="text-sm">Cobradores</span>
+    <p-card class="metric-card metric-card--cyan">
+      <div class="flex items-center gap-3">
+        <span class="metric-icon"><i class="pi pi-id-card" aria-hidden="true"></i></span>
+        <span class="metric-label">Cobradores</span>
       </div>
-      <div class="text-2xl font-bold text-surface-900 dark:text-surface-0">{{ kpis().cobradores }}</div>
-      <div class="text-xs text-surface-500 mt-1">Personal en campo</div>
+      <p class="metric-value">{{ kpis().cobradores }}</p>
+      <p class="metric-caption">Personal activo en campo</p>
     </p-card>
-  </div>
+  </section>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-    <!-- Recuperación de Cartera -->
-    <p-card styleClass="shadow-sm border-round-xl h-full" header="Recuperación de Cartera">
-      <div class="flex justify-center mt-4 h-[250px] relative">
-        <canvas #donutChart></canvas>
-      </div>
+  <section class="grid grid-cols-1 gap-4 lg:grid-cols-2" aria-label="Análisis de cartera">
+    <p-card class="insight-card h-full" header="Recuperación de cartera">
+      @defer (on viewport) {
+        <app-recovery-chart [totalCobrado]="kpis().totalCobrado" [saldoPendiente]="kpis().saldoPendiente" />
+      } @placeholder {
+        <div class="mt-3 flex h-[250px] items-center justify-center" aria-hidden="true">
+          <p-skeleton shape="circle" size="200px" />
+        </div>
+      } @loading (minimum 200ms) {
+        <div class="mt-3 flex h-[250px] items-center justify-center text-sm text-surface-500" aria-live="polite">
+          Cargando gráfico…
+        </div>
+      } @error {
+        <div class="mt-3 flex h-[250px] items-center justify-center text-sm text-red-600 dark:text-red-400" role="alert">
+          No se pudo cargar el gráfico de recuperación.
+        </div>
+      }
     </p-card>
 
-    <!-- Distribución de Clientes por Riesgo -->
-    <p-card styleClass="shadow-sm border-round-xl h-full" header="Distribución de Clientes por Riesgo">
-      <div class="flex flex-col gap-5 mt-4">
+    <p-card class="insight-card h-full" header="Distribución de clientes por riesgo">
+      <div class="mt-3 flex flex-col gap-5">
         <div>
-          <div class="flex justify-between mb-1 text-sm">
-            <span class="font-medium">Al día (Verde)</span>
+          <div class="mb-1.5 flex justify-between text-sm">
+            <span class="font-semibold">Al día</span>
             <span class="text-surface-500">{{ riskDistribution().green.count }} clientes</span>
           </div>
-          <p-progressbar [value]="riskDistribution().green.percent" color="#10B981" styleClass="h-2 border-round"></p-progressbar>
+          <p-progressbar [value]="riskDistribution().green.percent" color="#059669" styleClass="h-2 rounded-full" />
         </div>
 
         <div>
-          <div class="flex justify-between mb-1 text-sm">
-            <span class="font-medium">Atraso leve (Amarillo)</span>
+          <div class="mb-1.5 flex justify-between text-sm">
+            <span class="font-semibold">Atraso leve</span>
             <span class="text-surface-500">{{ riskDistribution().yellow.count }} clientes</span>
           </div>
-          <p-progressbar [value]="riskDistribution().yellow.percent" color="#EAB308" styleClass="h-2 border-round"></p-progressbar>
+          <p-progressbar [value]="riskDistribution().yellow.percent" color="#EAB308" styleClass="h-2 rounded-full" />
         </div>
 
         <div>
-          <div class="flex justify-between mb-1 text-sm">
-            <span class="font-medium">Atraso moderado (Naranja)</span>
+          <div class="mb-1.5 flex justify-between text-sm">
+            <span class="font-semibold">Atraso moderado</span>
             <span class="text-surface-500">{{ riskDistribution().orange.count }} clientes</span>
           </div>
-          <p-progressbar [value]="riskDistribution().orange.percent" color="#F97316" styleClass="h-2 border-round"></p-progressbar>
+          <p-progressbar [value]="riskDistribution().orange.percent" color="#EA580C" styleClass="h-2 rounded-full" />
         </div>
 
         <div>
-          <div class="flex justify-between mb-1 text-sm">
-            <span class="font-medium">Moroso (Rojo)</span>
+          <div class="mb-1.5 flex justify-between text-sm">
+            <span class="font-semibold">Moroso</span>
             <span class="text-surface-500">{{ riskDistribution().red.count }} clientes</span>
           </div>
-          <p-progressbar [value]="riskDistribution().red.percent" color="#EF4444" styleClass="h-2 border-round"></p-progressbar>
+          <p-progressbar [value]="riskDistribution().red.percent" color="#DC2626" styleClass="h-2 rounded-full" />
         </div>
       </div>
     </p-card>
-  </div>
+  </section>
 
-  <!-- Rendimiento de Cobradores -->
-  <p-card styleClass="shadow-sm border-round-xl mt-2">
+  <p-card class="table-card">
     <ng-template pTemplate="header">
-      <div class="p-4 pb-0">
-        <h3 class="m-0 text-xl font-semibold">Rendimiento de Cobradores</h3>
+      <div class="flex items-center gap-3 border-b border-surface-200 px-5 py-4 dark:border-surface-700">
+        <span class="grid size-9 place-items-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-950/40 dark:text-primary-300">
+          <i class="pi pi-chart-line" aria-hidden="true"></i>
+        </span>
+        <div>
+          <h2 class="m-0 text-lg font-bold text-surface-950 dark:text-surface-0">Rendimiento de cobradores</h2>
+          <p class="mt-0.5 text-xs text-surface-500">Avance operativo de la jornada</p>
+        </div>
       </div>
     </ng-template>
 
-    <p-table [value]="collectorPerformance()" responsiveLayout="scroll" styleClass="p-datatable-sm">
-      <ng-template pTemplate="header">
-        <tr>
-          <th>Cobrador</th>
-          <th>Clientes</th>
-          <th>Esperado Hoy</th>
-          <th>Cobrado Hoy</th>
-          <th>Pendiente</th>
-          <th>Atrasados</th>
-          <th class="text-center">Acciones</th>
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="body" let-col>
-        <tr>
-          <td>
-            <div class="font-bold">{{ col.name }}</div>
-            <div class="text-xs text-surface-500">DNI: {{ col.dni }}</div>
-          </td>
-          <td>{{ col.clientsCount }}</td>
-          <td class="font-medium">{{ col.expectedToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-          <td class="font-bold text-green-500">{{ col.collectedToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-          <td class="text-surface-500">{{ col.pendingToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-          <td>
-            <span class="px-2 py-1 border-round text-sm font-semibold" [class.bg-green-100]="col.delayedCount === 0" [class.text-green-700]="col.delayedCount === 0" [class.bg-yellow-100]="col.delayedCount > 0" [class.text-yellow-700]="col.delayedCount > 0">
-              {{ col.delayedCount }}
-            </span>
-          </td>
-          <td class="text-center">
-            <p-button variant="outlined" size="small"><i class="pi pi-eye mr-2"></i>Ver cartera</p-button>
-          </td>
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="empty">
-        <tr>
-          <td colspan="7" class="text-center p-4">No hay datos de cobradores.</td>
-        </tr>
-      </ng-template>
-    </p-table>
+    @defer (on viewport) {
+      <p-table [value]="collectorPerformance()" responsiveLayout="scroll" styleClass="p-datatable-sm">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Cobrador</th>
+            <th>Clientes</th>
+            <th>Esperado hoy</th>
+            <th>Cobrado hoy</th>
+            <th>Pendiente</th>
+            <th>Atrasados</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-col>
+          <tr>
+            <td>
+              <div class="font-bold text-surface-900 dark:text-surface-0">{{ col.name }}</div>
+              <div class="text-xs text-surface-500">DNI: {{ col.dni }}</div>
+            </td>
+            <td>{{ col.clientsCount }}</td>
+            <td class="font-medium">{{ col.expectedToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+            <td class="font-bold text-green-600 dark:text-green-400">{{ col.collectedToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+            <td class="text-surface-500">{{ col.pendingToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+            <td>
+              <span class="rounded-full px-2.5 py-1 text-sm font-semibold" [class.bg-green-100]="col.delayedCount === 0" [class.text-green-700]="col.delayedCount === 0" [class.bg-yellow-100]="col.delayedCount > 0" [class.text-yellow-700]="col.delayedCount > 0">
+                {{ col.delayedCount }}
+              </span>
+            </td>
+            <td class="text-center">
+              <p-button variant="outlined" size="small"><i class="pi pi-eye mr-2"></i>Ver cartera</p-button>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="empty">
+          <tr>
+            <td colspan="7" class="p-8 text-center text-surface-500">No hay datos de cobradores.</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    } @placeholder {
+      <div class="space-y-3 p-4" aria-hidden="true">
+        @for (row of loadingRows; track row) {
+          <p-skeleton height="2.5rem" borderRadius="0.5rem" />
+        }
+      </div>
+    } @error {
+      <div class="p-8 text-center text-sm text-red-600 dark:text-red-400" role="alert">
+        No se pudo cargar el rendimiento de cobradores.
+      </div>
+    }
   </p-card>
 </div>
+

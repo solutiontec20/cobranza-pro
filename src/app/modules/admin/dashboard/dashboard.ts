@@ -1,26 +1,25 @@
-import { Component, computed, inject, ViewChild, ElementRef, AfterViewInit, OnDestroy, effect } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { ProgressBarModule } from 'primeng/progressbar';
+import { SkeletonModule } from 'primeng/skeleton';
 import { CurrencyPipe } from '@angular/common';
 import { AppStoreService, SYSTEM_DATE } from '../../../core/services/app-store.service';
 import { AuthService } from '../../auth/auth.service';
-import Chart from 'chart.js/auto';
+import { RecoveryChart } from './recovery-chart';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CardModule, ButtonModule, TableModule, ProgressBarModule, CurrencyPipe],
+  imports: [CardModule, ButtonModule, TableModule, ProgressBarModule, SkeletonModule, CurrencyPipe, RecoveryChart],
   templateUrl: './dashboard.html'
 })
-export default class Dashboard implements AfterViewInit, OnDestroy {
+export default class Dashboard {
   appStore = inject(AppStoreService);
   authService = inject(AuthService);
-  
-  today = SYSTEM_DATE;
 
-  @ViewChild('donutChart') donutChartRef!: ElementRef<HTMLCanvasElement>;
-  private chartInstance: Chart | null = null;
+  today = SYSTEM_DATE;
+  protected readonly loadingRows = [1, 2, 3, 4, 5];
 
   readonly kpis = computed(() => {
     const loans = this.appStore.loans();
@@ -117,46 +116,5 @@ export default class Dashboard implements AfterViewInit, OnDestroy {
       };
     });
   });
-
-  constructor() {
-    // Reactively update chart when KPIs change
-    effect(() => {
-      const kpis = this.kpis();
-      if (this.chartInstance) {
-        this.chartInstance.data.datasets[0].data = [kpis.totalCobrado, kpis.saldoPendiente];
-        this.chartInstance.update();
-      }
-    });
-  }
-
-  ngAfterViewInit() {
-    if (this.donutChartRef?.nativeElement) {
-      const kpis = this.kpis();
-      this.chartInstance = new Chart(this.donutChartRef.nativeElement, {
-        type: 'doughnut',
-        data: {
-          labels: ['Cobrado', 'Pendiente'],
-          datasets: [{
-            data: [kpis.totalCobrado, kpis.saldoPendiente],
-            backgroundColor: ['#10B981', '#E2E8F0'],
-            hoverBackgroundColor: ['#059669', '#CBD5E1']
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: '70%',
-          plugins: {
-            legend: { position: 'bottom' }
-          }
-        }
-      });
-    }
-  }
-
-  ngOnDestroy() {
-    if (this.chartInstance) {
-      this.chartInstance.destroy();
-    }
-  }
 }
+

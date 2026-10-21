@@ -175,6 +175,7 @@ const emptyModel = (): ClientFormModel => ({
       </section>
     </main>
 
+    @defer (when dialogVisible()) {
     <p-dialog
       [header]="dialogMode() === 'create' ? 'Registrar cliente' : 'Editar cliente'"
       [modal]="true"
@@ -273,6 +274,9 @@ const emptyModel = (): ClientFormModel => ({
         </div>
       </form>
     </p-dialog>
+    } @error {
+      <p-message severity="error" styleClass="w-full">No se pudo cargar el formulario del cliente.</p-message>
+    }
   `,
 })
 export default class Clients {

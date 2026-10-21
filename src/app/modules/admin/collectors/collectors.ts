@@ -256,6 +256,7 @@ const EMPTY_RESET_MODEL = { reason: '' };
       </section>
     </main>
 
+    @defer (when createVisible()) {
     <p-dialog
       header="Nuevo cobrador"
       [modal]="true"
@@ -355,7 +356,11 @@ const EMPTY_RESET_MODEL = { reason: '' };
         </div>
       </form>
     </p-dialog>
+    } @error {
+      <p-message severity="error" styleClass="w-full">No se pudo cargar el formulario de nuevo cobrador.</p-message>
+    }
 
+    @defer (when resetVisible()) {
     <p-dialog
       header="Restablecer PIN"
       [modal]="true"
@@ -426,7 +431,11 @@ const EMPTY_RESET_MODEL = { reason: '' };
         }
       }
     </p-dialog>
+    } @error {
+      <p-message severity="error" styleClass="w-full">No se pudo cargar el formulario de restablecimiento de PIN.</p-message>
+    }
 
+    @defer (when statusVisible()) {
     <p-dialog
       [header]="selectedCollector()?.active ? 'Desactivar cobrador' : 'Activar cobrador'"
       [modal]="true"
@@ -484,6 +493,9 @@ const EMPTY_RESET_MODEL = { reason: '' };
         </form>
       }
     </p-dialog>
+    } @error {
+      <p-message severity="error" styleClass="w-full">No se pudo cargar el formulario de cambio de estado.</p-message>
+    }
   `,
 })
 export default class Collectors {
