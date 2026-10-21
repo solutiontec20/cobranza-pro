@@ -180,13 +180,13 @@ isOneToOne: false
                   ]
                 },"payment_allocations": {
                   Row: {
-                    "amount": number,"created_at": string,"id": string,"installment_id": string,"payment_id": string
+                    "amount": number,"created_at": string,"id": string,"installment_id": string,"payment_id": string,"superseded_at": string | null,"supersession_reason": string | null
                   }
                   Insert: {
-                    "amount": number,"created_at"?: string,"id"?: string,"installment_id": string,"payment_id": string
+                    "amount": number,"created_at"?: string,"id"?: string,"installment_id": string,"payment_id": string,"superseded_at"?: string | null,"supersession_reason"?: string | null
                   }
                   Update: {
-                    "amount"?: number,"created_at"?: string,"id"?: string,"installment_id"?: string,"payment_id"?: string
+                    "amount"?: number,"created_at"?: string,"id"?: string,"installment_id"?: string,"payment_id"?: string,"superseded_at"?: string | null,"supersession_reason"?: string | null
                   }
                   Relationships: [
                     {

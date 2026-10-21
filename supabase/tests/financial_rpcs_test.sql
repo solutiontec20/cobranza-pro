@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(13);
+select plan(20);
 
 -- ============================================================
 -- DATOS DE PRUEBA
@@ -69,6 +69,13 @@ values
     'Cliente B',
     '22222222-2222-2222-2222-222222222222',
     '44444444-4444-4444-4444-444444444444'
+  ),
+  (
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    '70000003',
+    'Cliente C',
+    '22222222-2222-2222-2222-222222222222',
+    '44444444-4444-4444-4444-444444444444'
   );
 
 -- ============================================================
@@ -117,6 +124,20 @@ values
     current_date + 7,
     'active',
     '44444444-4444-4444-4444-444444444444'
+  ),
+  (
+    'cccccccc-1111-1111-1111-111111111111',
+    'cccccccc-cccc-cccc-cccc-cccccccccccc',
+    100.00,
+    20.0000,
+    120.00,
+    100.00,
+    30,
+    'daily',
+    current_date,
+    current_date + 1,
+    'active',
+    '44444444-4444-4444-4444-444444444444'
   );
 
 -- ============================================================
@@ -152,6 +173,42 @@ values
     current_date + 7,
     60.00
   );
+
+insert into public.installments (
+  id,
+  loan_id,
+  installment_number,
+  due_date,
+  scheduled_amount,
+  superseded_at,
+  superseded_by,
+  supersession_reason
+)
+select
+  gen_random_uuid(),
+  'cccccccc-1111-1111-1111-111111111111'::uuid,
+  installment_number,
+  current_date + installment_number,
+  4.00,
+  clock_timestamp(),
+  '44444444-4444-4444-4444-444444444444'::uuid,
+  'Cronograma historico reemplazado'
+from generate_series(1, 30) as schedule(installment_number);
+
+insert into public.installments (
+  id,
+  loan_id,
+  installment_number,
+  due_date,
+  scheduled_amount
+)
+select
+  gen_random_uuid(),
+  'cccccccc-1111-1111-1111-111111111111'::uuid,
+  installment_number,
+  current_date + installment_number,
+  4.00
+from generate_series(1, 30) as schedule(installment_number);
 
 -- ============================================================
 -- AUTENTICAR COMO COBRADOR A
@@ -414,6 +471,164 @@ select results_eq(
   $$,
   array['active'::text],
   'Al anular el pago total el préstamo vuelve a quedar activo'
+);
+
+
+-- ============================================================
+-- TEST 14
+-- Cinco pagos consecutivos acumulan su saldo
+-- ============================================================
+
+create temporary table cumulative_payment_results (
+  payment_number integer primary key,
+  remaining_balance numeric(12,2) not null
+) on commit drop;
+
+select lives_ok(
+  $$
+    do $block$
+    declare
+      payment_number integer;
+    begin
+      for payment_number in 1..5 loop
+        insert into cumulative_payment_results (
+          payment_number,
+          remaining_balance
+        )
+        select
+          payment_number,
+          result.remaining_balance
+        from public.register_payment(
+          'cccccccc-1111-1111-1111-111111111111'::uuid,
+          4.00,
+          'cash'
+        ) as result;
+      end loop;
+    end
+    $block$
+  $$,
+  'Cinco pagos separados se registran sin perder acumulacion'
+);
+
+
+-- ============================================================
+-- TEST 15
+-- Cada confirmacion devuelve el saldo del prestamo seleccionado
+-- ============================================================
+
+select results_eq(
+  $$
+    select
+      payment_number,
+      remaining_balance
+    from cumulative_payment_results
+    order by payment_number
+  $$,
+  $$ values
+    (1, 116.00::numeric),
+    (2, 112.00::numeric),
+    (3, 108.00::numeric),
+    (4, 104.00::numeric),
+    (5, 100.00::numeric)
+  $$,
+  'Cada pago devuelve el saldo acumulado del prestamo seleccionado'
+);
+
+
+-- ============================================================
+-- TEST 16
+-- El cronograma confirma cinco cuotas pagadas y saldo 100
+-- ============================================================
+
+select results_eq(
+  $$
+    select
+      count(*) filter (where outstanding_amount = 0),
+      sum(outstanding_amount)
+    from public.installment_balances
+    where loan_id =
+      'cccccccc-1111-1111-1111-111111111111'::uuid
+  $$,
+  $$ values (5::bigint, 100.00::numeric) $$,
+  'Cinco pagos de cuatro soles dejan cinco cuotas pagadas y saldo 100'
+);
+
+
+-- ============================================================
+-- TEST 17
+-- Un pago parcial reduce la cuota pendiente
+-- ============================================================
+
+select results_eq(
+  $$
+    select remaining_balance
+    from public.register_payment(
+      'cccccccc-1111-1111-1111-111111111111'::uuid,
+      2.00,
+      'cash'
+    )
+  $$,
+  $$ values (98.00::numeric) $$,
+  'Un pago parcial reduce el saldo total del prestamo'
+);
+
+
+-- ============================================================
+-- TEST 18
+-- La cuota conserva el remanente parcial
+-- ============================================================
+
+select results_eq(
+  $$
+    select
+      paid_amount,
+      outstanding_amount,
+      status
+    from public.installment_balances
+    where loan_id =
+      'cccccccc-1111-1111-1111-111111111111'::uuid
+      and installment_number = 6
+  $$,
+  $$ values (2.00::numeric, 2.00::numeric, 'partial'::text) $$,
+  'La cuota parcialmente pagada conserva su remanente y estado'
+);
+
+
+-- ============================================================
+-- TEST 19
+-- El siguiente pago completa la parcial y adelanta otra cuota
+-- ============================================================
+
+select results_eq(
+  $$
+    select remaining_balance
+    from public.register_payment(
+      'cccccccc-1111-1111-1111-111111111111'::uuid,
+      6.00,
+      'cash'
+    )
+  $$,
+  $$ values (92.00::numeric) $$,
+  'El pago siguiente completa el remanente y adelanta la cuota posterior'
+);
+
+
+-- ============================================================
+-- TEST 20
+-- El arrastre parcial respeta el orden del cronograma
+-- ============================================================
+
+select results_eq(
+  $$
+    select
+      count(*) filter (where outstanding_amount = 0),
+      sum(outstanding_amount)
+    from public.installment_balances
+    where loan_id =
+      'cccccccc-1111-1111-1111-111111111111'::uuid
+  $$,
+  $$ values (7::bigint, 92.00::numeric) $$,
+  'El remanente parcial se completa antes de adelantar la cuota siguiente'
 );
 
 
