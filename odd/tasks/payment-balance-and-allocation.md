@@ -35,11 +35,12 @@ Payment allocation is financial state: cumulative payments, advance payments, an
   replacement RPC, pgTAP coverage, UI copy, and focused tests.
 - Chain strategy: reuse `feature-branch-chain` on the existing `felix` branch, as selected for
   the referenced loans work.
-- Running authored changed lines: 957 through PAY-2 (generated types and task-document
+- Running authored changed lines: 1,059 through PAY-3 (generated types and task-document
   bookkeeping excluded).
 - Pull request slices: slice 1 candidate contains `9a085e6`; its versioned migration cannot be split
   without separating the transactional fix, historical repair, and the tests that prove them,
-  so a `size:exception` is recommended if a PR is created. Slice 2 candidate contains `4e324cb`.
+  so a `size:exception` is recommended if a PR is created. Slice 2 candidate contains `4e324cb`;
+  slice 3 candidate contains `c7c427d`.
 
 ## Testing mode
 
@@ -80,15 +81,22 @@ Payment allocation is financial state: cumulative payments, advance payments, an
   - RDD: disabled/unmanaged.
   - Work-unit commit: `4e324cb` (`fix(loans): identify selected loan payment balance`).
 
-- [ ] **PAY-3 — Reconcile the loan summary with posted payment history**
+- [x] **PAY-3 — Reconcile the loan summary with posted payment history**
   - Derive the selected-loan summary from every posted payment in its loaded history, regardless
     of how many payments share the same business date.
   - Exclude voided payments and keep the displayed balance, payment limits, preview, and
     confirmation consistent with that derived amount.
   - Add focused unit coverage for repeated same-day payments and voided-payment exclusion.
   - Checks: `pnpm test:ci`, `pnpm build`, and focused responsive smoke verification.
+  - Evidence: the summary now calculates paid and remaining amounts from all posted payment rows,
+    excludes voided rows, and uses the same derived balance for display, payment limits, previews,
+    and refreshed confirmation feedback. Seven posted S/ 4.00 payments against S/ 120.00 display
+    S/ 28.00 paid and S/ 92.00 remaining even when all share the same business date.
+  - Runtime harness: Vitest passed 7 files / 32 tests; Angular build passed with the existing bundle
+    warning; temporary Chromium smoke scenarios passed at 390×844 and 1280×900 and were removed.
   - Rollback boundary: pure payment-summary calculation and its loan-detail consumers.
   - RDD: disabled/unmanaged.
+  - Work-unit commit: `c7c427d` (`fix(loans): derive summary from posted payments`).
 
 ## Progress
 
@@ -120,8 +128,15 @@ Payment allocation is financial state: cumulative payments, advance payments, an
 - `pnpm build` — passed; existing initial bundle warning remains (809.50 kB vs 500 kB).
 - Temporary Chromium payment-dialog smoke — passed mobile 390×844 and desktop 1280×900; the
   temporary spec was removed.
+- `pnpm test:ci` for PAY-3 — passed 7 files / 32 tests after rerunning outside the filesystem
+  sandbox; the initial sandboxed run could not read the external Node installation.
+- `pnpm build` for PAY-3 — passed; the existing initial bundle warning remains (809.50 kB vs
+  500 kB).
+- Temporary Chromium loan-summary smoke for PAY-3 — passed mobile 390×844 and desktop 1280×900;
+  both rendered S/ 28.00 paid and S/ 92.00 remaining from seven posted same-day payments while
+  excluding one voided payment. The temporary spec was removed.
 
 ## Next step
 
-Implement PAY-3 and verify the selected-loan summary reflects all posted same-day payments.
-Remote push and pull-request creation remain user-owned decisions.
+Implementation and local verification are complete. Remote push and pull-request creation remain
+user-owned decisions.
