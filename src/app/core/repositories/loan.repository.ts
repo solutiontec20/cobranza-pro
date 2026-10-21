@@ -3,7 +3,10 @@ import {
   CreateLoanInput,
   Loan,
   LoanClientOption,
+  LoanDetail,
+  LoanInstallment,
   LoanListItem,
+  UpdateLoanInput,
 } from '../models/loan.model';
 
 export interface LoanRepository {
@@ -11,7 +14,13 @@ export interface LoanRepository {
 
   listAvailableClients(): Promise<LoanClientOption[]>;
 
+  getSchedule(loanId: string): Promise<LoanInstallment[]>;
+
+  getDetail(loanId: string): Promise<LoanDetail>;
+
   create(input: CreateLoanInput): Promise<Loan>;
+
+  update(input: UpdateLoanInput): Promise<Loan>;
 }
 
 export const LOAN_REPOSITORY = new InjectionToken<LoanRepository>(
