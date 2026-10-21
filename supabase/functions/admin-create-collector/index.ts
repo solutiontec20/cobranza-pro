@@ -1,4 +1,5 @@
 import { withSupabase } from 'npm:@supabase/server@1';
+import { isWeakPin } from '../_shared/pin.ts';
 
 type CreateCollectorBody = {
   fullName?: unknown;
@@ -123,6 +124,13 @@ export default {
 
       const temporaryPin =
         body.temporaryPin as string;
+
+      if (isWeakPin(temporaryPin, dni)) {
+        return jsonResponse(400, {
+          error: 'PIN_TOO_WEAK',
+          message: 'Elegí un PIN que no sea secuencial, repetido ni parte del DNI.',
+        });
+      }
 
       const phone =
         typeof body.phone === 'string' &&

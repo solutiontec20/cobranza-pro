@@ -1,9 +1,10 @@
 import { InjectionToken } from "@angular/core"
-import { Profile } from "../models/profile.model"
+import { ChangePinInput, Profile } from "../models/profile.model"
 
 export interface AuthRepository {
   login(dni: string, pin: string): Promise<Profile>
   currentUser(): Promise<Profile | null>
+  changePin(input: ChangePinInput): Promise<void>
   logout(): Promise<void>
 }
 

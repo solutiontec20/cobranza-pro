@@ -14,12 +14,31 @@ export const authGuard: CanActivateFn = () => {
   return router.createUrlTree(['/login']);
 };
 
+export const operationalGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  if (!auth.isAuthenticated()) {
+    return router.createUrlTree(['/login']);
+  }
+
+  if (auth.mustChangePin()) {
+    return router.createUrlTree(['/cambiar-pin']);
+  }
+
+  return true;
+};
+
 export const publicGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
   if (!auth.isAuthenticated()) {
     return true;
+  }
+
+  if (auth.mustChangePin()) {
+    return router.createUrlTree(['/cambiar-pin']);
   }
 
   if (auth.isCollector()) {

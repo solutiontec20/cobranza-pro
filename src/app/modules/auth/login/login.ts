@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../auth.service';
 import { InputTextModule } from 'primeng/inputtext';
@@ -16,15 +16,21 @@ export default class Login {
 
   private authService = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private fb = inject(FormBuilder);
 
   errorMessage = signal<string | null>(null);
+  successMessage = signal<string | null>(
+    this.route.snapshot.queryParamMap.get('pinChanged') === '1'
+      ? 'Tu PIN fue actualizado. Ingresá nuevamente con el PIN nuevo.'
+      : null,
+  );
   loading = signal(false);
   showPin = signal(false);
 
   loginForm = this.fb.group({
     dni: ['', [Validators.required, Validators.pattern(/^[0-9]{8}$/)]],
-    pin: ['', [Validators.required, Validators.pattern(/^[0-9]+$/)]],
+    pin: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
   });
 
   onNumericKeyDown(event: KeyboardEvent): void {
@@ -84,6 +90,11 @@ export default class Login {
 
 
   private navigateBasedOnRole() {
+    if (this.authService.mustChangePin()) {
+      this.router.navigate(['/cambiar-pin']);
+      return;
+    }
+
     if (this.authService.isCollector()) {
       this.router.navigate(['/cobrador']);
     } else if (this.authService.isAdmin() || this.authService.isSupervisor()) {

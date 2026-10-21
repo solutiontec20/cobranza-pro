@@ -22,6 +22,7 @@ describe('CollectorsStore', () => {
   let repository: {
     list: ReturnType<typeof vi.fn<CollectorRepository['list']>>;
     create: ReturnType<typeof vi.fn<CollectorRepository['create']>>;
+    resetPin: ReturnType<typeof vi.fn<CollectorRepository['resetPin']>>;
     setActive: ReturnType<typeof vi.fn<CollectorRepository['setActive']>>;
   };
 
@@ -29,6 +30,7 @@ describe('CollectorsStore', () => {
     repository = {
       list: vi.fn<CollectorRepository['list']>().mockResolvedValue([collector]),
       create: vi.fn<CollectorRepository['create']>(),
+      resetPin: vi.fn<CollectorRepository['resetPin']>(),
       setActive: vi.fn<CollectorRepository['setActive']>(),
     };
 
@@ -77,5 +79,22 @@ describe('CollectorsStore', () => {
 
     expect(result).toBe(false);
     expect(store.error()).toContain('Reasigná su cartera primero');
+  });
+
+  it('returns the one-time temporary PIN after an administrative reset', async () => {
+    repository.resetPin.mockResolvedValue({
+      collectorId: collector.id,
+      collectorName: collector.fullName,
+      temporaryPin: '482907',
+    });
+
+    const result = await store.resetPin({
+      collectorId: collector.id,
+      reason: 'El cobrador olvidó su PIN',
+    });
+
+    expect(result?.temporaryPin).toBe('482907');
+    expect(repository.resetPin).toHaveBeenCalledOnce();
+    expect(store.resettingCollectorId()).toBeNull();
   });
 });

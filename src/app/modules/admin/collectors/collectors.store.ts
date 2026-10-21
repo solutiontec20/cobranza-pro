@@ -3,6 +3,8 @@ import { AppError } from '../../../core/errors/app-error';
 import {
   Collector,
   CreateCollectorInput,
+  ResetCollectorPinInput,
+  ResetCollectorPinResult,
   SetCollectorActiveInput,
 } from '../../../core/models/collector.model';
 import { COLLECTOR_REPOSITORY } from '../../../core/repositories/collector.repository';
@@ -17,6 +19,7 @@ export class CollectorsStore {
   readonly error = signal<string | null>(null);
   readonly creating = signal(false);
   readonly updatingCollectorId = signal<string | null>(null);
+  readonly resettingCollectorId = signal<string | null>(null);
 
   readonly filteredCollectors = computed(() => {
     const query = this.normalize(this.query());
@@ -90,6 +93,20 @@ export class CollectorsStore {
       return false;
     } finally {
       this.updatingCollectorId.set(null);
+    }
+  }
+
+  async resetPin(input: ResetCollectorPinInput): Promise<ResetCollectorPinResult | null> {
+    this.resettingCollectorId.set(input.collectorId);
+    this.error.set(null);
+
+    try {
+      return await this.repository.resetPin(input);
+    } catch (error) {
+      this.error.set(this.messageFrom(error, 'No se pudo restablecer el PIN.'));
+      return null;
+    } finally {
+      this.resettingCollectorId.set(null);
     }
   }
 

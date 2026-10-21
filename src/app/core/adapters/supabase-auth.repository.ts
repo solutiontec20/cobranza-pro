@@ -1,16 +1,16 @@
 import { inject, Service } from '@angular/core';
+import { FunctionsHttpError, SupabaseClient } from '@supabase/supabase-js';
 import { AuthRepository } from '../repositories/auth.repository';
 import { SUPABASE } from '../supabase/supabase-client';
-import { Profile } from '../models/profile.model';
+import { ChangePinInput, Profile } from '../models/profile.model';
 import { AppError } from '../errors/app-error';
+import { Database } from '../supabase/database.types';
 
 @Service({
   autoProvided: false
 })
 export class SupabaseAuthRepository implements AuthRepository {
-
-  private readonly supabase = inject(SUPABASE)
-
+  private readonly supabase = inject(SUPABASE) as SupabaseClient<Database>;
 
   async login(dni: string, pin: string): Promise<Profile> {
 
@@ -44,6 +44,21 @@ export class SupabaseAuthRepository implements AuthRepository {
     return this.fetchProfile(user.id);
   }
 
+  async changePin(input: ChangePinInput): Promise<void> {
+    const { data, error } = await this.supabase.functions.invoke<{ changed: boolean }>(
+      'change-pin',
+      { body: input },
+    );
+
+    if (error) {
+      throw await this.functionError(error, 'No se pudo cambiar el PIN.');
+    }
+
+    if (!data?.changed) {
+      throw new AppError('SUPABASE_RPC', 'El cambio de PIN no fue confirmado.');
+    }
+  }
+
 
   async logout(): Promise<void> {
     const { error } = await this.supabase.auth.signOut();
@@ -56,7 +71,7 @@ export class SupabaseAuthRepository implements AuthRepository {
   private async fetchProfile(userId: string): Promise<Profile> {
     const { data, error } = await this.supabase
       .from("profiles")
-      .select("id,dni,full_name,role,active")
+      .select("id,dni,full_name,role,active,must_change_pin")
       .eq("id", userId)
       .single()
 
@@ -70,6 +85,7 @@ export class SupabaseAuthRepository implements AuthRepository {
       fullName: data.full_name,
       role: data.role,
       active: data.active,
+      mustChangePin: data.must_change_pin,
     };
 
   }
@@ -77,6 +93,21 @@ export class SupabaseAuthRepository implements AuthRepository {
 
   private emailFromDni(dni: string): string {
     return `${dni}@auth.cobranzapro.local`;
+  }
+
+  private async functionError(error: unknown, fallback: string): Promise<AppError> {
+    let message = fallback;
+
+    if (error instanceof FunctionsHttpError) {
+      try {
+        const body = (await error.context.json()) as { message?: string };
+        message = body.message ?? message;
+      } catch {
+        // Infrastructure errors may return an empty response.
+      }
+    }
+
+    return new AppError('SUPABASE_RPC', message, error);
   }
 
 }

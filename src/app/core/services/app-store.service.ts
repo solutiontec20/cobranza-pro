@@ -211,9 +211,9 @@ export class AppStoreService {
 
   private getInitialDatabase(): AppDatabase {
     const profiles: Profile[] = [
-      { id: 'prof-admin', dni: '10203040', fullName: 'Carlos Mendoza', phone: '987654321', role: 'admin', active: true },
-      { id: 'prof-cobrador-1', dni: '20304050', fullName: 'Pedro Castillo', phone: '912345678', role: 'collector', active: true },
-      { id: 'prof-cobrador-2', dni: '30405060', fullName: 'Luis Quispe', phone: '923456789', role: 'collector', active: true }
+      { id: 'prof-admin', dni: '10203040', fullName: 'Carlos Mendoza', phone: '987654321', role: 'admin', active: true, mustChangePin: false },
+      { id: 'prof-cobrador-1', dni: '20304050', fullName: 'Pedro Castillo', phone: '912345678', role: 'collector', active: true, mustChangePin: false },
+      { id: 'prof-cobrador-2', dni: '30405060', fullName: 'Luis Quispe', phone: '923456789', role: 'collector', active: true, mustChangePin: false }
     ];
 
     const clients: Client[] = [
