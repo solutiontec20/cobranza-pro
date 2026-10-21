@@ -199,7 +199,8 @@ describe('loan calculations', () => {
     });
   });
 
-  it('moves a daily first due date from a weekend to Monday', () => {
+  it('keeps Saturday and moves Sunday to Monday for daily collections', () => {
+    expect(firstDueOn('2026-10-17', 'daily')).toBe('2026-10-17');
     expect(firstDueOn('2026-10-18', 'daily')).toBe('2026-10-19');
   });
 });
