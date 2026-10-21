@@ -573,7 +573,9 @@ const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
           </div>
           <dl class="w-full rounded-lg border border-surface p-4 text-sm">
             <div class="flex items-center justify-between gap-3">
-              <dt class="text-muted-color">Nuevo saldo pendiente</dt>
+              <dt class="text-left text-muted-color">
+                Nuevo saldo del préstamo #{{ selectedLoanReference() }}
+              </dt>
               <dd class="font-bold tabular-nums text-color">
                 {{ result.remainingBalance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
               </dd>
@@ -605,9 +607,12 @@ const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
                 <div>
                   <p class="text-muted-color">Cliente</p>
                   <p class="mt-1 font-semibold text-color">{{ currentDetail.client.fullName }}</p>
+                  <p class="mt-1 text-xs text-muted-color">
+                    Préstamo #{{ selectedLoanReference() }}
+                  </p>
                 </div>
                 <div class="text-right">
-                  <p class="text-muted-color">Saldo pendiente</p>
+                  <p class="text-muted-color">Saldo de este préstamo</p>
                   <p class="mt-1 text-lg font-bold tabular-nums text-color">
                     {{ currentDetail.loan.balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
                   </p>
@@ -686,7 +691,7 @@ const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
           </div>
 
           <div class="flex items-center justify-between gap-3 rounded-lg border border-surface p-4 text-sm">
-            <span class="text-muted-color">Saldo después del pago</span>
+            <span class="text-muted-color">Saldo de este préstamo después del pago</span>
             <strong class="text-lg tabular-nums text-color">
               {{ paymentBalancePreview() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
             </strong>
@@ -828,6 +833,9 @@ export default class LoanDetailPage {
     const amount = this.paymentModel().amount;
     return Math.max(0, Math.round((balance - (Number.isFinite(amount) ? amount : 0)) * 100) / 100);
   });
+  protected readonly selectedLoanReference = computed(() =>
+    (this.detail()?.loan.id ?? '').slice(0, 8).toUpperCase(),
+  );
 
   constructor() {
     void this.store.loadDetail(this.loanId);
