@@ -2,11 +2,11 @@
 
 ## Objective
 
-Complete the administrative loan module with a Supabase-backed payment schedule, audited editing, and loan start/end dates in the schedule summary.
+Complete the administrative loan module with a Supabase-backed, mobile-first loan detail page, audited editing, payment schedule, payment history, and loan start/end dates.
 
 ## Problem
 
-The current loan screen only lists and creates loans. It cannot show installment-level balances or edit an existing loan. Editing financial terms must keep the loan, schedule, cash ledger, and audit trail consistent.
+The loan list must lead to a complete page instead of presenting the schedule and editing flow in dialogs. The page needs enough customer and financial context for field use on mobile without sacrificing desktop readability or financial integrity.
 
 ## Why
 
@@ -21,6 +21,10 @@ Administrators need to inspect the customer's real payment schedule and correct 
 - Require an audit reason for every edit.
 - Preserve superseded installments instead of physically deleting them.
 - Keep the loan disbursement cash movement consistent when principal changes.
+- Replace schedule/edit dialogs with a routed loan detail page.
+- Show customer contact/address context and the assigned collector.
+- Show payment history from Supabase, including voided records for audit visibility.
+- Use mobile installment/payment cards and desktop tables so the primary workflow remains usable on phones.
 
 ## Constraints
 
@@ -34,7 +38,7 @@ Administrators need to inspect the customer's real payment schedule and correct 
 ## Delivery
 
 - Strategy: `ask-on-risk`
-- Forecast: approximately 900 authored changed lines across SQL, tests, types, repository/store, and UI.
+- Forecast: approximately 2,700 accumulated authored changed lines across SQL, tests, types, repository/store, routing, and responsive UI.
 - Chain strategy: `feature-branch-chain` on the existing `felix` branch.
 - Running authored changed lines: 1,817 through the three implementation commits (`d2130b9`, `ce00f2c`, `d9f01de`; 27 generated `database.types.ts` lines and final bookkeeping excluded).
 - Pull request slices: slice 1 candidate contains `d2130b9`; slice 2 candidate contains `ce00f2c`; slice 3 candidate contains `d9f01de`; no pull request created because remote delivery remains user-owned.
@@ -85,11 +89,21 @@ Administrators need to inspect the customer's real payment schedule and correct 
   - RDD: disabled/unmanaged.
   - Work-unit commit: `d9f01de` (`feat(loans): add schedule and editing UI`).
 
+- [ ] **LOAN-4 — Replace loan dialogs with a responsive detail page**
+  - Add a routed loan detail under `/admin/prestamos/:loanId` and navigate to it from the loan list.
+  - Load customer context, active installment balances, and auditable payment history from Supabase.
+  - Present customer detail, loan summary, schedule, and received-payment history using mobile cards and desktop tables.
+  - Move audited editing into an inline page section and keep installment recalculation visible while editing.
+  - Acceptance: no schedule/edit modal is used; the detail page follows the MVP information hierarchy and remains readable and operable at mobile and desktop widths.
+  - Checks: focused Vitest coverage, `pnpm build`, and Playwright smoke scenarios at mobile and desktop viewports.
+  - Evidence: pending.
+
 ## Progress
 
 - Exploration completed against the two MVP HTML files, README, migration guide, current Angular module, generated Supabase types, and all loan-related migrations.
 - Confirmed that the MVP contains schedule viewing but no editing behavior; the editing rules above come from the user's explicit decision and financial-integrity constraints.
 - UI implementation completed with PrimeNG dialogs/tables, Signal Forms, mobile-first responsive layout, and Spanish `es-PE` formatting.
+- User review superseded the dialog-based interaction: LOAN-4 reopens the UI work as a routed, mobile-first detail experience based on the MVP client-detail hierarchy.
 
 ## Verification evidence
 
@@ -105,4 +119,4 @@ Administrators need to inspect the customer's real payment schedule and correct 
 
 ## Next step
 
-Feature implementation and local verification are complete. Remote push and pull-request creation remain user-owned decisions.
+Implement LOAN-4 as the next feature-branch-chain slice. Remote push and pull-request creation remain user-owned decisions.

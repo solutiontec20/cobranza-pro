@@ -6,6 +6,7 @@ import {
   CreateLoanInput,
   Loan,
   LoanClientOption,
+  LoanDetail,
   LoanInstallment,
   LoanInstallmentStatus,
   LoanListItem,
@@ -308,6 +309,154 @@ export class SupabaseLoanRepository implements LoanRepository {
         overdueDays: Number(row.overdue_days),
       };
     });
+  }
+
+  async getDetail(loanId: string): Promise<LoanDetail> {
+    const loanRequest = this.supabase
+      .from('loans')
+      .select(`
+        id,
+        customer_id,
+        principal_amount,
+        interest_rate_percent,
+        total_amount,
+        installment_count,
+        frequency,
+        started_on,
+        status,
+        created_at,
+        customer:customers!loans_customer_id_fkey (
+          id,
+          document_number,
+          full_name,
+          phone,
+          address,
+          notes,
+          collector_id,
+          collector:profiles!customers_collector_id_fkey (
+            id,
+            full_name
+          )
+        )
+      `)
+      .eq('id', loanId)
+      .single();
+
+    const paymentsRequest = this.supabase
+      .from('payments')
+      .select(`
+        id,
+        amount,
+        payment_method,
+        paid_at,
+        business_date,
+        status,
+        notes,
+        collector_id,
+        void_reason,
+        collector:profiles!payments_collector_id_fkey (
+          id,
+          full_name
+        )
+      `)
+      .eq('loan_id', loanId)
+      .order('paid_at', { ascending: false });
+
+    const [loanResult, installments, paymentsResult] = await Promise.all([
+      loanRequest,
+      this.getSchedule(loanId),
+      paymentsRequest,
+    ]);
+
+    if (loanResult.error || !loanResult.data) {
+      throw this.toAppError(
+        loanResult.error,
+        'No se pudo cargar el detalle del préstamo.',
+      );
+    }
+
+    if (paymentsResult.error) {
+      throw this.toAppError(
+        paymentsResult.error,
+        'No se pudo cargar el historial de pagos.',
+      );
+    }
+
+    if (installments.length === 0) {
+      throw new AppError(
+        'SUPABASE_RPC',
+        'El préstamo no tiene un cronograma activo.',
+      );
+    }
+
+    const row = loanResult.data;
+    const customer = row.customer;
+    const collector = customer?.collector;
+
+    if (!customer || !collector) {
+      throw new AppError(
+        'SUPABASE_RPC',
+        'El préstamo tiene datos incompletos del cliente o cobrador.',
+      );
+    }
+
+    const balance = installments.reduce(
+      (total, installment) => total + installment.outstandingAmount,
+      0,
+    );
+
+    return {
+      loan: {
+        id: row.id,
+        clientId: customer.id,
+        clientName: customer.full_name,
+        collectorId: collector.id,
+        collectorName: collector.full_name,
+        principal: Number(row.principal_amount),
+        interestRate: Number(row.interest_rate_percent),
+        totalAmount: Number(row.total_amount),
+        installmentAmount: installments[0].scheduledAmount,
+        installmentCount: Number(row.installment_count),
+        frequency: row.frequency,
+        balance,
+        status: row.status,
+        startedOn: row.started_on,
+        endDate: installments.at(-1)?.dueDate ?? row.started_on,
+        createdAt: row.created_at,
+      },
+      client: {
+        id: customer.id,
+        dni: customer.document_number,
+        fullName: customer.full_name,
+        phone: customer.phone,
+        address: customer.address,
+        notes: customer.notes,
+        collectorId: collector.id,
+        collectorName: collector.full_name,
+      },
+      installments,
+      payments: (paymentsResult.data ?? []).map((payment) => {
+        if (!payment.collector) {
+          throw new AppError(
+            'SUPABASE_RPC',
+            'Un pago tiene datos incompletos del cobrador.',
+          );
+        }
+
+        return {
+          id: payment.id,
+          amount: Number(payment.amount),
+          paymentMethod: payment.payment_method,
+          paidAt: payment.paid_at,
+          businessDate: payment.business_date,
+          status: payment.status,
+          notes: payment.notes,
+          collectorId: payment.collector_id,
+          collectorName: payment.collector.full_name,
+          voidReason: payment.void_reason,
+        };
+      }),
+    };
   }
 
   // ==========================================================

@@ -81,6 +81,37 @@ export interface LoanInstallment {
   overdueDays: number;
 }
 
+export interface LoanDetailClient {
+  id: string;
+  dni: string;
+  fullName: string;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
+  collectorId: string;
+  collectorName: string;
+}
+
+export interface LoanPaymentRecord {
+  id: string;
+  amount: number;
+  paymentMethod: string;
+  paidAt: string;
+  businessDate: string;
+  status: 'posted' | 'voided';
+  notes: string | null;
+  collectorId: string;
+  collectorName: string;
+  voidReason: string | null;
+}
+
+export interface LoanDetail {
+  loan: LoanListItem;
+  client: LoanDetailClient;
+  installments: LoanInstallment[];
+  payments: LoanPaymentRecord[];
+}
+
 export interface CreateLoanInput {
   clientId: string;
   principal: number;

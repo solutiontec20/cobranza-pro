@@ -3,6 +3,7 @@ import { AppError } from '../../../core/errors/app-error';
 import {
   CreateLoanInput,
   LoanClientOption,
+  LoanDetail,
   LoanInstallment,
   LoanListItem,
   UpdateLoanInput,
@@ -17,8 +18,10 @@ export class LoansStore {
   readonly availableClients = signal<LoanClientOption[]>([]);
   readonly selectedSchedule = signal<LoanInstallment[]>([]);
   readonly selectedScheduleLoanId = signal<string | null>(null);
+  readonly selectedDetail = signal<LoanDetail | null>(null);
   readonly loading = signal(false);
   readonly loadingSchedule = signal(false);
+  readonly loadingDetail = signal(false);
   readonly creating = signal(false);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
@@ -72,6 +75,20 @@ export class LoansStore {
     }
   }
 
+  async loadDetail(loanId: string): Promise<void> {
+    this.loadingDetail.set(true);
+    this.error.set(null);
+
+    try {
+      this.selectedDetail.set(await this.repository.getDetail(loanId));
+    } catch (error) {
+      this.selectedDetail.set(null);
+      this.error.set(this.messageFrom(error, 'No se pudo cargar el detalle del préstamo.'));
+    } finally {
+      this.loadingDetail.set(false);
+    }
+  }
+
   async update(input: UpdateLoanInput): Promise<boolean> {
     this.saving.set(true);
     this.error.set(null);
@@ -86,6 +103,10 @@ export class LoansStore {
 
       if (this.selectedScheduleLoanId() === input.loanId) {
         await this.loadSchedule(input.loanId);
+      }
+
+      if (this.selectedDetail()?.loan.id === input.loanId) {
+        await this.loadDetail(input.loanId);
       }
 
       return this.error() === null;

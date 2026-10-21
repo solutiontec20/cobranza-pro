@@ -3,6 +3,7 @@ import {
   CreateLoanInput,
   Loan,
   LoanClientOption,
+  LoanDetail,
   LoanInstallment,
   LoanListItem,
   UpdateLoanInput,
@@ -14,6 +15,8 @@ export interface LoanRepository {
   listAvailableClients(): Promise<LoanClientOption[]>;
 
   getSchedule(loanId: string): Promise<LoanInstallment[]>;
+
+  getDetail(loanId: string): Promise<LoanDetail>;
 
   create(input: CreateLoanInput): Promise<Loan>;
 

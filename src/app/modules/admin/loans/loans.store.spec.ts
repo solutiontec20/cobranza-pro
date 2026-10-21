@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { AppError } from '../../../core/errors/app-error';
-import { LoanInstallment, LoanListItem } from '../../../core/models/loan.model';
+import { LoanDetail, LoanInstallment, LoanListItem } from '../../../core/models/loan.model';
 import { LOAN_REPOSITORY, LoanRepository } from '../../../core/repositories/loan.repository';
 import { calculateLoanSummary, firstDueOn } from './loan-calculations';
 import { LoansStore } from './loans.store';
@@ -38,12 +38,29 @@ const schedule: LoanInstallment[] = [
   },
 ];
 
+const detail: LoanDetail = {
+  loan,
+  client: {
+    id: loan.clientId,
+    dni: '12345678',
+    fullName: loan.clientName,
+    phone: '987654321',
+    address: 'Av. Principal 123',
+    notes: 'Cliente puntual',
+    collectorId: loan.collectorId,
+    collectorName: loan.collectorName,
+  },
+  installments: schedule,
+  payments: [],
+};
+
 describe('LoansStore', () => {
   let store: LoansStore;
   let repository: {
     list: ReturnType<typeof vi.fn<LoanRepository['list']>>;
     listAvailableClients: ReturnType<typeof vi.fn<LoanRepository['listAvailableClients']>>;
     getSchedule: ReturnType<typeof vi.fn<LoanRepository['getSchedule']>>;
+    getDetail: ReturnType<typeof vi.fn<LoanRepository['getDetail']>>;
     create: ReturnType<typeof vi.fn<LoanRepository['create']>>;
     update: ReturnType<typeof vi.fn<LoanRepository['update']>>;
   };
@@ -53,6 +70,7 @@ describe('LoansStore', () => {
       list: vi.fn<LoanRepository['list']>().mockResolvedValue([loan]),
       listAvailableClients: vi.fn<LoanRepository['listAvailableClients']>().mockResolvedValue([]),
       getSchedule: vi.fn<LoanRepository['getSchedule']>().mockResolvedValue(schedule),
+      getDetail: vi.fn<LoanRepository['getDetail']>().mockResolvedValue(detail),
       create: vi.fn<LoanRepository['create']>(),
       update: vi.fn<LoanRepository['update']>(),
     };
@@ -105,6 +123,14 @@ describe('LoansStore', () => {
     expect(store.selectedScheduleLoanId()).toBe(loan.id);
     expect(store.selectedSchedule()).toEqual(schedule);
     expect(store.loadingSchedule()).toBe(false);
+  });
+
+  it('loads the complete routed loan detail', async () => {
+    await store.loadDetail(loan.id);
+
+    expect(repository.getDetail).toHaveBeenCalledWith(loan.id);
+    expect(store.selectedDetail()).toEqual(detail);
+    expect(store.loadingDetail()).toBe(false);
   });
 
   it('updates a loan and reloads its list and selected schedule', async () => {
