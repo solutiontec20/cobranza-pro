@@ -17,6 +17,11 @@ import {
   LoanStatus,
 } from '../../../core/models/loan.model';
 import { calculateLoanSummary, firstDueOn } from './loan-calculations';
+import {
+  LoanEditReasonCode,
+  LOAN_EDIT_REASON_OPTIONS,
+  resolveLoanEditReason,
+} from './loan-edit-reasons';
 import { LoansStore } from './loans.store';
 
 interface LoanEditModel {
@@ -25,7 +30,8 @@ interface LoanEditModel {
   frequency: LoanFrequency;
   installmentCount: number;
   startedOn: string;
-  reason: string;
+  reasonCode: LoanEditReasonCode | '';
+  customReason: string;
 }
 
 type TagSeverity = 'success' | 'warn' | 'danger' | 'secondary' | 'info';
@@ -36,7 +42,8 @@ const emptyEditModel = (): LoanEditModel => ({
   frequency: 'daily',
   installmentCount: 1,
   startedOn: '',
-  reason: '',
+  reasonCode: '',
+  customReason: '',
 });
 
 @Component({
@@ -276,18 +283,37 @@ const emptyEditModel = (): LoanEditModel => ({
               </div>
 
               <div>
-                <label for="edit-reason" class="mb-2 block text-sm font-medium text-color">Motivo de la edición</label>
-                <textarea
-                  id="edit-reason"
-                  rows="3"
-                  class="w-full resize-y rounded-md border border-surface px-3 py-2.5 text-color outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-surface-950"
-                  placeholder="Describe por qué se corrigen las condiciones del préstamo"
-                  [formField]="editForm.reason"
-                ></textarea>
-                @if (editForm.reason().touched() && editForm.reason().invalid()) {
-                  <small class="mt-1 block text-red-600">{{ editForm.reason().errors()[0]?.message }}</small>
+                <label for="edit-reason-code" class="mb-2 block text-sm font-medium text-color">Motivo de la edición</label>
+                <p-select
+                  inputId="edit-reason-code"
+                  [formField]="editForm.reasonCode"
+                  [options]="editReasonOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Selecciona un motivo"
+                  appendTo="body"
+                  styleClass="w-full"
+                />
+                @if (editForm.reasonCode().touched() && editForm.reasonCode().invalid()) {
+                  <small class="mt-1 block text-red-600">{{ editForm.reasonCode().errors()[0]?.message }}</small>
                 }
               </div>
+
+              @if (editModel().reasonCode === 'other') {
+                <div>
+                  <label for="edit-custom-reason" class="mb-2 block text-sm font-medium text-color">Justificación</label>
+                  <textarea
+                    id="edit-custom-reason"
+                    rows="3"
+                    class="w-full resize-y rounded-md border border-surface px-3 py-2.5 text-color outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-surface-950"
+                    placeholder="Describe por qué se corrigen las condiciones del préstamo"
+                    [formField]="editForm.customReason"
+                  ></textarea>
+                  @if (editForm.customReason().touched() && editForm.customReason().invalid()) {
+                    <small class="mt-1 block text-red-600">{{ editForm.customReason().errors()[0]?.message }}</small>
+                  }
+                </div>
+              }
 
               <section class="grid grid-cols-2 gap-3 rounded-xl bg-surface-50 p-4 text-sm dark:bg-surface-800 sm:grid-cols-3" aria-label="Nuevo resumen del préstamo">
                 <div>
@@ -508,6 +534,7 @@ export default class LoanDetailPage {
     { label: 'Semanal', value: 'weekly' },
     { label: 'Mensual', value: 'monthly' },
   ];
+  protected readonly editReasonOptions = LOAN_EDIT_REASON_OPTIONS;
 
   protected readonly detail = this.store.selectedDetail;
   protected readonly editModel = signal<LoanEditModel>(emptyEditModel());
@@ -517,8 +544,13 @@ export default class LoanDetailPage {
     min(path.installmentCount, 1, { message: 'Debe existir al menos una cuota.' });
     max(path.installmentCount, 32767, { message: 'La cantidad de cuotas es demasiado alta.' });
     required(path.startedOn, { message: 'Selecciona la fecha de inicio.' });
-    required(path.reason, { message: 'Ingresa el motivo de la edición.' });
-    maxLength(path.reason, 500, { message: 'El motivo no puede superar 500 caracteres.' });
+    required(path.reasonCode, { message: 'Selecciona el motivo de la edición.' });
+    maxLength(path.customReason, 500, { message: 'La justificación no puede superar 500 caracteres.' });
+    validate(path.customReason, ({ valueOf }) =>
+      valueOf(path.reasonCode) === 'other' && valueOf(path.customReason).trim().length === 0
+        ? { kind: 'required', message: 'Ingresa una justificación.' }
+        : undefined,
+    );
     validate(path.installmentCount, ({ valueOf }) => {
       const summary = calculateLoanSummary(
         valueOf(path.principal),
@@ -581,7 +613,8 @@ export default class LoanDetailPage {
       frequency: loan.frequency,
       installmentCount: loan.installmentCount,
       startedOn: loan.startedOn,
-      reason: '',
+      reasonCode: '',
+      customReason: '',
     });
     this.editForm().reset();
     this.editing.set(true);
@@ -595,6 +628,9 @@ export default class LoanDetailPage {
   protected saveChanges(): void {
     void submit(this.editForm, async () => {
       const model = this.editModel();
+      const reason = resolveLoanEditReason(model.reasonCode, model.customReason);
+      if (!reason) return;
+
       const updated = await this.store.update({
         loanId: this.loanId,
         principal: model.principal,
@@ -602,7 +638,7 @@ export default class LoanDetailPage {
         frequency: model.frequency,
         installmentCount: model.installmentCount,
         startedOn: model.startedOn,
-        reason: model.reason.trim(),
+        reason,
       });
 
       if (updated) {

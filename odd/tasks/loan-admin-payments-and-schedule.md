@@ -36,8 +36,8 @@ The collection calendar must match the business operation, audit reasons should 
 - Strategy: `ask-on-risk`.
 - Forecast: approximately 1,900 authored changed lines across the schedule migration, pgTAP/Vitest coverage, typed repository/store operations, and responsive payment/edit UI.
 - Chain strategy: reuse `feature-branch-chain` on the existing `felix` branch, as previously selected for the loans feature.
-- Running authored changed lines: 0.
-- Pull request slices: none created; remote delivery remains user-owned.
+- Running authored changed lines: 758 through LOAN-5 (task-document bookkeeping excluded).
+- Pull request slices: slice 1 candidate contains `b008c3f`; none created because remote delivery remains user-owned.
 
 ## Testing mode
 
@@ -58,14 +58,16 @@ The collection calendar must match the business operation, audit reasons should 
   - Runtime harness: local reset applied every migration; pgTAP passed 5 files / 99 tests; Vitest passed 6 files / 22 tests; database lint reported no schema errors.
   - Rollback boundary: revert the new migration and its schedule assertions before deployment; existing schedules are intentionally not backfilled.
   - RDD: disabled/unmanaged.
-  - Work-unit commit: pending.
+  - Work-unit commit: `b008c3f` (`feat(loans): collect daily installments through Saturday`).
 
-- [ ] **LOAN-6 — Add predefined audited edit reasons**
+- [x] **LOAN-6 — Add predefined audited edit reasons**
   - Add a reason selector with the three requested messages plus `Otro`.
   - Show and require a custom justification only for `Otro`.
   - Resolve the selected/custom reason into the existing `UpdateLoanInput.reason` value.
   - Acceptance: predefined reasons can be saved directly; `Otro` cannot be saved without a non-blank custom justification.
   - Checks: focused Vitest coverage, Angular build, and responsive UI smoke verification.
+  - Evidence: the edit page now exposes the three requested audit messages plus `Otro`; custom justification appears and becomes required only for `Otro`, and the resolved trimmed message is sent through the existing audited update contract.
+  - Runtime harness: Vitest passed 7 files / 24 tests; Angular build passed; a 390×844 Chromium scenario verified every option, conditional justification, disabled/enabled save states, and switching back to a predefined reason.
   - Rollback boundary: revert the loan-detail edit-form reason controls and tests; no database rollback is required.
   - RDD: disabled/unmanaged.
   - Work-unit commit: pending.
@@ -88,6 +90,7 @@ The collection calendar must match the business operation, audit reasons should 
 - Verified that the RPC records the assigned collector on the payment/cash movement and the authenticated administrator as `created_by`.
 - Supabase function/RLS guidance and the October 2026 breaking-change feed were reviewed; no relevant RPC signature break applies, and existing explicit function grants remain necessary.
 - LOAN-5 is implemented without backfilling existing schedules; only newly created or explicitly edited eligible loans receive the Monday-through-Saturday calendar.
+- LOAN-6 is implemented with a pure reason resolver so the audit text is independently unit-tested from the PrimeNG selector.
 
 ## Verification evidence
 
@@ -97,7 +100,10 @@ The collection calendar must match the business operation, audit reasons should 
 - `pnpm supabase test db` — passed; 5 files / 99 tests.
 - `pnpm test:ci` — passed; 6 files / 22 tests.
 - `pnpm supabase db lint --level warning` — passed with no schema errors.
+- `pnpm test:ci` after LOAN-6 — passed; 7 files / 24 tests.
+- `pnpm build` after LOAN-6 — passed with the existing initial-bundle budget warning (809.31 kB vs 500 kB). The first build attempt exposed a readonly-array incompatibility with PrimeNG options; the array contract was corrected and the retry passed.
+- Temporary mobile Playwright/Chromium edit-reason smoke — passed; the temporary spec was removed after verification.
 
 ## Next step
 
-Commit LOAN-5, record its identity, and implement the predefined edit-reason flow in LOAN-6.
+Commit LOAN-6, record its identity, and implement administrator payment registration in LOAN-7.
