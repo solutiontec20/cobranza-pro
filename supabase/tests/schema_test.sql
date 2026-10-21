@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(18);
+select plan(24);
 
 -- ============================================================
 -- TABLES
@@ -30,6 +30,27 @@ select has_table(
   'public',
   'installments',
   'installments table should exist'
+);
+
+select has_column(
+  'public',
+  'installments',
+  'superseded_at',
+  'installments should record when a schedule entry was superseded'
+);
+
+select has_column(
+  'public',
+  'installments',
+  'superseded_by',
+  'installments should record who superseded a schedule entry'
+);
+
+select has_column(
+  'public',
+  'installments',
+  'supersession_reason',
+  'installments should record why a schedule entry was superseded'
 );
 
 select has_table(
@@ -109,6 +130,20 @@ select has_index(
   'payments collector/business-date index should exist'
 );
 
+select has_index(
+  'public',
+  'installments',
+  'installments_active_number_unique_idx',
+  'active installment numbers should be unique per loan'
+);
+
+select has_index(
+  'public',
+  'installments',
+  'installments_active_due_date_unique_idx',
+  'active installment dates should be unique per loan'
+);
+
 -- ============================================================
 -- FINANCIAL RPCs
 -- ============================================================
@@ -155,6 +190,21 @@ select has_function(
     'text'
   ],
   'validate_cash_closure RPC should exist'
+);
+
+select has_function(
+  'public',
+  'admin_update_loan',
+  array[
+    'uuid',
+    'numeric',
+    'numeric',
+    'loan_frequency',
+    'integer',
+    'date',
+    'text'
+  ],
+  'admin_update_loan RPC should exist'
 );
 
 select * from finish();

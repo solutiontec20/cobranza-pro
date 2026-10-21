@@ -9,7 +9,6 @@ export type Database = {
                   Row: {
                     "business_date": string,"collector_id": string,"created_at": string,"created_by": string,"delivered_amount": number,"difference_amount": number | null,"expected_amount": number,"id": string,"observation": string | null,"status": Database["public"]['Enums']["cash_closure_status"],"submitted_at": string | null,"updated_at": string,"validated_at": string | null,"validated_by": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "business_date": string,"collector_id": string,"created_at"?: string,"created_by": string,"delivered_amount": number,"difference_amount"?: never,"expected_amount": number,"id"?: string,"observation"?: string | null,"status"?: Database["public"]['Enums']["cash_closure_status"],"submitted_at"?: string | null,"updated_at"?: string,"validated_at"?: string | null,"validated_by"?: string | null
                   }
@@ -41,7 +40,6 @@ isOneToOne: false
                   Row: {
                     "amount": number,"business_date": string,"collector_id": string,"created_at": string,"created_by": string,"customer_id": string | null,"direction": Database["public"]['Enums']["cash_direction"],"id": string,"loan_id": string | null,"movement_type": string,"notes": string | null,"occurred_at": string,"payment_id": string | null,"payment_method": string | null,"reversal_of_id": string | null,"updated_at": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "amount": number,"business_date"?: string,"collector_id": string,"created_at"?: string,"created_by": string,"customer_id"?: string | null,"direction": Database["public"]['Enums']["cash_direction"],"id"?: string,"loan_id"?: string | null,"movement_type": string,"notes"?: string | null,"occurred_at"?: string,"payment_id"?: string | null,"payment_method"?: string | null,"reversal_of_id"?: string | null,"updated_at"?: string
                   }
@@ -97,7 +95,6 @@ isOneToOne: false
                   Row: {
                     "active": boolean,"address": string | null,"collector_id": string,"created_at": string,"created_by": string,"document_number": string,"full_name": string,"id": string,"notes": string | null,"phone": string | null,"updated_at": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "active"?: boolean,"address"?: string | null,"collector_id": string,"created_at"?: string,"created_by": string,"document_number": string,"full_name": string,"id"?: string,"notes"?: string | null,"phone"?: string | null,"updated_at"?: string
                   }
@@ -121,14 +118,13 @@ isOneToOne: false
                   ]
                 },"installments": {
                   Row: {
-                    "created_at": string,"due_date": string,"id": string,"installment_number": number,"loan_id": string,"scheduled_amount": number
+                    "created_at": string,"due_date": string,"id": string,"installment_number": number,"loan_id": string,"scheduled_amount": number,"superseded_at": string | null,"superseded_by": string | null,"supersession_reason": string | null
                   }
-                  ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"due_date": string,"id"?: string,"installment_number": number,"loan_id": string,"scheduled_amount": number
+                    "created_at"?: string,"due_date": string,"id"?: string,"installment_number": number,"loan_id": string,"scheduled_amount": number,"superseded_at"?: string | null,"superseded_by"?: string | null,"supersession_reason"?: string | null
                   }
                   Update: {
-                    "created_at"?: string,"due_date"?: string,"id"?: string,"installment_number"?: number,"loan_id"?: string,"scheduled_amount"?: number
+                    "created_at"?: string,"due_date"?: string,"id"?: string,"installment_number"?: number,"loan_id"?: string,"scheduled_amount"?: number,"superseded_at"?: string | null,"superseded_by"?: string | null,"supersession_reason"?: string | null
                   }
                   Relationships: [
                     {
@@ -137,13 +133,18 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "loans"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "installments_superseded_by_fkey"
+      columns: ["superseded_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
     }
                   ]
                 },"loans": {
                   Row: {
                     "close_reason": string | null,"closed_at": string | null,"created_at": string,"created_by": string,"customer_id": string,"disbursed_amount": number,"first_due_on": string,"frequency": Database["public"]['Enums']["loan_frequency"],"id": string,"installment_count": number,"interest_rate_percent": number,"previous_loan_id": string | null,"principal_amount": number,"started_on": string,"status": Database["public"]['Enums']["loan_status"],"total_amount": number,"updated_at": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "close_reason"?: string | null,"closed_at"?: string | null,"created_at"?: string,"created_by": string,"customer_id": string,"disbursed_amount": number,"first_due_on": string,"frequency": Database["public"]['Enums']["loan_frequency"],"id"?: string,"installment_count": number,"interest_rate_percent": number,"previous_loan_id"?: string | null,"principal_amount": number,"started_on": string,"status"?: Database["public"]['Enums']["loan_status"],"total_amount": number,"updated_at"?: string
                   }
@@ -181,7 +182,6 @@ isOneToOne: false
                   Row: {
                     "amount": number,"created_at": string,"id": string,"installment_id": string,"payment_id": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "amount": number,"created_at"?: string,"id"?: string,"installment_id": string,"payment_id": string
                   }
@@ -213,7 +213,6 @@ isOneToOne: false
                   Row: {
                     "amount": number,"business_date": string,"collector_id": string,"corrected_from_payment_id": string | null,"created_at": string,"created_by": string,"id": string,"loan_id": string,"notes": string | null,"paid_at": string,"payment_method": string,"status": Database["public"]['Enums']["payment_status"],"updated_at": string,"void_reason": string | null,"voided_at": string | null,"voided_by": string | null
                   }
-                  ComputedFields: never
                   Insert: {
                     "amount": number,"business_date"?: string,"collector_id": string,"corrected_from_payment_id"?: string | null,"created_at"?: string,"created_by": string,"id"?: string,"loan_id": string,"notes"?: string | null,"paid_at"?: string,"payment_method": string,"status"?: Database["public"]['Enums']["payment_status"],"updated_at"?: string,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null
                   }
@@ -257,7 +256,6 @@ isOneToOne: false
                   Row: {
                     "active": boolean,"created_at": string,"credentials_invalid_before": string | null,"dni": string,"full_name": string,"id": string,"must_change_pin": boolean,"phone": string | null,"pin_changed_at": string | null,"role": Database["public"]['Enums']["app_role"],"updated_at": string
                   }
-                  ComputedFields: never
                   Insert: {
                     "active"?: boolean,"created_at"?: string,"credentials_invalid_before"?: string | null,"dni": string,"full_name": string,"id": string,"must_change_pin"?: boolean,"phone"?: string | null,"pin_changed_at"?: string | null,"role": Database["public"]['Enums']["app_role"],"updated_at"?: string
                   }
@@ -274,7 +272,6 @@ isOneToOne: false
                   Row: {
                     "customer_id": string | null,"is_blacklisted": boolean | null,"max_overdue_days": number | null,"outstanding_amount": number | null
                   }
-                  ComputedFields: never
                   Relationships: [
                     
                   ]
@@ -282,7 +279,6 @@ isOneToOne: false
                   Row: {
                     "due_date": string | null,"id": string | null,"installment_number": number | null,"loan_id": string | null,"outstanding_amount": number | null,"overdue_days": number | null,"paid_amount": number | null,"scheduled_amount": number | null,"status": string | null
                   }
-                  ComputedFields: never
                   Relationships: [
                     {
       foreignKeyName: "installments_loan_id_fkey"
@@ -318,6 +314,11 @@ isOneToOne: false
 "admin_set_collector_active":
 { Args: { "p_active": boolean,"p_collector_id": string,"p_reason": string }; Returns: {
               "active": boolean,"active_customer_count": number,"created_at": string,"dni": string,"full_name": string,"id": string,"phone": string
+            }[]
+                           },
+"admin_update_loan":
+{ Args: { "p_frequency": Database["public"]['Enums']["loan_frequency"],"p_installment_count": number,"p_interest_rate": number,"p_loan_id": string,"p_principal": number,"p_reason": string,"p_started_on": string }; Returns: {
+              "created_at": string,"customer_id": string,"disbursed_amount": number,"first_due_on": string,"frequency": Database["public"]['Enums']["loan_frequency"],"id": string,"installment_count": number,"interest_rate_percent": number,"principal_amount": number,"started_on": string,"status": Database["public"]['Enums']["loan_status"],"total_amount": number
             }[]
                            },
 "register_payment":
