@@ -1,0 +1,180 @@
+<main class="mx-auto flex w-full max-w-[90rem] flex-col gap-6 p-4 sm:p-6" aria-labelledby="daily-control-title">
+  <header class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+    <div>
+      <div class="mb-1 flex flex-wrap items-center gap-2">
+        <p class="text-sm font-medium text-primary">Operaciones</p>
+        <p-tag value="Datos de prueba" severity="secondary" icon="pi pi-database" />
+      </div>
+      <h1 id="daily-control-title" class="text-2xl font-bold text-color sm:text-3xl">Control diario</h1>
+      <p class="mt-1 max-w-2xl text-sm text-muted-color">
+        Revisá lo programado, lo cobrado y la mora de cada cartera a la fecha de corte.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2" aria-label="Opciones de exportación">
+      <p-button label="CSV" icon="pi pi-file" severity="secondary" variant="outlined" size="small"
+        [loading]="exporting() === 'csv'" [disabled]="store.loading() || !store.visibleReport()?.rows?.length || exporting() !== null"
+        (onClick)="exportReport('csv')" />
+      <p-button label="Excel" icon="pi pi-file-excel" severity="success" variant="outlined" size="small"
+        [loading]="exporting() === 'xlsx'" [disabled]="store.loading() || !store.visibleReport()?.rows?.length || exporting() !== null"
+        (onClick)="exportReport('xlsx')" />
+      <p-button label="PDF" icon="pi pi-file-pdf" severity="danger" variant="outlined" size="small"
+        [loading]="exporting() === 'pdf'" [disabled]="store.loading() || !store.visibleReport()?.rows?.length || exporting() !== null"
+        (onClick)="exportReport('pdf')" />
+    </div>
+  </header>
+
+  <section class="rounded-2xl border border-surface bg-surface-0 p-4 shadow-sm dark:bg-surface-900" aria-label="Filtros del control diario">
+    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-[13rem_18rem_14rem_minmax(14rem,1fr)_auto] xl:items-end">
+      <label class="flex flex-col gap-2 text-sm font-medium text-color">
+        Fecha de corte
+        <p-datepicker [ngModel]="selectedDate()" (ngModelChange)="changeDate($event)" dateFormat="dd/mm/yy"
+          [showIcon]="true" [showButtonBar]="true" inputId="daily-control-date" appendTo="body" />
+      </label>
+      <label class="flex flex-col gap-2 text-sm font-medium text-color">
+        Cobrador
+        <p-select [options]="collectorOptions()" optionLabel="label" optionValue="value"
+          [ngModel]="store.filters().collectorId" (ngModelChange)="changeCollector($event)"
+          inputId="daily-control-collector" appendTo="body" />
+      </label>
+      <label class="flex flex-col gap-2 text-sm font-medium text-color">
+        Estado
+        <p-select [options]="statusOptions" optionLabel="label" optionValue="value"
+          [ngModel]="store.filters().status" (ngModelChange)="changeStatus($event)"
+          inputId="daily-control-status" appendTo="body" />
+      </label>
+      <label class="flex flex-col gap-2 text-sm font-medium text-color">
+        Buscar
+        <span class="relative block">
+          <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-muted-color" aria-hidden="true"></i>
+          <input pInputText class="w-full pl-10" type="search" placeholder="Cliente, DNI o cobrador"
+            [value]="store.query()" (input)="updateSearch($event)" />
+        </span>
+      </label>
+      <p-button label="Limpiar" icon="pi pi-filter-slash" severity="secondary" variant="text"
+        [disabled]="store.loading()" (onClick)="clearFilters()" />
+    </div>
+  </section>
+
+  @if (store.error()) {
+    <p-message severity="error" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
+  }
+  @if (exportError()) {
+    <p-message severity="error" styleClass="w-full" role="alert">{{ exportError() }}</p-message>
+  }
+
+  @if (store.loading() && !store.report()) {
+    <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Cargando resumen">
+      @for (row of loadingRows; track row) {
+        <p-skeleton height="8rem" borderRadius="1rem" />
+      }
+    </section>
+  } @else if (store.visibleReport(); as report) {
+    <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Resumen del día">
+      <article class="metric-card metric-card--blue p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div><p class="text-xs font-semibold uppercase tracking-wide text-muted-color">Programado</p>
+            <p class="mt-2 text-2xl font-bold text-color">{{ report.summary.scheduledAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p></div>
+          <i class="pi pi-calendar-clock text-xl text-blue-600" aria-hidden="true"></i>
+        </div>
+      </article>
+      <article class="metric-card metric-card--green p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div><p class="text-xs font-semibold uppercase tracking-wide text-muted-color">Cobrado</p>
+            <p class="mt-2 text-2xl font-bold text-color">{{ report.summary.collectedAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p></div>
+          <i class="pi pi-wallet text-xl text-emerald-600" aria-hidden="true"></i>
+        </div>
+      </article>
+      <article class="metric-card metric-card--orange p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div><p class="text-xs font-semibold uppercase tracking-wide text-muted-color">Diferencia</p>
+            <p class="mt-2 text-2xl font-bold" [class.text-red-600]="report.summary.operationalDifference > 0" [class.text-color]="report.summary.operationalDifference <= 0">
+              {{ report.summary.operationalDifference | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p></div>
+          <i class="pi pi-chart-line text-xl text-orange-600" aria-hidden="true"></i>
+        </div>
+      </article>
+      <article class="metric-card metric-card--cyan p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div><p class="text-xs font-semibold uppercase tracking-wide text-muted-color">Atendidos</p>
+            <p class="mt-2 text-2xl font-bold text-color">{{ report.summary.attendedClients }}</p><p class="text-xs text-muted-color">clientes con cobro</p></div>
+          <i class="pi pi-users text-xl text-cyan-600" aria-hidden="true"></i>
+        </div>
+      </article>
+      <article class="metric-card metric-card--red p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div><p class="text-xs font-semibold uppercase tracking-wide text-muted-color">Con atraso</p>
+            <p class="mt-2 text-2xl font-bold text-red-600">{{ report.summary.overdueClients }}</p><p class="text-xs text-muted-color">según cuota impaga</p></div>
+          <i class="pi pi-exclamation-triangle text-xl text-red-600" aria-hidden="true"></i>
+        </div>
+      </article>
+    </section>
+
+    <section class="table-card overflow-hidden" aria-labelledby="portfolio-detail-title">
+      <div class="flex flex-col gap-1 border-b border-surface px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div><h2 id="portfolio-detail-title" class="font-semibold text-color">Detalle de cartera</h2>
+          <p class="text-xs text-muted-color">{{ report.rows.length }} registros al {{ formatDate(report.filters.businessDate) }}</p></div>
+        <p class="mt-1 text-xs text-muted-color sm:mt-0">Atraso: días calendario desde la cuota impaga más antigua</p>
+      </div>
+
+      @if (store.loading()) {
+        <div class="space-y-3 p-4" aria-label="Actualizando reporte">
+          @for (row of loadingRows; track row) { <p-skeleton height="4.5rem" borderRadius="0.75rem" /> }
+        </div>
+      } @else if (report.rows.length === 0) {
+        <div class="flex flex-col items-center px-6 py-14 text-center">
+          <i class="pi pi-inbox mb-4 text-4xl text-muted-color" aria-hidden="true"></i>
+          <h3 class="text-lg font-semibold text-color">No hay resultados</h3>
+          <p class="mt-1 text-sm text-muted-color">Ajustá los filtros para ver otros registros.</p>
+        </div>
+      } @else {
+        <div class="divide-y divide-surface lg:hidden">
+          @for (row of report.rows; track row.loanId) {
+            <article class="p-4" [class]="row.status === 'overdue' ? 'bg-red-50 dark:bg-red-950/30' : ''">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0"><h3 class="truncate font-semibold text-color">{{ row.clientName }}</h3>
+                  <p class="text-xs text-muted-color">DNI {{ row.clientDni }} · {{ row.collectorName }}</p></div>
+                <p-tag [severity]="statusSeverity(row.status)" [value]="statusLabel(row.status)" />
+              </div>
+              <dl class="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                <div><dt class="text-xs text-muted-color">Programado</dt><dd class="font-semibold text-color">{{ row.scheduledOnDate | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd></div>
+                <div><dt class="text-xs text-muted-color">Cobrado</dt><dd class="font-semibold text-emerald-600">{{ row.collectedOnDate | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd></div>
+                <div><dt class="text-xs text-muted-color">Saldo al corte</dt><dd class="font-semibold text-color">{{ row.balanceAsOf | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd></div>
+                <div><dt class="text-xs text-muted-color">Atraso</dt><dd class="font-semibold" [class.text-red-600]="row.overdueDays > 0">{{ row.overdueDays }} días</dd></div>
+              </dl>
+              @if (row.oldestUnpaidDueDate) { <p class="mt-3 text-xs text-muted-color">Cuota impaga más antigua: {{ formatDate(row.oldestUnpaidDueDate) }}</p> }
+            </article>
+          }
+        </div>
+
+        <div class="hidden lg:block">
+          <p-table [value]="report.rows" [rows]="10" [paginator]="report.rows.length > 10" [scrollable]="true"
+            scrollHeight="34rem" sortField="overdueDays" [sortOrder]="-1" styleClass="p-datatable-sm">
+            <ng-template #header>
+              <tr>
+                <th pSortableColumn="clientName" pFrozenColumn>Cliente <p-sort-icon field="clientName" /></th>
+                <th pSortableColumn="collectorName">Cobrador <p-sort-icon field="collectorName" /></th>
+                <th>Periodo</th><th>Capital</th><th>Cuota</th><th>Programado</th><th>Cobrado</th><th>Saldo</th>
+                <th pSortableColumn="overdueDays">Atraso <p-sort-icon field="overdueDays" /></th><th>Estado</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-row>
+              <tr [class]="row.status === 'overdue' ? 'bg-red-50 dark:bg-red-950/30' : ''">
+                <td pFrozenColumn><span class="font-semibold text-color">{{ row.clientName }}</span><br /><small class="text-muted-color">DNI {{ row.clientDni }}</small></td>
+                <td>{{ row.collectorName }}</td>
+                <td class="whitespace-nowrap">{{ formatDate(row.startedOn) }}<br /><small class="text-muted-color">a {{ formatDate(row.endDate) }}</small></td>
+                <td>{{ row.principalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+                <td>{{ row.installmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+                <td class="font-semibold">{{ row.scheduledOnDate | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+                <td class="font-semibold text-emerald-600">{{ row.collectedOnDate | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+                <td class="font-semibold">{{ row.balanceAsOf | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+                <td><span class="font-semibold" [class.text-red-600]="row.overdueDays > 0">{{ row.overdueDays }} d</span><br />
+                  <small class="whitespace-nowrap text-muted-color">{{ formatDate(row.oldestUnpaidDueDate) }}</small></td>
+                <td><p-tag [severity]="statusSeverity(row.status)" [value]="statusLabel(row.status)" /></td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+      }
+    </section>
+  }
+</main>
