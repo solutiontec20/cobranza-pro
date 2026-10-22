@@ -35,8 +35,10 @@ Payment allocation is financial state: cumulative payments, advance payments, an
   replacement RPC, pgTAP coverage, UI copy, and focused tests.
 - Chain strategy: reuse `feature-branch-chain` on the existing `felix` branch, as selected for
   the referenced loans work.
-- Running authored changed lines: 1,059 through PAY-3 (generated types and task-document
-  bookkeeping excluded).
+- Running authored changed lines: 1,781 through local PAY-5 (generated types and task-document
+  bookkeeping excluded); PAY-4 and PAY-5 remain uncommitted by explicit user request. PAY-5 is a
+  cohesive 481-line migration plus pgTAP fixture that cannot be split without separating the
+  repair from the evidence that proves it.
 - Pull request slices: slice 1 candidate contains `9a085e6`; its versioned migration cannot be split
   without separating the transactional fix, historical repair, and the tests that prove them,
   so a `size:exception` is recommended if a PR is created. Slice 2 candidate contains `4e324cb`;
@@ -98,6 +100,54 @@ Payment allocation is financial state: cumulative payments, advance payments, an
   - RDD: disabled/unmanaged.
   - Work-unit commit: `c7c427d` (`fix(loans): derive summary from posted payments`).
 
+- [x] **PAY-4 — Use one financial balance across loan list and detail**
+  - Derive every loan-list balance from its total amount and all posted payments, matching the
+    selected-loan detail instead of relying on installment allocation totals.
+  - Keep installment balances as the schedule/allocation breakdown, including an explicit partial
+    state when a S/ 1.00 payment leaves part of the current installment outstanding.
+  - Centralize the monetary calculation so the adapter and detail cannot drift independently.
+  - Add regression coverage where installment balances report S/ 115.00 but posted payments imply
+    a real remaining balance of S/ 90.00, including a S/ 1.00 partial payment and voided exclusion.
+  - Checks: `pnpm test:ci` and `pnpm build`.
+  - Evidence: the list now derives each balance from `total_amount` minus all posted payments,
+    exactly like the selected-loan detail. Installment balances remain responsible only for the
+    schedule metadata and allocation breakdown. The shared calculation excludes voided payments,
+    and the detail model's own `balance` now uses it too.
+  - Regression coverage: a S/ 120.00 loan whose stale installment balances sum S/ 115.00 but whose
+    posted payments total S/ 30.00 now returns S/ 90.00 in the list. A S/ 1.00 allocation against a
+    S/ 4.00 installment is reported as partial with S/ 3.00 outstanding.
+  - Runtime harness: Vitest passed 7 files / 33 tests; Angular production build passed with the
+    existing initial-bundle warning (809.50 kB against the 500 kB budget).
+  - Rollback boundary: shared posted-payment calculation plus list/detail adapter consumers and
+    their focused regression tests.
+  - RDD: disabled/unmanaged.
+  - Commit: intentionally omitted because the user requested no commit.
+
+- [x] **PAY-5 — Reconcile incomplete payment allocations into the active schedule**
+  - Detect loans whose posted-payment total differs from the active, non-superseded allocation
+    total that feeds `installment_balances`.
+  - Preserve every payment and historical allocation as audit evidence, supersede only the
+    inconsistent active allocation set, and rebuild allocations oldest-installment-first.
+  - Prove the reported case: seven S/ 4.00 payments plus one S/ 1.00 partial payment must render
+    seven paid installments and the eighth installment partial with S/ 3.00 outstanding.
+  - Keep the repair transactional, locked per loan, restricted from authenticated callers, and
+    idempotent.
+  - Checks: incremental local migration, pgTAP suite, and database lint.
+  - Evidence: a versioned migration detects loans whose posted-payment total differs from their
+    active allocation total, locks the loan, payments, and active installments, supersedes the
+    inconsistent allocation set with an audit reason, and rebuilds every posted payment FIFO.
+  - Regression coverage: the fixture first reproduces one paid installment plus one partial from
+    eight posted payments, then proves the repair produces seven paid installments and an eighth
+    partial installment with S/ 1.00 paid and S/ 3.00 outstanding. All eight payments remain
+    present and fully allocated; a second repair run changes nothing.
+  - Runtime harness: incremental local migration applied; pgTAP passed 7 files / 128 tests;
+    database lint reported no schema errors. The repair migration was deployed to the authorized
+    `Cobranza Pro Dev` UAT project, and the post-deployment query found zero loans whose posted
+    payment totals differed from active allocation totals.
+  - Rollback boundary: the reconciliation migration and its focused pgTAP file.
+  - RDD: disabled/unmanaged.
+  - Commit: intentionally omitted because the user requested no commit.
+
 ## Progress
 
 - CodeGraph traced the Angular payment flow from the loan detail page through `LoansStore` and `SupabaseLoanRepository` to `register_payment`.
@@ -117,6 +167,15 @@ Payment allocation is financial state: cumulative payments, advance payments, an
   while the installment-derived summary still shows only one S/ 4.00 reduction. PAY-3 therefore
   treats posted payment history as the immediate source for the selected-loan summary while the
   schedule remains the allocation breakdown.
+- A second follow-up exposed the remaining split: the general loan list still summed
+  `installment_balances`, while the detail used posted payment history. PAY-4 centralizes the
+  calculation in `core/calculations` and applies it to both adapter results and the detail summary.
+- The schedule discrepancy remained because the original historical repair selected only loans
+  with allocations pointing at superseded installments. It did not select a loan whose allocation
+  set was simply incomplete. PAY-5 compares total posted payments with active allocations and
+  repairs either form of inconsistency without modifying payment or cash-ledger rows.
+- The payment and allocation migrations were deployed to `Cobranza Pro Dev` UAT. The remote
+  validation found zero allocation mismatches after the repair. Production was not touched.
 
 ## Verification evidence
 
@@ -135,8 +194,25 @@ Payment allocation is financial state: cumulative payments, advance payments, an
 - Temporary Chromium loan-summary smoke for PAY-3 — passed mobile 390×844 and desktop 1280×900;
   both rendered S/ 28.00 paid and S/ 92.00 remaining from seven posted same-day payments while
   excluding one voided payment. The temporary spec was removed.
+- Initial `pnpm test:ci` for PAY-4 — failed compilation because the new test double retained a
+  narrower inferred query shape and an isolated-module type re-export was not marked `export type`;
+  both test/code typing issues were corrected.
+- Second `pnpm test:ci` for PAY-4 — failed one legacy detail assertion that still expected the
+  installment-derived S/ 30.00 instead of the posted-payment-derived S/ 100.00; the assertion was
+  corrected to the intended financial rule.
+- Final `pnpm test:ci` for PAY-4 — passed 7 files / 33 tests.
+- `pnpm build` for PAY-4 — passed; the existing initial bundle warning remains (809.50 kB vs
+  500 kB).
+- `pnpm supabase migration up --local` for PAY-5 — applied the allocation-reconciliation migration.
+- `pnpm supabase test db` for PAY-5 — passed 7 files / 128 tests.
+- `pnpm supabase db lint --local --level error` for PAY-5 — no schema errors.
+- `git diff --check` for PAY-5 — passed; only existing LF/CRLF conversion warnings were reported.
+- `pnpm supabase db push --linked --yes` — deployed payment migrations `20261021163406` and
+  `20261021222800` as part of the five verified pending UAT migrations.
+- Post-deployment read-only validation — `allocation_mismatch_count = 0`.
 
 ## Next step
 
-Implementation and local verification are complete. Remote push and pull-request creation remain
-user-owned decisions.
+Implementation, local verification, and the authorized UAT deployment are complete. PAY-4, PAY-5,
+and the schedule repairs remain uncommitted as requested. Production was not touched; the next step
+is user acceptance testing of the affected loan summary and schedule.

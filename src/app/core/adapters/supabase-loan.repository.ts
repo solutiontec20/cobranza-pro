@@ -1,6 +1,7 @@
 import { inject, Service } from '@angular/core';
 import { SupabaseClient } from '@supabase/supabase-js';
 
+import { calculateLoanPaymentSummary } from '../calculations/loan-payment-calculations';
 import { AppError } from '../errors/app-error';
 import {
   CreateLoanInput,
@@ -67,12 +68,18 @@ export class SupabaseLoanRepository implements LoanRepository {
         outstanding_amount
       `);
 
+    const paymentsQuery = this.supabase
+      .from('payments')
+      .select('loan_id, amount, status');
+
     const [
       { data: loans, error: loansError },
       { data: balances, error: balancesError },
+      { data: payments, error: paymentsError },
     ] = await Promise.all([
       loansQuery,
       balancesQuery,
+      paymentsQuery,
     ]);
 
     if (loansError) {
@@ -89,10 +96,16 @@ export class SupabaseLoanRepository implements LoanRepository {
       );
     }
 
-    const summaries = new Map<
+    if (paymentsError) {
+      throw this.toAppError(
+        paymentsError,
+        'No se pudo calcular el saldo real de los préstamos.',
+      );
+    }
+
+    const scheduleSummaries = new Map<
       string,
       {
-        balance: number;
         installmentAmount: number | null;
         endDate: string | null;
       }
@@ -103,15 +116,10 @@ export class SupabaseLoanRepository implements LoanRepository {
         continue;
       }
 
-      const current = summaries.get(row.loan_id) ?? {
-        balance: 0,
+      const current = scheduleSummaries.get(row.loan_id) ?? {
         installmentAmount: null,
         endDate: null,
       };
-
-      current.balance += Number(
-        row.outstanding_amount ?? 0,
-      );
 
       if (
         row.installment_number === 1 &&
@@ -131,7 +139,21 @@ export class SupabaseLoanRepository implements LoanRepository {
         current.endDate = row.due_date;
       }
 
-      summaries.set(row.loan_id, current);
+      scheduleSummaries.set(row.loan_id, current);
+    }
+
+    const paymentsByLoan = new Map<
+      string,
+      Array<{ amount: number; status: 'posted' | 'voided' }>
+    >();
+
+    for (const payment of payments ?? []) {
+      const loanPayments = paymentsByLoan.get(payment.loan_id) ?? [];
+      loanPayments.push({
+        amount: Number(payment.amount),
+        status: payment.status,
+      });
+      paymentsByLoan.set(payment.loan_id, loanPayments);
     }
 
     return (loans ?? []).map((row) => {
@@ -145,7 +167,7 @@ export class SupabaseLoanRepository implements LoanRepository {
         );
       }
 
-      const summary = summaries.get(row.id);
+      const summary = scheduleSummaries.get(row.id);
       if (!summary || summary.installmentAmount === null || summary.endDate === null) {
         throw new AppError(
           'SUPABASE_RPC',
@@ -173,7 +195,10 @@ export class SupabaseLoanRepository implements LoanRepository {
 
         frequency: row.frequency,
 
-        balance: summary.balance,
+        balance: calculateLoanPaymentSummary(
+          Number(row.total_amount),
+          paymentsByLoan.get(row.id) ?? [],
+        ).remainingBalance,
 
         status: row.status,
 
@@ -404,10 +429,31 @@ export class SupabaseLoanRepository implements LoanRepository {
       );
     }
 
-    const balance = installments.reduce(
-      (total, installment) => total + installment.outstandingAmount,
-      0,
-    );
+    const payments = (paymentsResult.data ?? []).map((payment) => {
+      if (!payment.collector) {
+        throw new AppError(
+          'SUPABASE_RPC',
+          'Un pago tiene datos incompletos del cobrador.',
+        );
+      }
+
+      return {
+        id: payment.id,
+        amount: Number(payment.amount),
+        paymentMethod: payment.payment_method,
+        paidAt: payment.paid_at,
+        businessDate: payment.business_date,
+        status: payment.status,
+        notes: payment.notes,
+        collectorId: payment.collector_id,
+        collectorName: payment.collector.full_name,
+        voidReason: payment.void_reason,
+      };
+    });
+    const balance = calculateLoanPaymentSummary(
+      Number(row.total_amount),
+      payments,
+    ).remainingBalance;
 
     return {
       loan: {
@@ -439,27 +485,7 @@ export class SupabaseLoanRepository implements LoanRepository {
         collectorName: collector.full_name,
       },
       installments,
-      payments: (paymentsResult.data ?? []).map((payment) => {
-        if (!payment.collector) {
-          throw new AppError(
-            'SUPABASE_RPC',
-            'Un pago tiene datos incompletos del cobrador.',
-          );
-        }
-
-        return {
-          id: payment.id,
-          amount: Number(payment.amount),
-          paymentMethod: payment.payment_method,
-          paidAt: payment.paid_at,
-          businessDate: payment.business_date,
-          status: payment.status,
-          notes: payment.notes,
-          collectorId: payment.collector_id,
-          collectorName: payment.collector.full_name,
-          voidReason: payment.void_reason,
-        };
-      }),
+      payments,
     };
   }
 

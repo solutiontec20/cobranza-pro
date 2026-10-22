@@ -6,7 +6,7 @@ describe('SupabaseLoanRepository', () => {
   const order = vi.fn();
   const eq = vi.fn(() => ({ order }));
   const select = vi.fn(() => ({ eq }));
-  const from = vi.fn(() => ({ select }));
+  const from = vi.fn<(table: string) => unknown>(() => ({ select }));
   const rpc = vi.fn();
   let repository: SupabaseLoanRepository;
 
@@ -29,9 +29,9 @@ describe('SupabaseLoanRepository', () => {
           loan_id: 'loan-1',
           installment_number: 1,
           due_date: '2026-10-20',
-          scheduled_amount: 40,
-          paid_amount: 10,
-          outstanding_amount: 30,
+          scheduled_amount: 4,
+          paid_amount: 1,
+          outstanding_amount: 3,
           status: 'pending',
           overdue_days: 0,
         },
@@ -45,15 +45,88 @@ describe('SupabaseLoanRepository', () => {
         loanId: 'loan-1',
         installmentNumber: 1,
         dueDate: '2026-10-20',
-        scheduledAmount: 40,
-        paidAmount: 10,
-        outstandingAmount: 30,
+        scheduledAmount: 4,
+        paidAmount: 1,
+        outstandingAmount: 3,
         status: 'partial',
         overdueDays: 0,
       },
     ]);
     expect(eq).toHaveBeenCalledWith('loan_id', 'loan-1');
     expect(order).toHaveBeenCalledWith('installment_number', { ascending: true });
+  });
+
+  it('uses posted payment history for the same balance shown by loan detail', async () => {
+    from
+      .mockImplementationOnce(() => ({
+        select: () => ({
+          order: () =>
+            Promise.resolve({
+              data: [
+                {
+                  id: 'loan-1',
+                  customer_id: 'customer-1',
+                  principal_amount: 120,
+                  interest_rate_percent: 0,
+                  total_amount: 120,
+                  installment_count: 30,
+                  frequency: 'daily',
+                  started_on: '2026-10-01',
+                  first_due_on: '2026-10-01',
+                  status: 'active',
+                  created_at: '2026-10-01T12:00:00Z',
+                  customer: {
+                    id: 'customer-1',
+                    full_name: 'Ana Flores',
+                    collector_id: 'collector-1',
+                    collector: { id: 'collector-1', full_name: 'Luis Ramos' },
+                  },
+                },
+              ],
+              error: null,
+            }),
+        }),
+      }))
+      .mockImplementationOnce(() => ({
+        select: () =>
+          Promise.resolve({
+            data: [
+              {
+                loan_id: 'loan-1',
+                installment_number: 1,
+                due_date: '2026-10-01',
+                scheduled_amount: 4,
+                outstanding_amount: 3,
+              },
+              {
+                loan_id: 'loan-1',
+                installment_number: 30,
+                due_date: '2026-11-04',
+                scheduled_amount: 4,
+                outstanding_amount: 112,
+              },
+            ],
+            error: null,
+          }),
+      }))
+      .mockImplementationOnce(() => ({
+        select: () =>
+          Promise.resolve({
+            data: [
+              { loan_id: 'loan-1', amount: 1, status: 'posted' },
+              { loan_id: 'loan-1', amount: 9, status: 'posted' },
+              { loan_id: 'loan-1', amount: 20, status: 'posted' },
+              { loan_id: 'loan-1', amount: 4, status: 'voided' },
+            ],
+            error: null,
+          }),
+      }));
+
+    const [result] = await repository.list();
+
+    expect(result.balance).toBe(90);
+    expect(result.installmentAmount).toBe(4);
+    expect(result.endDate).toBe('2026-11-04');
   });
 
   it.each([
