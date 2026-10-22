@@ -15,6 +15,12 @@ export type LoanInstallmentStatus =
   | 'overdue'
   | 'paid';
 
+export type LoanPaymentMethod =
+  | 'cash'
+  | 'yape'
+  | 'plin'
+  | 'transfer';
+
 export interface Loan {
   id: string;
   clientId: string;
@@ -134,4 +140,18 @@ export interface UpdateLoanInput {
 
   startedOn: string;
   reason: string;
+}
+
+export interface RegisterLoanPaymentInput {
+  loanId: string;
+  amount: number;
+  paymentMethod: LoanPaymentMethod;
+  notes: string;
+}
+
+export interface RegisterLoanPaymentResult {
+  paymentId: string;
+  allocatedAmount: number;
+  remainingBalance: number;
+  resultingLoanStatus: LoanStatus;
 }

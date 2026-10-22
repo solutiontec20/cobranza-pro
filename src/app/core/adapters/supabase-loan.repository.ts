@@ -1,6 +1,7 @@
 import { inject, Service } from '@angular/core';
 import { SupabaseClient } from '@supabase/supabase-js';
 
+import { calculateLoanPaymentSummary } from '../calculations/loan-payment-calculations';
 import { AppError } from '../errors/app-error';
 import {
   CreateLoanInput,
@@ -10,6 +11,8 @@ import {
   LoanInstallment,
   LoanInstallmentStatus,
   LoanListItem,
+  RegisterLoanPaymentInput,
+  RegisterLoanPaymentResult,
   UpdateLoanInput,
 } from '../models/loan.model';
 import { LoanRepository } from '../repositories/loan.repository';
@@ -20,6 +23,8 @@ type CreateLoanRow =
   Database['public']['Functions']['admin_create_loan']['Returns'][number];
 type UpdateLoanRow =
   Database['public']['Functions']['admin_update_loan']['Returns'][number];
+type RegisterPaymentRow =
+  Database['public']['Functions']['register_payment']['Returns'][number];
 
 @Service({ autoProvided: false })
 export class SupabaseLoanRepository implements LoanRepository {
@@ -63,12 +68,18 @@ export class SupabaseLoanRepository implements LoanRepository {
         outstanding_amount
       `);
 
+    const paymentsQuery = this.supabase
+      .from('payments')
+      .select('loan_id, amount, status');
+
     const [
       { data: loans, error: loansError },
       { data: balances, error: balancesError },
+      { data: payments, error: paymentsError },
     ] = await Promise.all([
       loansQuery,
       balancesQuery,
+      paymentsQuery,
     ]);
 
     if (loansError) {
@@ -85,10 +96,16 @@ export class SupabaseLoanRepository implements LoanRepository {
       );
     }
 
-    const summaries = new Map<
+    if (paymentsError) {
+      throw this.toAppError(
+        paymentsError,
+        'No se pudo calcular el saldo real de los préstamos.',
+      );
+    }
+
+    const scheduleSummaries = new Map<
       string,
       {
-        balance: number;
         installmentAmount: number | null;
         endDate: string | null;
       }
@@ -99,15 +116,10 @@ export class SupabaseLoanRepository implements LoanRepository {
         continue;
       }
 
-      const current = summaries.get(row.loan_id) ?? {
-        balance: 0,
+      const current = scheduleSummaries.get(row.loan_id) ?? {
         installmentAmount: null,
         endDate: null,
       };
-
-      current.balance += Number(
-        row.outstanding_amount ?? 0,
-      );
 
       if (
         row.installment_number === 1 &&
@@ -127,7 +139,21 @@ export class SupabaseLoanRepository implements LoanRepository {
         current.endDate = row.due_date;
       }
 
-      summaries.set(row.loan_id, current);
+      scheduleSummaries.set(row.loan_id, current);
+    }
+
+    const paymentsByLoan = new Map<
+      string,
+      Array<{ amount: number; status: 'posted' | 'voided' }>
+    >();
+
+    for (const payment of payments ?? []) {
+      const loanPayments = paymentsByLoan.get(payment.loan_id) ?? [];
+      loanPayments.push({
+        amount: Number(payment.amount),
+        status: payment.status,
+      });
+      paymentsByLoan.set(payment.loan_id, loanPayments);
     }
 
     return (loans ?? []).map((row) => {
@@ -141,7 +167,7 @@ export class SupabaseLoanRepository implements LoanRepository {
         );
       }
 
-      const summary = summaries.get(row.id);
+      const summary = scheduleSummaries.get(row.id);
       if (!summary || summary.installmentAmount === null || summary.endDate === null) {
         throw new AppError(
           'SUPABASE_RPC',
@@ -169,7 +195,10 @@ export class SupabaseLoanRepository implements LoanRepository {
 
         frequency: row.frequency,
 
-        balance: summary.balance,
+        balance: calculateLoanPaymentSummary(
+          Number(row.total_amount),
+          paymentsByLoan.get(row.id) ?? [],
+        ).remainingBalance,
 
         status: row.status,
 
@@ -400,10 +429,31 @@ export class SupabaseLoanRepository implements LoanRepository {
       );
     }
 
-    const balance = installments.reduce(
-      (total, installment) => total + installment.outstandingAmount,
-      0,
-    );
+    const payments = (paymentsResult.data ?? []).map((payment) => {
+      if (!payment.collector) {
+        throw new AppError(
+          'SUPABASE_RPC',
+          'Un pago tiene datos incompletos del cobrador.',
+        );
+      }
+
+      return {
+        id: payment.id,
+        amount: Number(payment.amount),
+        paymentMethod: payment.payment_method,
+        paidAt: payment.paid_at,
+        businessDate: payment.business_date,
+        status: payment.status,
+        notes: payment.notes,
+        collectorId: payment.collector_id,
+        collectorName: payment.collector.full_name,
+        voidReason: payment.void_reason,
+      };
+    });
+    const balance = calculateLoanPaymentSummary(
+      Number(row.total_amount),
+      payments,
+    ).remainingBalance;
 
     return {
       loan: {
@@ -435,27 +485,7 @@ export class SupabaseLoanRepository implements LoanRepository {
         collectorName: collector.full_name,
       },
       installments,
-      payments: (paymentsResult.data ?? []).map((payment) => {
-        if (!payment.collector) {
-          throw new AppError(
-            'SUPABASE_RPC',
-            'Un pago tiene datos incompletos del cobrador.',
-          );
-        }
-
-        return {
-          id: payment.id,
-          amount: Number(payment.amount),
-          paymentMethod: payment.payment_method,
-          paidAt: payment.paid_at,
-          businessDate: payment.business_date,
-          status: payment.status,
-          notes: payment.notes,
-          collectorId: payment.collector_id,
-          collectorName: payment.collector.full_name,
-          voidReason: payment.void_reason,
-        };
-      }),
+      payments,
     };
   }
 
@@ -532,6 +562,39 @@ export class SupabaseLoanRepository implements LoanRepository {
     }
 
     return this.toLoan(row);
+  }
+
+  async registerPayment(
+    input: RegisterLoanPaymentInput,
+  ): Promise<RegisterLoanPaymentResult> {
+    const { data, error } = await this.supabase.rpc(
+      'register_payment',
+      {
+        p_loan_id: input.loanId,
+        p_amount: input.amount,
+        p_payment_method: input.paymentMethod,
+        p_notes: input.notes.trim() || undefined,
+      },
+    );
+
+    if (error) {
+      throw this.registerPaymentError(error);
+    }
+
+    const row: RegisterPaymentRow | undefined = data?.[0];
+    if (!row) {
+      throw new AppError(
+        'SUPABASE_RPC',
+        'El registro no devolvió la confirmación del pago.',
+      );
+    }
+
+    return {
+      paymentId: row.payment_id,
+      allocatedAmount: Number(row.allocated_amount),
+      remainingBalance: Number(row.remaining_balance),
+      resultingLoanStatus: row.resulting_loan_status,
+    };
   }
 
   // ==========================================================
@@ -698,6 +761,55 @@ export class SupabaseLoanRepository implements LoanRepository {
       error,
       'No se pudo editar el préstamo.',
     );
+  }
+
+  private registerPaymentError(error: unknown): AppError {
+    const message = this.errorMessage(error);
+
+    if (message.includes('Payment exceeds outstanding loan balance')) {
+      return new AppError(
+        'VALIDATION',
+        'El monto no puede superar el saldo pendiente.',
+        error,
+      );
+    }
+
+    if (message.includes('Payments can only be registered on active loans')) {
+      return new AppError(
+        'VALIDATION',
+        'Solo se pueden registrar pagos en préstamos activos.',
+        error,
+      );
+    }
+
+    if (message.includes('Loan has no outstanding balance')) {
+      return new AppError(
+        'VALIDATION',
+        'El préstamo no tiene saldo pendiente.',
+        error,
+      );
+    }
+
+    if (
+      message.includes('Payment amount must be greater than zero') ||
+      message.includes('Payment amount may contain at most two decimals')
+    ) {
+      return new AppError(
+        'VALIDATION',
+        'Ingresa un monto válido con máximo dos decimales.',
+        error,
+      );
+    }
+
+    if (message.includes('Insufficient privileges')) {
+      return new AppError(
+        'AUTH_UNAUTHORIZED',
+        'No tenés permisos para registrar este pago.',
+        error,
+      );
+    }
+
+    return this.toAppError(error, 'No se pudo registrar el pago.');
   }
 
   private toAppError(

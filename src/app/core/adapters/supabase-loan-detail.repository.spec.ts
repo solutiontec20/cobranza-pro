@@ -115,7 +115,7 @@ describe('SupabaseLoanRepository loan detail', () => {
       collectorName: 'María Quispe',
     });
     expect(detail.loan).toMatchObject({
-      balance: 30,
+      balance: 100,
       installmentAmount: 40,
       endDate: '2026-10-20',
     });

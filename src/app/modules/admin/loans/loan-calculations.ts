@@ -1,5 +1,8 @@
 import { LoanFrequency } from '../../../core/models/loan.model';
 
+export { calculateLoanPaymentSummary } from '../../../core/calculations/loan-payment-calculations';
+export type { LoanPaymentSummary } from '../../../core/calculations/loan-payment-calculations';
+
 export interface LoanSummary {
   totalAmount: number;
   baseInstallmentAmount: number;
@@ -30,7 +33,7 @@ export function firstDueOn(startedOn: string, frequency: LoanFrequency): string 
   const date = new Date(`${startedOn}T00:00:00`);
   if (Number.isNaN(date.getTime())) return startedOn;
 
-  while (date.getDay() === 0 || date.getDay() === 6) {
+  while (date.getDay() === 0) {
     date.setDate(date.getDate() + 1);
   }
 
