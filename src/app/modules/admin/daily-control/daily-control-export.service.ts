@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Service } from '@angular/core';
 import {
   DailyControlExportContext,
   DailyControlExportFormat,
@@ -9,7 +9,7 @@ import {
 
 const MIME_XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-@Injectable()
+@Service()
 export class DailyControlExportService {
   async export(
     format: DailyControlExportFormat,

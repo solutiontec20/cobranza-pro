@@ -4,7 +4,7 @@
 
     <div class="flex items-center gap-2 md:hidden">
       <div class="app-brand-mark size-8! rounded-lg! shadow-sm!">
-        <i class="pi pi-wallet text-sm text-white"></i>
+        <i class="pi pi-wallet text-sm text-white" aria-hidden="true"></i>
       </div>
       <span class="font-extrabold tracking-tight text-primary">CobranzaPro</span>
     </div>
@@ -19,14 +19,15 @@
       [text]="true" 
       class="app-icon-button flex h-10 w-10 items-center justify-center p-0" 
       (click)="themeService.toggleTheme()"
+      aria-label="Cambiar tema"
       pTooltip="Cambiar tema">
-      <i [class]="themeService.isDark() ? 'pi pi-sun text-xl' : 'pi pi-moon text-xl'"></i>
+      <i [class]="themeService.isDark() ? 'pi pi-sun text-xl' : 'pi pi-moon text-xl'" aria-hidden="true"></i>
     </button>
 
     <!-- Notification bell -->
     <div class="relative">
-      <button pButton [rounded]="true" [text]="true" class="app-icon-button flex h-10 w-10 items-center justify-center p-0" pTooltip="Notificaciones">
-        <i class="pi pi-bell text-xl"></i>
+      <button pButton type="button" [rounded]="true" [text]="true" class="app-icon-button flex h-10 w-10 items-center justify-center p-0" aria-label="Notificaciones" pTooltip="Notificaciones">
+        <i class="pi pi-bell text-xl" aria-hidden="true"></i>
       </button>
       <span class="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-surface-0 dark:border-surface-900 pointer-events-none"></span>
     </div>
@@ -39,8 +40,5 @@
       <span class="mt-0.5 rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-bold capitalize text-primary-700 dark:bg-primary-950/40 dark:text-primary-300">{{ authService.currentUser()?.role || '' }}</span>
     </div>
 
-    <button pButton [rounded]="true" [text]="true" class="app-icon-button ml-1 flex h-10 w-10 items-center justify-center p-0" pTooltip="Perfil de usuario">
-      <i class="pi pi-user text-xl"></i>
-    </button>
   </div>
 </div>

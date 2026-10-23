@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { AppError } from '../../../core/errors/app-error';
 import {
+  DailyCashClosure,
   DailyControlFilters,
   DailyControlReport,
   DailyControlRow,
@@ -20,9 +21,17 @@ export class DailyControlStore {
   });
   readonly query = signal('');
   readonly collectors = signal<Array<{ id: string; fullName: string }>>([]);
+  readonly closures = signal<DailyCashClosure[]>([]);
+  readonly selectedClosureId = signal<string | null>(null);
   readonly report = signal<DailyControlReport | null>(null);
   readonly loading = signal(false);
+  readonly saving = signal(false);
   readonly error = signal<string | null>(null);
+
+  readonly selectedClosure = computed(() => {
+    const id = this.selectedClosureId();
+    return this.closures().find((closure) => closure.id === id) ?? null;
+  });
 
   readonly visibleReport = computed<DailyControlReport | null>(() => {
     const report = this.report();
@@ -45,12 +54,14 @@ export class DailyControlStore {
     this.error.set(null);
 
     try {
-      const [collectors, report] = await Promise.all([
+      const [collectors, report, closures] = await Promise.all([
         this.repository.listCollectors(),
         this.repository.getReport(this.filters()),
+        this.repository.listClosures(this.filters().businessDate),
       ]);
       this.collectors.set(collectors);
       this.report.set(report);
+      this.setClosures(closures);
     } catch (error) {
       this.error.set(this.messageFrom(error));
     } finally {
@@ -59,8 +70,10 @@ export class DailyControlStore {
   }
 
   async updateFilters(patch: Partial<DailyControlFilters>): Promise<void> {
+    const businessDateChanged =
+      patch.businessDate !== undefined && patch.businessDate !== this.filters().businessDate;
     this.filters.update((filters) => ({ ...filters, ...patch }));
-    await this.loadReport();
+    await this.loadWorkspace(businessDateChanged);
   }
 
   async clearFilters(): Promise<void> {
@@ -70,22 +83,62 @@ export class DailyControlStore {
       collectorId: null,
       status: 'all',
     });
-    await this.loadReport();
+    await this.loadWorkspace();
   }
 
   async reload(): Promise<void> {
-    await this.loadReport();
+    await this.loadWorkspace();
   }
 
-  private async loadReport(): Promise<void> {
+  async focusClosure(closureId: string): Promise<void> {
+    const closure = this.closures().find((item) => item.id === closureId);
+    if (!closure) return;
+
+    this.selectedClosureId.set(closureId);
+    if (this.filters().collectorId !== closure.collectorId) {
+      await this.updateFilters({ collectorId: closure.collectorId });
+    }
+  }
+
+  async validateSelected(validatedBy: string, observation: string | null): Promise<boolean> {
+    const closure = this.selectedClosure();
+    if (!closure || closure.status !== 'submitted') return false;
+
+    this.saving.set(true);
+    this.error.set(null);
+    try {
+      const updated = await this.repository.validateClosure({
+        closureId: closure.id,
+        validatedBy,
+        observation,
+      });
+      this.closures.update((closures) =>
+        closures.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      return true;
+    } catch (error) {
+      this.error.set(this.messageFrom(error));
+      return false;
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  private async loadWorkspace(loadClosures = true): Promise<void> {
     const requestId = ++this.requestSequence;
     this.loading.set(true);
     this.error.set(null);
 
     try {
-      const report = await this.repository.getReport(this.filters());
+      const [report, closures] = await Promise.all([
+        this.repository.getReport(this.filters()),
+        loadClosures
+          ? this.repository.listClosures(this.filters().businessDate)
+          : Promise.resolve(null),
+      ]);
       if (requestId === this.requestSequence) {
         this.report.set(report);
+        if (closures) this.setClosures(closures);
       }
     } catch (error) {
       if (requestId === this.requestSequence) {
@@ -95,6 +148,21 @@ export class DailyControlStore {
       if (requestId === this.requestSequence) {
         this.loading.set(false);
       }
+    }
+  }
+
+  private setClosures(closures: DailyCashClosure[]): void {
+    this.closures.set(closures);
+    const selectedId = this.selectedClosureId();
+    const selectedStillExists = closures.some((closure) => closure.id === selectedId);
+    if (!selectedStillExists) {
+      const collectorId = this.filters().collectorId;
+      this.selectedClosureId.set(
+        closures.find((closure) => closure.collectorId === collectorId)?.id ??
+          closures.find((closure) => closure.status === 'submitted')?.id ??
+          closures[0]?.id ??
+          null,
+      );
     }
   }
 

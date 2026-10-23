@@ -1,4 +1,4 @@
-<form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-5">
+<form class="flex flex-col gap-5" (submit)="onSubmit(); $event.preventDefault()">
   @if (successMessage()) {
   <div role="status"
     class="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-800/50 dark:bg-green-950/30 dark:text-green-300">
@@ -19,52 +19,58 @@
   <div class="flex flex-col gap-3">
     <!-- DNI -->
     <div>
+      <label for="dni" class="sr-only">DNI</label>
       <p-iconfield>
         <p-inputicon>
-          <i class="pi pi-id-card"></i>
+          <i class="pi pi-id-card" aria-hidden="true"></i>
         </p-inputicon>
         <input
           pInputText
           id="dni"
-          formControlName="dni"
           type="text"
           inputmode="numeric"
-          maxlength="8"
-          (keydown)="onNumericKeyDown($event)"
-          (input)="onNumericInput($event, 'dni')"
+          autocomplete="username"
+          spellcheck="false"
           placeholder="DNI (8 dígitos)"
           [fluid]="true"
+          [formField]="loginForm.dni"
         />
       </p-iconfield>
+      @if (loginForm.dni().touched() && loginForm.dni().invalid()) {
+      <small class="mt-1 block text-red-600">{{ loginForm.dni().errors()[0]?.message }}</small>
+      }
     </div>
 
-    <!-- PIN con toggle mostrar/ocultar y bloqueo de letras -->
+    <!-- PIN con toggle mostrar/ocultar -->
     <div class="relative">
+      <label for="pin" class="sr-only">PIN</label>
       <p-iconfield>
         <p-inputicon>
-          <i class="pi pi-lock"></i>
+          <i class="pi pi-lock" aria-hidden="true"></i>
         </p-inputicon>
         <input
           pInputText
           id="pin"
-          formControlName="pin"
           [type]="showPin() ? 'text' : 'password'"
           inputmode="numeric"
-          maxlength="6"
-          (keydown)="onNumericKeyDown($event)"
-          (input)="onNumericInput($event, 'pin')"
+          autocomplete="current-password"
+          spellcheck="false"
           placeholder="PIN de 6 dígitos"
           [fluid]="true"
           class="pr-10"
+          [formField]="loginForm.pin"
         />
       </p-iconfield>
       <button
         type="button"
         (click)="showPin.set(!showPin())"
-        class="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 transition-colors cursor-pointer p-1 flex items-center justify-center border-0 bg-transparent focus:outline-hidden"
+        class="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-surface-400 transition-colors hover:text-surface-600 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:hover:text-surface-200 dark:focus-visible:ring-offset-surface-800"
         [attr.aria-label]="showPin() ? 'Ocultar PIN' : 'Mostrar PIN'">
-        <i [class]="showPin() ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+        <i [class]="showPin() ? 'pi pi-eye-slash' : 'pi pi-eye'" aria-hidden="true"></i>
       </button>
+      @if (loginForm.pin().touched() && loginForm.pin().invalid()) {
+      <small class="mt-1 block text-red-600">{{ loginForm.pin().errors()[0]?.message }}</small>
+      }
     </div>
 
     <!-- Submit Button -->
@@ -72,8 +78,10 @@
       pButton
       type="submit"
       class="w-full mt-2 justify-center font-bold py-3"
-      [loading]="loading()"
-      [disabled]="loginForm.invalid || loading()">
+      [disabled]="loginForm().invalid() || loading()">
+      @if (loading()) {
+        <i class="pi pi-spin pi-spinner"></i>
+      }
       Ingresar
     </button>
   </div>
