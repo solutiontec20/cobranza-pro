@@ -66,8 +66,8 @@ values (
   120,
   30,
   'daily',
-  '2026-10-20',
-  '2026-10-20',
+  current_date + 30,
+  current_date + 30,
   'active',
   '53000000-0000-0000-0000-000000000002'
 );
@@ -83,7 +83,7 @@ select
   ('83000000-0000-0000-0000-' || lpad(series::text, 12, '0'))::uuid,
   '73000000-0000-0000-0000-000000000001'::uuid,
   series,
-  '2026-10-20'::date + series - 1,
+  current_date + 30 + series - 1,
   4
 from generate_series(1, 30) as series;
 
@@ -104,8 +104,9 @@ select
   '53000000-0000-0000-0000-000000000001'::uuid,
   case when series = 8 then 1 else 4 end,
   'cash',
-  '2026-10-20 12:00:00+00'::timestamptz + make_interval(mins => series),
-  '2026-10-20'::date,
+  ((current_date + 30)::timestamp + interval '12 hours') at time zone 'UTC'
+    + make_interval(mins => series),
+  current_date + 30,
   'posted',
   '53000000-0000-0000-0000-000000000002'::uuid
 from generate_series(1, 8) as series;
