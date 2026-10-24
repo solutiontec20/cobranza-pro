@@ -1,14 +1,18 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
+import { MessageModule } from 'primeng/message';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { SelectModule } from 'primeng/select';
+import { SkeletonModule } from 'primeng/skeleton';
 import { CollectionClientCard } from '../../../shared/ui/collection-client-card/collection-client-card';
 import { CollectionMetric } from '../../../shared/ui/collection-metric/collection-metric';
+import { AuthService } from '../../auth/auth.service';
 import { CollectionDashboardStore } from '../collection-dashboard.store';
 import {
   CollectionClient,
@@ -32,15 +36,22 @@ interface FilterOption {
     IconFieldModule,
     InputIconModule,
     InputTextModule,
+    MessageModule,
     ProgressBarModule,
     SelectModule,
+    SkeletonModule,
   ],
   templateUrl: './dashboard.html',
 })
 export default class CollectorDashboard {
+  private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
   readonly store = inject(CollectionDashboardStore);
   readonly today = new Date();
-  readonly actionNotice = signal('');
+  protected readonly loadingRows = [1, 2, 3];
+  protected readonly collectorFirstName = computed(
+    () => this.authService.currentUser()?.fullName?.split(' ')[0] ?? '',
+  );
 
   readonly sortOptions: { label: string; value: CollectionSort }[] = [
     { label: 'Mayor atraso', value: 'MOST_OVERDUE' },
@@ -61,19 +72,20 @@ export default class CollectorDashboard {
     { label: 'Préstamos pagados', value: 'PAID_LOANS' },
   ];
 
+  constructor() {
+    void this.store.load();
+  }
+
   updateQuery(event: Event) {
     this.store.setQuery((event.target as HTMLInputElement).value);
   }
 
   selectFilter(filter: CollectionFilter) {
     this.store.setFilter(filter);
-    this.actionNotice.set('');
   }
 
   requestPayment(client: CollectionClient) {
-    this.actionNotice.set(
-      `Seleccionaste registrar un pago para ${client.fullName}. En este corte no se modificó el saldo: la operación transaccional y auditada se integra en el siguiente flujo.`,
-    );
+    this.router.navigate(['/cobrador/cliente', client.id]);
   }
 }
 

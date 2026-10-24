@@ -5,7 +5,7 @@
         {{ today | date: 'EEEE, d MMMM' : undefined : 'es-PE' }}
       </p>
       <h1 class="mt-1 mb-0 text-2xl font-semibold tracking-tight text-pretty text-surface-950 sm:text-3xl dark:text-surface-0">
-        Ruta de cobranza de Pedro
+        Ruta de cobranza de {{ collectorFirstName() }}
       </h1>
       <p class="mt-1 mb-0 text-sm text-surface-500 dark:text-surface-400">
         Priorizá atrasos y registrá cada visita desde el teléfono.
@@ -150,13 +150,17 @@
       </div>
     </div>
 
-    @if (actionNotice()) {
-      <div role="status" aria-live="polite" class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-200">
-        {{ actionNotice() }}
-      </div>
+    @if (store.error()) {
+      <p-message severity="error" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
     }
 
-    @if (store.filteredClients().length > 0) {
+    @if (store.loading()) {
+      <div class="grid gap-3 lg:grid-cols-3 md:grid-cols-2" aria-label="Cargando cobranzas" aria-live="polite">
+        @for (row of loadingRows; track row) {
+          <p-skeleton height="11rem" borderRadius="0.75rem" />
+        }
+      </div>
+    } @else if (store.filteredClients().length > 0) {
       <div class="grid gap-3 lg:grid-cols-3 md:grid-cols-2">
         @for (client of store.filteredClients(); track client.id) {
           <app-collection-client-card
