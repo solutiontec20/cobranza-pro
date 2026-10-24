@@ -50,7 +50,7 @@ database, so it does not block this seed.
 | 3.8 | Hugo Martin Delgado Rios | B | daily | 20% | Mirrors 3.1, under collector B — use with 3.1 to verify **portfolio isolation** | Security: collector A must not see collector B's portfolio |
 | 3.9 | Patricia Noemi Flores Chavez | B | weekly | 30% | >5 days overdue → blacklisted, under collector B | §6 lista negra |
 | 3.10 | Elena Sofia Paredes Luna | B | daily | 20% | Payment registered, then voided by the admin with a reason (`payments.status='voided'`, original row preserved) | §8 correcciones — nunca se borra un pago |
-| §4 | — | A | — | — | Collector A submits today's cash closure (`submit_cash_closure`), admin validates it (`validate_cash_closure`) | §9 cierre de caja diario |
+| §4 | — | C | — | — | Collector C (no seeded customers/loans) submits today's zero-movement cash closure (`submit_cash_closure`), admin validates it (`validate_cash_closure`) — chosen deliberately because every other collector's portfolio has loan disbursements dated today that outweigh today's collections, which would make the computed expected amount negative and violate `cash_closures`' non-negative check constraints | §9 cierre de caja diario |
 
 ## Known gap
 
