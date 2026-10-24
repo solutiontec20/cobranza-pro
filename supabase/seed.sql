@@ -787,17 +787,18 @@ commit;
 -- ============================================================
 -- 4. DAILY CASH CLOSURE (submit + validate)
 -- ============================================================
--- Collector A (Marco Rivas) submits today's closure. The expected
--- amount below is computed the same way submit_cash_closure itself
--- does (net of every inflow/outflow cash_movement dated today for
--- his portfolio — every loan disbursement from section 3 plus the
--- collections registered on scenarios 3.1, 3.2, 3.3 and 3.6), so
--- the delivered amount matches exactly and the closure has no
--- difference. The admin then validates it.
--- Covers REQUERIMIENTO.md section 9.
+-- Collector A (Marco Rivas) submits today's closure. Loan creation
+-- records disbursements as cash outflows using today's business date,
+-- even when the simulated loan started in the past. In this seed that
+-- can make the day's net cash movement negative. A collector cannot
+-- physically deliver a negative amount, and submit_cash_closure
+-- correctly rejects it. Keep the real net amount for the RPC to
+-- reconcile, but clamp the physically delivered cash to zero when the
+-- simulated day is net-negative. The admin then validates the closure,
+-- including any resulting difference. Covers REQUERIMIENTO.md section 9.
 
 select set_config(
-  'cobranzapro_seed.closure_expected_amount',
+  'cobranzapro_seed.closure_net_amount',
   coalesce(
     sum(
       case direction
@@ -812,6 +813,15 @@ from public.cash_movements
 where collector_id = '00000000-0000-0000-0000-000000000011'
   and business_date = current_setting('cobranzapro_seed.today_lima')::date;
 
+select set_config(
+  'cobranzapro_seed.closure_delivered_amount',
+  greatest(
+    current_setting('cobranzapro_seed.closure_net_amount')::numeric,
+    0::numeric
+  )::text,
+  false
+);
+
 begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000011'; -- Marco Rivas (collector A)
@@ -819,7 +829,7 @@ set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000011'; -- Mar
 select set_config('cobranzapro_seed.cash_closure_id', closure_id::text, false)
 from public.submit_cash_closure(
   p_business_date => current_setting('cobranzapro_seed.today_lima')::date,
-  p_delivered_amount => current_setting('cobranzapro_seed.closure_expected_amount')::numeric,
+  p_delivered_amount => current_setting('cobranzapro_seed.closure_delivered_amount')::numeric,
   p_observation => 'Ruta completada sin incidencias (seed)'
 );
 
