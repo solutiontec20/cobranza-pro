@@ -29,10 +29,10 @@
 -- SQL errors — if so, compare these columns against
 -- `\d auth.users` / `\d auth.identities` in the local stack.
 --
--- IMPORTANT — this script relies on psql meta-commands (\gset).
--- `supabase db reset` pipes seed.sql through `psql`, so this is
--- safe to rely on; it will NOT work through a generic Postgres
--- driver (e.g. pg_restore or a raw connection string importer).
+-- IMPORTANT — this seed uses SQL-only session variables through
+-- set_config()/current_setting(). It intentionally avoids psql
+-- meta-commands such as \gset so Supabase CLI can execute the file
+-- through its SQL batch seeding path in local development and CI.
 -- ============================================================
 
 
@@ -59,7 +59,11 @@ create extension if not exists pgcrypto with schema extensions;
 -- so this seed's "due today"/"overdue" math can never silently
 -- disagree with what the RPCs themselves compute.
 
-select ((now() at time zone 'America/Lima')::date)::text as today_lima \gset
+select set_config(
+  'cobranzapro_seed.today_lima',
+  ((now() at time zone 'America/Lima')::date)::text,
+  false
+);
 
 
 -- ============================================================
@@ -420,34 +424,39 @@ begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001'; -- admin
 
-select id as c1_loan_id
+select set_config('cobranzapro_seed.c1_loan_id', id::text, false)
 from public.admin_create_loan(
   p_customer_id => 'a0000000-0000-0000-0000-000000000001',
   p_principal => 300,
   p_interest_rate => 20,
   p_frequency => 'daily',
   p_installment_count => 24,
-  p_started_on => :'today_lima'::date - 9,
-  p_first_due_on => :'today_lima'::date - 9
-) \gset
+  p_started_on => current_setting('cobranzapro_seed.today_lima')::date - 9,
+  p_first_due_on => current_setting('cobranzapro_seed.today_lima')::date - 9
+);
 
 commit;
 
-select coalesce(sum(scheduled_amount), 0) as c1_due_today
+select set_config(
+  'cobranzapro_seed.c1_due_today',
+  coalesce(sum(scheduled_amount), 0)::text,
+  false
+)
 from public.installments
-where loan_id = :'c1_loan_id' and due_date <= :'today_lima'::date \gset
+where loan_id = current_setting('cobranzapro_seed.c1_loan_id')::uuid
+  and due_date <= current_setting('cobranzapro_seed.today_lima')::date;
 
 begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001'; -- admin pays on behalf; collector_id on the ledger stays Marco's
 
-select payment_id as c1_payment_id
+select set_config('cobranzapro_seed.c1_payment_id', payment_id::text, false)
 from public.register_payment(
-  p_loan_id => :'c1_loan_id'::uuid,
-  p_amount => :c1_due_today,
+  p_loan_id => current_setting('cobranzapro_seed.c1_loan_id')::uuid,
+  p_amount => current_setting('cobranzapro_seed.c1_due_today')::numeric,
   p_payment_method => 'cash',
   p_notes => 'Pago al dia (seed)'
-) \gset
+);
 
 commit;
 
@@ -461,36 +470,36 @@ begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
-select id as c2_loan_id
+select set_config('cobranzapro_seed.c2_loan_id', id::text, false)
 from public.admin_create_loan(
   p_customer_id => 'a0000000-0000-0000-0000-000000000002',
   p_principal => 400,
   p_interest_rate => 20,
   p_frequency => 'weekly',
   p_installment_count => 10,
-  p_started_on => :'today_lima'::date - 21,
-  p_first_due_on => :'today_lima'::date - 21
-) \gset
+  p_started_on => current_setting('cobranzapro_seed.today_lima')::date - 21,
+  p_first_due_on => current_setting('cobranzapro_seed.today_lima')::date - 21
+);
 
 commit;
 
-select scheduled_amount as c2_first_installment
+select set_config('cobranzapro_seed.c2_first_installment', scheduled_amount::text, false)
 from public.installments
-where loan_id = :'c2_loan_id'
+where loan_id = current_setting('cobranzapro_seed.c2_loan_id')::uuid
 order by installment_number
-limit 1 \gset
+limit 1;
 
 begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
-select payment_id as c2_payment_id
+select set_config('cobranzapro_seed.c2_payment_id', payment_id::text, false)
 from public.register_payment(
-  p_loan_id => :'c2_loan_id'::uuid,
-  p_amount => round(:c2_first_installment / 2, 2),
+  p_loan_id => current_setting('cobranzapro_seed.c2_loan_id')::uuid,
+  p_amount => round(current_setting('cobranzapro_seed.c2_first_installment')::numeric / 2, 2),
   p_payment_method => 'yape',
   p_notes => 'Pago parcial (seed) - deja saldo pendiente para la siguiente fecha'
-) \gset
+);
 
 commit;
 
@@ -504,49 +513,57 @@ begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
-select id as c3_loan_id
+select set_config('cobranzapro_seed.c3_loan_id', id::text, false)
 from public.admin_create_loan(
   p_customer_id => 'a0000000-0000-0000-0000-000000000003',
   p_principal => 250,
   p_interest_rate => 20,
   p_frequency => 'daily',
   p_installment_count => 20,
-  p_started_on => :'today_lima'::date - 9,
-  p_first_due_on => :'today_lima'::date - 9
-) \gset
+  p_started_on => current_setting('cobranzapro_seed.today_lima')::date - 9,
+  p_first_due_on => current_setting('cobranzapro_seed.today_lima')::date - 9
+);
 
 commit;
 
-select coalesce(
+select set_config(
+  'cobranzapro_seed.c3_advance_amount',
   (
-    select sum(scheduled_amount)
-    from public.installments
-    where loan_id = :'c3_loan_id' and due_date <= :'today_lima'::date
-  ), 0
-) + coalesce(
-  (
-    select sum(scheduled_amount)
-    from (
-      select scheduled_amount
-      from public.installments
-      where loan_id = :'c3_loan_id' and due_date > :'today_lima'::date
-      order by installment_number
-      limit 2
-    ) next_two
-  ), 0
-) as c3_advance_amount \gset
+    coalesce(
+      (
+        select sum(scheduled_amount)
+        from public.installments
+        where loan_id = current_setting('cobranzapro_seed.c3_loan_id')::uuid
+          and due_date <= current_setting('cobranzapro_seed.today_lima')::date
+      ), 0
+    ) + coalesce(
+      (
+        select sum(scheduled_amount)
+        from (
+          select scheduled_amount
+          from public.installments
+          where loan_id = current_setting('cobranzapro_seed.c3_loan_id')::uuid
+            and due_date > current_setting('cobranzapro_seed.today_lima')::date
+          order by installment_number
+          limit 2
+        ) next_two
+      ), 0
+    )
+  )::text,
+  false
+);
 
 begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
-select payment_id as c3_payment_id
+select set_config('cobranzapro_seed.c3_payment_id', payment_id::text, false)
 from public.register_payment(
-  p_loan_id => :'c3_loan_id'::uuid,
-  p_amount => :c3_advance_amount,
+  p_loan_id => current_setting('cobranzapro_seed.c3_loan_id')::uuid,
+  p_amount => current_setting('cobranzapro_seed.c3_advance_amount')::numeric,
   p_payment_method => 'cash',
   p_notes => 'Pago adelantado (seed) - cubre hoy + 2 cuotas futuras'
-) \gset
+);
 
 commit;
 
@@ -560,16 +577,16 @@ begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
-select id as c4_loan_id
+select set_config('cobranzapro_seed.c4_loan_id', id::text, false)
 from public.admin_create_loan(
   p_customer_id => 'a0000000-0000-0000-0000-000000000004',
   p_principal => 500,
   p_interest_rate => 15,
   p_frequency => 'monthly',
   p_installment_count => 6,
-  p_started_on => :'today_lima'::date - 3,
-  p_first_due_on => :'today_lima'::date - 3
-) \gset
+  p_started_on => current_setting('cobranzapro_seed.today_lima')::date - 3,
+  p_first_due_on => current_setting('cobranzapro_seed.today_lima')::date - 3
+);
 
 commit;
 
@@ -583,16 +600,16 @@ begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
-select id as c5_loan_id
+select set_config('cobranzapro_seed.c5_loan_id', id::text, false)
 from public.admin_create_loan(
   p_customer_id => 'a0000000-0000-0000-0000-000000000005',
   p_principal => 200,
   p_interest_rate => 20,
   p_frequency => 'daily',
   p_installment_count => 15,
-  p_started_on => :'today_lima'::date - 20,
-  p_first_due_on => :'today_lima'::date - 20
-) \gset
+  p_started_on => current_setting('cobranzapro_seed.today_lima')::date - 20,
+  p_first_due_on => current_setting('cobranzapro_seed.today_lima')::date - 20
+);
 
 commit;
 
@@ -606,16 +623,18 @@ begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
-select id as c6_loan_id, total_amount as c6_total
+select
+  set_config('cobranzapro_seed.c6_loan_id', id::text, false),
+  set_config('cobranzapro_seed.c6_total', total_amount::text, false)
 from public.admin_create_loan(
   p_customer_id => 'a0000000-0000-0000-0000-000000000006',
   p_principal => 150,
   p_interest_rate => 20,
   p_frequency => 'weekly',
   p_installment_count => 1,
-  p_started_on => :'today_lima'::date - 10,
-  p_first_due_on => :'today_lima'::date - 10
-) \gset
+  p_started_on => current_setting('cobranzapro_seed.today_lima')::date - 10,
+  p_first_due_on => current_setting('cobranzapro_seed.today_lima')::date - 10
+);
 
 commit;
 
@@ -623,13 +642,13 @@ begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
-select payment_id as c6_payment_id
+select set_config('cobranzapro_seed.c6_payment_id', payment_id::text, false)
 from public.register_payment(
-  p_loan_id => :'c6_loan_id'::uuid,
-  p_amount => :c6_total,
+  p_loan_id => current_setting('cobranzapro_seed.c6_loan_id')::uuid,
+  p_amount => current_setting('cobranzapro_seed.c6_total')::numeric,
   p_payment_method => 'cash',
   p_notes => 'Cancelacion total (seed)'
-) \gset
+);
 
 commit;
 
@@ -646,34 +665,39 @@ begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
-select id as c8_loan_id
+select set_config('cobranzapro_seed.c8_loan_id', id::text, false)
 from public.admin_create_loan(
   p_customer_id => 'b0000000-0000-0000-0000-000000000001',
   p_principal => 300,
   p_interest_rate => 20,
   p_frequency => 'daily',
   p_installment_count => 24,
-  p_started_on => :'today_lima'::date - 9,
-  p_first_due_on => :'today_lima'::date - 9
-) \gset
+  p_started_on => current_setting('cobranzapro_seed.today_lima')::date - 9,
+  p_first_due_on => current_setting('cobranzapro_seed.today_lima')::date - 9
+);
 
 commit;
 
-select coalesce(sum(scheduled_amount), 0) as c8_due_today
+select set_config(
+  'cobranzapro_seed.c8_due_today',
+  coalesce(sum(scheduled_amount), 0)::text,
+  false
+)
 from public.installments
-where loan_id = :'c8_loan_id' and due_date <= :'today_lima'::date \gset
+where loan_id = current_setting('cobranzapro_seed.c8_loan_id')::uuid
+  and due_date <= current_setting('cobranzapro_seed.today_lima')::date;
 
 begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
-select payment_id as c8_payment_id
+select set_config('cobranzapro_seed.c8_payment_id', payment_id::text, false)
 from public.register_payment(
-  p_loan_id => :'c8_loan_id'::uuid,
-  p_amount => :c8_due_today,
+  p_loan_id => current_setting('cobranzapro_seed.c8_loan_id')::uuid,
+  p_amount => current_setting('cobranzapro_seed.c8_due_today')::numeric,
   p_payment_method => 'cash',
   p_notes => 'Pago al dia (seed, portafolio B)'
-) \gset
+);
 
 commit;
 
@@ -686,16 +710,16 @@ begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
-select id as c9_loan_id
+select set_config('cobranzapro_seed.c9_loan_id', id::text, false)
 from public.admin_create_loan(
   p_customer_id => 'b0000000-0000-0000-0000-000000000002',
   p_principal => 350,
   p_interest_rate => 30,
   p_frequency => 'weekly',
   p_installment_count => 8,
-  p_started_on => :'today_lima'::date - 28,
-  p_first_due_on => :'today_lima'::date - 28
-) \gset
+  p_started_on => current_setting('cobranzapro_seed.today_lima')::date - 28,
+  p_first_due_on => current_setting('cobranzapro_seed.today_lima')::date - 28
+);
 
 commit;
 
@@ -711,34 +735,39 @@ begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
-select id as c10_loan_id
+select set_config('cobranzapro_seed.c10_loan_id', id::text, false)
 from public.admin_create_loan(
   p_customer_id => 'b0000000-0000-0000-0000-000000000003',
   p_principal => 300,
   p_interest_rate => 20,
   p_frequency => 'daily',
   p_installment_count => 10,
-  p_started_on => :'today_lima'::date - 9,
-  p_first_due_on => :'today_lima'::date - 9
-) \gset
+  p_started_on => current_setting('cobranzapro_seed.today_lima')::date - 9,
+  p_first_due_on => current_setting('cobranzapro_seed.today_lima')::date - 9
+);
 
 commit;
 
-select coalesce(sum(scheduled_amount), 0) as c10_due_today
+select set_config(
+  'cobranzapro_seed.c10_due_today',
+  coalesce(sum(scheduled_amount), 0)::text,
+  false
+)
 from public.installments
-where loan_id = :'c10_loan_id' and due_date <= :'today_lima'::date \gset
+where loan_id = current_setting('cobranzapro_seed.c10_loan_id')::uuid
+  and due_date <= current_setting('cobranzapro_seed.today_lima')::date;
 
 begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001';
 
-select payment_id as c10_payment_id
+select set_config('cobranzapro_seed.c10_payment_id', payment_id::text, false)
 from public.register_payment(
-  p_loan_id => :'c10_loan_id'::uuid,
-  p_amount => :c10_due_today,
+  p_loan_id => current_setting('cobranzapro_seed.c10_loan_id')::uuid,
+  p_amount => current_setting('cobranzapro_seed.c10_due_today')::numeric,
   p_payment_method => 'cash',
   p_notes => 'Pago a anular (seed)'
-) \gset
+);
 
 commit;
 
@@ -746,11 +775,11 @@ begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001'; -- admin voids the payment
 
-select payment_id as c10_voided_payment_id
+select set_config('cobranzapro_seed.c10_voided_payment_id', payment_id::text, false)
 from public.void_payment(
-  p_payment_id => :'c10_payment_id'::uuid,
+  p_payment_id => current_setting('cobranzapro_seed.c10_payment_id')::uuid,
   p_reason => 'Error de registro detectado por el cobrador (seed)'
-) \gset
+);
 
 commit;
 
@@ -767,28 +796,32 @@ commit;
 -- difference. The admin then validates it.
 -- Covers REQUERIMIENTO.md section 9.
 
-select coalesce(
-  sum(
-    case direction
-      when 'inflow' then amount
-      else -amount
-    end
-  ), 0
-) as closure_expected_amount
+select set_config(
+  'cobranzapro_seed.closure_expected_amount',
+  coalesce(
+    sum(
+      case direction
+        when 'inflow' then amount
+        else -amount
+      end
+    ), 0
+  )::text,
+  false
+)
 from public.cash_movements
 where collector_id = '00000000-0000-0000-0000-000000000011'
-  and business_date = :'today_lima'::date \gset
+  and business_date = current_setting('cobranzapro_seed.today_lima')::date;
 
 begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000011'; -- Marco Rivas (collector A)
 
-select closure_id as cash_closure_id
+select set_config('cobranzapro_seed.cash_closure_id', closure_id::text, false)
 from public.submit_cash_closure(
-  p_business_date => :'today_lima'::date,
-  p_delivered_amount => :closure_expected_amount,
+  p_business_date => current_setting('cobranzapro_seed.today_lima')::date,
+  p_delivered_amount => current_setting('cobranzapro_seed.closure_expected_amount')::numeric,
   p_observation => 'Ruta completada sin incidencias (seed)'
-) \gset
+);
 
 commit;
 
@@ -796,11 +829,11 @@ begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000001'; -- admin validates
 
-select closure_id as cash_closure_validated_id
+select set_config('cobranzapro_seed.cash_closure_validated_id', closure_id::text, false)
 from public.validate_cash_closure(
-  p_closure_id => :'cash_closure_id'::uuid,
+  p_closure_id => current_setting('cobranzapro_seed.cash_closure_id')::uuid,
   p_observation => 'Efectivo verificado en oficina (seed)'
-) \gset
+);
 
 commit;
 
