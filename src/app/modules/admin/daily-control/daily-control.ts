@@ -9,7 +9,10 @@ import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { SortIcon, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
+import { TextareaModule } from 'primeng/textarea';
 import {
+  DailyCashClosureStatus,
+  DailyCashMovement,
   DailyControlExportFormat,
   DailyControlStatus,
   DailyControlStatusFilter,
@@ -32,6 +35,7 @@ import { DailyControlStore } from './daily-control.store';
     SortIcon,
     TableModule,
     TagModule,
+    TextareaModule,
   ],
   templateUrl: './daily-control.html',
 })
@@ -44,6 +48,7 @@ export default class DailyControl {
   protected readonly selectedDate = signal(dateFromIso(this.store.filters().businessDate));
   protected readonly exporting = signal<DailyControlExportFormat | null>(null);
   protected readonly exportError = signal<string | null>(null);
+  protected readonly validationObservation = signal('');
 
   protected readonly collectorOptions = computed(() => [
     { label: 'Todos los cobradores', value: null },
@@ -90,6 +95,19 @@ export default class DailyControl {
     this.selectedDate.set(dateFromIso(this.store.filters().businessDate));
   }
 
+  protected async focusClosure(closureId: string): Promise<void> {
+    this.validationObservation.set('');
+    await this.store.focusClosure(closureId);
+  }
+
+  protected async validateClosure(): Promise<void> {
+    const validated = await this.store.validateSelected(
+      this.authService.currentUser()?.fullName ?? 'Administrador',
+      this.validationObservation().trim() || null,
+    );
+    if (validated) this.validationObservation.set('');
+  }
+
   protected async exportReport(format: DailyControlExportFormat): Promise<void> {
     const report = this.store.visibleReport();
     if (!report) return;
@@ -132,6 +150,34 @@ export default class DailyControl {
     if (status === 'overdue') return 'danger';
     if (status === 'paid') return 'secondary';
     return 'success';
+  }
+
+  protected closureStatusLabel(status: DailyCashClosureStatus): string {
+    return { draft: 'Borrador', submitted: 'Enviado', validated: 'Validado' }[status];
+  }
+
+  protected closureStatusSeverity(
+    status: DailyCashClosureStatus,
+  ): 'secondary' | 'warn' | 'success' {
+    if (status === 'submitted') return 'warn';
+    if (status === 'validated') return 'success';
+    return 'secondary';
+  }
+
+  protected movementLabel(movement: DailyCashMovement): string {
+    if (movement.type === 'loan_disbursement') return 'Desembolso';
+    if (movement.type === 'payment_void') return 'Anulación de cobro';
+    if (movement.type === 'adjustment') return 'Ajuste';
+    return movement.method === 'cash' ? 'Cobro en efectivo' : 'Cobro por Yape';
+  }
+
+  protected formatDateTime(value: string | null): string {
+    if (!value) return '—';
+    return new Intl.DateTimeFormat('es-PE', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: 'America/Lima',
+    }).format(new Date(value));
   }
 }
 

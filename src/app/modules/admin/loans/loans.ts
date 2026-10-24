@@ -58,13 +58,9 @@ const emptyModel = (): LoanFormModel => ({
             Consulta cada préstamo en una página completa con el cliente, el cronograma y sus pagos.
           </p>
         </div>
-        <p-button
-          label="Nuevo préstamo"
-          icon="pi pi-plus"
-          styleClass="w-full sm:w-auto"
-          [disabled]="store.loading()"
-          (onClick)="openCreateDialog()"
-        />
+        <button pButton class="w-full sm:w-auto" [disabled]="store.loading()" (click)="openCreateDialog()">
+          <i class="pi pi-plus"></i> Nuevo préstamo
+        </button>
       </header>
 
       @if (store.error()) {
@@ -313,22 +309,19 @@ const emptyModel = (): LoanFormModel => ({
         </section>
 
         <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <p-button
-            type="button"
-            label="Cancelar"
-            severity="secondary"
-            variant="text"
-            styleClass="w-full sm:w-auto"
-            (onClick)="createDialogVisible.set(false)"
-          />
-          <p-button
-            type="submit"
-            label="Crear préstamo"
-            icon="pi pi-check"
-            styleClass="w-full sm:w-auto"
-            [loading]="store.creating()"
-            [disabled]="loanForm().invalid() || store.availableClients().length === 0"
-          />
+          <button pButton type="button" severity="secondary" variant="text" class="w-full sm:w-auto"
+            (click)="createDialogVisible.set(false)">
+            Cancelar
+          </button>
+          <button pButton type="submit" class="w-full sm:w-auto"
+            [disabled]="store.creating() || loanForm().invalid() || store.availableClients().length === 0">
+            @if (store.creating()) {
+              <i class="pi pi-spin pi-spinner"></i>
+            } @else {
+              <i class="pi pi-check"></i>
+            }
+            Crear préstamo
+          </button>
         </div>
       </form>
     </p-dialog>

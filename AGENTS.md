@@ -121,9 +121,10 @@ NG_APP_PRIMENG_UI_KEY=
 ```
 src/app/
   core/
-    adapters/        Supabase implementations of the repository interfaces (SupabaseXRepository)
+    adapters/        Supabase implementations of the repository interfaces (SupabaseXRepository) + InMemoryDailyControlRepository (fixture-backed, see below)
     repositories/     Repository interfaces + InjectionToken per feature (XRepository, X_REPOSITORY)
-    models/           Plain TS interfaces/types per domain (client, collector, loan, installment, payment, profile)
+    models/           Plain TS interfaces/types per domain (client, collector, loan, installment, payment, profile, daily-control)
+    calculations/     Pure, DI-free business calculations shared across modules (loan-payment-calculations.ts)
     supabase/         Supabase client factory (SUPABASE token) + generated database.types.ts
     errors/           AppError + GlobalErrorHandler
     services/         Cross-cutting app-wide services (AppStoreService, layout, theme, toast)
@@ -133,15 +134,20 @@ src/app/
     collector/         Collector-only feature screens (dashboard, clients, client-detail)
     auth/              Login, change-pin, auth.guard.ts, auth.routes.ts, auth.service.ts
   shell/              App shell, sidebar, topbar (post-login layout)
-  shared/             Reusable UI pieces, pipes, validators
+  shared/             Reusable UI pieces (shared/ui/<name>/<name>.ts), pipes, validators
 supabase/
   migrations/         Timestamped SQL migrations (authoritative schema source)
   functions/          Deno Edge Functions (admin-create-collector, change-pin, admin-reset-collector-pin, _shared/)
   tests/              SQL tests run by `pnpm supabase test db` (RLS, RPCs, constraints)
   seed.sql
-scripts/              One-off Node scripts (e.g. seed-dev-users.mjs) using the Supabase service/secret key — never ship this key to the frontend
+scripts/              Reserved for one-off Node scripts that would use the Supabase service/secret key (never ship that key to the frontend) — currently empty; `supabase/seed.sql` is the live seeding mechanism (see below).
 e2e/                  Playwright specs, grouped by journey (e.g. e2e/auth/login.spec.ts)
+REQUERIMIENTO.md     Spanish business-requirements document from the client — the authoritative source for business rules (see "Confirmed business rules" below). Treat it like a migration or model file: read it before assuming or changing loan/payment/blacklist/cash-closure behavior.
+MIGRATION.md         Historical plan for migrating the original static MVP (`mvp/`) to this Angular app — useful background, not a live task list.
+cobranza_diaria_edwin.md  Real-world sample data dump (a collector's daily collection list: client, loan dates, amount, interest, days overdue, payments, installment, balance) handed over by the client — reference data for understanding real portfolio shapes, not a spec and not wired into the app or seed data.
 ```
+
+Note: `odd/tasks/` and `payment-balance-and-allocation.md` are **not present** in this repository despite sounding like plausible ODD bookkeeping — don't assume they exist; verify any task-doc or design-doc reference against the actual tree before citing it.
 
 ### Repository + Adapter + Store pattern (follow this for every new feature)
 
@@ -178,13 +184,34 @@ New singleton/root services: use `@Service()`. New per-route feature stores: use
 - `AuthService` (`modules/auth/auth.service.ts`) wraps `AUTH_REPOSITORY` (`SupabaseAuthRepository`, provided app-wide in `app.config.ts`), persists the current `Profile` to `localStorage` under `cobranzapro_user`, and exposes `isAuthenticated`, `isAdmin`, `isSupervisor`, `isCollector`, `mustChangePin` as `computed()` signals.
 - Route guards (`modules/auth/auth.guard.ts`): `authGuard` (must be logged in), `operationalGuard` (logged in **and** not forced to change PIN — used on all admin/collector feature routes), `publicGuard` (redirects an already-logged-in user away from `/login`, respecting `mustChangePin`).
 - PIN changes and admin-driven collector/PIN management go through Supabase Edge Functions (`supabase/functions/change-pin`, `admin-create-collector`, `admin-reset-collector-pin`), not direct table writes, because they need `auth.updateUser` / service-role operations the frontend must never perform directly. Shared PIN validation (`isSixDigitPin`, `isWeakPin`) lives in `supabase/functions/_shared/pin.ts`.
-- `scripts/seed-dev-users.mjs` seeds local/dev auth users using `SUPABASE_SECRET_KEY` from `process.env` (not `NG_APP_*`) — it is a Node script run outside the Angular app and must never be imported into frontend code.
+- Local/dev auth users and fixture data are seeded by `supabase/seed.sql` (see `supabase/SEED.md`), not by a Node script — `scripts/` is currently empty. If a future Node seeding script is added there, it must use the Supabase service/secret key only via `process.env` (never `NG_APP_*`) and must never be imported into frontend code.
 
 ### Legacy code — do not extend
 
 - `src/app/core/models/legacy-loan.model.ts` (`LegacyLoan`) and the rest of the `FrequencyType`/mock-driven model shapes in `profile.model.ts` are an explicit **temporary MVP contract** still used by `AppStoreService` and `modules/collector/*` (`collection-dashboard.store.ts`, `clients.ts`, `dashboard.ts`, `client-detail.ts`). The file's own docstring says: "New Supabase-backed features must use `loan.model.ts` instead."
 - The collector module is still running on `AppStoreService`'s in-memory/mock data (`loans()`, `clients()`, `getClientRiskStatus()`, etc.), **not** the Supabase repository/adapter/store pattern used under `modules/admin/*`. When asked to migrate collector screens to Supabase, follow the admin pattern (repository + adapter + per-route store), don't extend the mock `AppStoreService`.
 - `mvp/` at the repo root contains a static HTML prototype (`cobranzapro_app.html`, `index.html`) — reference only, not part of the Angular build.
+- `modules/admin/audit/audit.ts` is a placeholder stub (`<p>En construcción</p>`) — the audit screen described in `MIGRATION.md`/`REQUERIMIENTO.md` is not implemented yet.
+
+### Daily Control module — fixture-backed, not Supabase yet
+
+`modules/admin/daily-control/*` (route `control-diario`) follows the repository/adapter/store pattern structurally, but `admin.routes.ts` wires `DAILY_CONTROL_REPOSITORY` to `InMemoryDailyControlRepository` (`core/adapters/in-memory-daily-control.repository.ts`), not a `Supabase*Repository`. That adapter keeps hardcoded fixture loans/payments/closures in module-level arrays and an in-memory `Map` for cash-closure state (reset on reload). Treat `DailyControlReport`/`DailyCashClosure` shapes in `daily-control.model.ts` as the target contract, but don't assume the data is real or persisted — if asked to make this feature production-ready, replace the in-memory adapter with a Supabase one following the same interface, the same way `clients`/`loans`/`collectors` already do.
+
+### Shared UI components (`shared/ui/<name>/<name>.ts`)
+
+Small reusable presentational pieces (e.g. `CollectionMetric`, `CollectionClientCard`) live under `shared/ui/<kebab-name>/<kebab-name>.ts`, one component per folder, **not** `export default` (unlike routed page components). They use `input()` for all props (including `input.required<T>()` and `input('default')` for optional ones with a default), put static classes via the `host: { class: '...' }` object instead of a wrapper `@HostBinding`, and favor an inline template with Tailwind utility/PrimeNG surface tokens. Follow this shape for new small shared widgets instead of inventing a different folder layout.
+
+### Export patterns (`daily-control-export.service.ts`)
+
+Per-route export services (provided alongside the feature's store, e.g. `DailyControlExportService` in `admin.routes.ts`) implement CSV generation with a plain string-building helper, and XLSX/PDF via **dynamic `import('exceljs')` / jsPDF** (`jspdf` + `jspdf-autotable`) inside the method that needs them, so those heavy libraries stay out of the eagerly-loaded bundle. Follow this dynamic-import approach for any new Excel/PDF export rather than a static top-level import.
+
+### Signal Forms in practice
+
+`modules/admin/loans/loan-detail.ts` is the concrete reference for Signal Forms usage: imports `form`, `FormField`, `max`, `maxLength`, `min`, `required`, `submit`, `validate` from `@angular/forms/signals`, builds a plain TS model interface (e.g. `LoanEditModel`) and a `form(signal(model), schema)` call, and binds fields with `[field]="theForm.prop"` + `<app-FormField>`-style wiring. Read this file before writing a new Signal Form instead of guessing the API shape.
+
+### Audited edit reasons (`loan-edit-reasons.ts`)
+
+Admin/supervisor-only loan edits use a small predefined-reason-code pattern: a `LoanEditReasonCode` union (`'amount_error' | 'rate_error' | 'installment_count_error' | 'other'`), a `LOAN_EDIT_REASON_OPTIONS` array of `{ label, value }` for the UI `p-select`, and a pure `resolveLoanEditReason(code, customReason)` helper that returns the label for predefined codes or the trimmed custom text for `'other'` (empty/whitespace-only custom reason resolves to `null`, which the caller must treat as invalid). Reuse this pattern for any other feature that needs an auditable "reason for change" input instead of a free-text-only field.
 
 ## Supabase and Database
 
@@ -202,10 +229,12 @@ New singleton/root services: use `@Service()`. New per-route feature stores: use
 
 - Migration files live in `supabase/migrations/`, named `<UTC timestamp>_<snake_case_description>.sql` (e.g. `20261020165847_secure_collector_pin_management.sql`). Create new migrations the same way (via `pnpm supabase migration new <name>` or an equivalent timestamped file) — never edit an already-applied migration.
 - Core tables so far: `profiles` (role: `admin`/`collector`/`supervisor`, `dni`, `active`), `customers` (`document_number`, `collector_id` FK to `profiles`, `active`), `loans` (`principal_amount`, `interest_rate_percent`, `total_amount`, `installment_count`, `frequency`, `started_on`, `first_due_on`, `status`), plus derived views/tables `installment_balances` and `customer_financial_status` used for balances/overdue aggregation. Always check `src/app/core/supabase/database.types.ts` (regenerate with `pnpm db:types`) before assuming a column name/type.
-- Financial writes (creating a loan, changing a collector's PIN, admin collector management) go through **Postgres RPC functions** called via `supabase.rpc('fn_name', { p_arg: ... })`, e.g. `admin_create_loan`, `service_complete_collector_pin_change`. RPC parameter names are snake_case and prefixed `p_`. Business-rule violations are surfaced as Postgres `RAISE EXCEPTION` text that adapters match by substring (see Error handling above) — read the migration that defines the RPC before assuming what message/condition it raises.
+- Financial writes (creating/updating a loan, registering a payment, listing collectors, changing a collector's PIN, admin collector management) go through **Postgres RPC functions** called via `supabase.rpc('fn_name', { p_arg: ... })`, e.g. `admin_create_loan`, `admin_update_loan`, `register_payment`, `admin_list_collectors`, `service_complete_collector_pin_change`. RPC parameter names are snake_case and prefixed `p_`. Business-rule violations are surfaced as Postgres `RAISE EXCEPTION` text that adapters match by substring (see Error handling above) — read the migration that defines the RPC before assuming what message/condition it raises. `register_payment` authorizes admins/supervisors to pay on behalf of any customer while still recording the customer's actually-assigned collector on the payment/ledger rows — don't assume the caller's id is the collector id for that RPC.
 - Admin-privileged operations that Postgres RLS alone can't gate safely (creating a collector's auth user, resetting a PIN, changing a PIN) are implemented as **Supabase Edge Functions** under `supabase/functions/<name>/index.ts` (Deno), using `withSupabase({ auth: 'user' }, ...)` from `@supabase/server` to get a user-scoped `ctx.supabase` and a privileged `ctx.supabaseAdmin`. Shared helpers go in `supabase/functions/_shared/`.
-- SQL tests (pgTAP-style) live in `supabase/tests/*_test.sql`, one file per concern (`rls_customers_test.sql`, `financial_rpcs_test.sql`, `admin_loan_management_test.sql`, `admin_collector_management_test.sql`, `schema_test.sql`). Run them locally with `pnpm supabase db start` then `pnpm supabase test db` (this is exactly what CI's `database` job does).
+- SQL tests (pgTAP-style) live in `supabase/tests/*_test.sql`, one file per concern (`rls_customers_test.sql`, `financial_rpcs_test.sql`, `admin_loan_management_test.sql`, `admin_collector_management_test.sql`, `daily_schedule_repair_test.sql`, `payment_allocation_reconciliation_test.sql`, `schema_test.sql`). Run them locally with `pnpm supabase db start` then `pnpm supabase test db` (this is exactly what CI's `database` job does).
+- The daily/schedule-related migrations have been iterated several times in place via **new, additive migrations** rather than edits (`update_loan_schedule` → `daily_schedule_monday_saturday` → `fix_payment_active_schedule_allocation` → `repair_active_daily_schedules` → `reconcile_incomplete_payment_allocations` → `reassert_new_daily_schedule_monday_saturday`). This is the expected way to correct a previously-shipped schedule/allocation bug here: ship a new migration that repairs existing rows and reasserts the function definition, never rewrite an already-applied migration file.
 - `pnpm supabase db lint --local --level error` is run in CI before the SQL tests — run it locally too after changing the schema.
+- `supabase/seed.sql` (loaded automatically by `supabase db start`/`db reset`, see `[db.seed]` in `config.toml`) seeds the **local** stack only with fictional admin/supervisor/collector logins (real DNI+PIN via `auth.users`+`auth.identities`, so `/login` works) and a set of customers/loans/payments covering the confirmed business scenarios (full/partial/advance payment, mild overdue, automatic blacklist, fully paid loan, voided payment, cash closure). It creates everything through the real RPCs (`admin_create_loan`, `register_payment`, etc.), simulating each actor the same way `supabase/tests/*.sql` does. See `supabase/SEED.md` for the full credentials/scenario table before writing Playwright specs or doing manual QA against the local stack.
 
 ## Financial Integrity
 
@@ -213,7 +242,27 @@ New singleton/root services: use `@Service()`. New per-route feature stores: use
 - Payments and financial records must remain auditable.
 - Do not physically delete payment history or other critical financial history.
 - Corrections should preserve who changed the record, when it changed and why.
-- Do not implement definitive loan, interest, installment, late-payment or blacklist rules until those business rules are confirmed.
+- Business rules not covered by `REQUERIMIENTO.md` or existing code (e.g. new late-payment penalties, new interest schemes) must still not be invented — confirm with the user.
+
+### Confirmed business rules (`REQUERIMIENTO.md`)
+
+The client-provided `REQUERIMIENTO.md` (Spanish) is now the authoritative source for the rules below. Some are already implemented in code (noted inline); others are specified but not yet built — check the relevant model/store/migration before assuming a rule is live.
+
+- **Roles**: `admin` (full access, creates users), `supervisor` (sees/corrects all portfolios, cannot create users or reassign a client's collector), `collector` (only own clients; cannot correct/void payments or edit an existing loan). Matches `Profile.role` and the RLS/RPC authorization already in migrations.
+- **Loan total**: `total = principal + principal * rate / 100`, interest charged **once** (simple, not compounding); default rate is 20% if unspecified but is editable per loan (10/20/30/%...). Implemented in `loan-calculations.ts` (`calculateLoanSummary`) and mirrored in the `admin_create_loan` / `admin_update_loan` RPCs.
+- **Installment amount**: `total / installmentCount`, rounded to cents; the **last installment absorbs the rounding remainder** so the schedule always sums exactly to `total`. Implemented in `calculateLoanSummary` (`lastInstallmentAmount`) and the schedule-generation RPCs.
+- **Collection calendar** (`firstDueOn` + schedule-generation RPCs):
+  - **Daily**: Monday–Saturday, **Sunday is skipped**; holidays are collected normally. Implemented (migration `20261021010000_daily_schedule_monday_saturday.sql` and later repair migrations extend/reassert this to Mon–Sat).
+  - **Weekly**: same weekday every week.
+  - **Monthly**: same day-of-month; if that day is a Sunday, roll to Monday, *unless* that Monday falls in the next month, in which case roll back to the preceding Saturday instead.
+- **Payment application**: tracks "should have been paid as of today" vs. "actually paid"; partial payments carry the shortfall forward to the next due date; advance payments cover multiple future installments at once; allocation is oldest-unpaid-installment-first. The real implementation lives in the `register_payment` Postgres RPC (`supabase/migrations/20261019181116_financial_rpcs.sql`, revised by `20261021163406_fix_payment_active_schedule_allocation.sql`) — read that function before changing allocation behavior. `allocateOldestFirst` in `core/adapters/in-memory-daily-control.repository.ts` is a same-shaped helper but only backs the fixture-based Daily Control adapter, not real payments.
+- **Blacklist**: a client automatically enters a blacklist state after **more than 5 days** of accumulated overdue, and automatically exits once caught up — no manual toggle. No separate interest/penalty is charged for being overdue. A blacklisted client cannot renew their loan. **Not yet confirmed as implemented in the current schema/RPCs — check `database.types.ts`/migrations before assuming a `blacklist`/`is_blacklisted` column or RPC exists.**
+- **Loans/renewals**: one active loan per client at a time; a renewal closes the previous loan and creates a new one linked to it, carrying over any outstanding balance into the new loan's principal. New loans can be created by admin, supervisor and collector; only admin/supervisor can edit an existing loan afterwards (matches `admin.routes.ts` wiring and `loan-edit-reasons.ts` being admin/supervisor-only UI).
+- **Corrections/audit**: a posted payment is never deleted — only voided/corrected, preserving who/when/before/after/why. A client's assigned collector cannot be changed except via an explicit bulk portfolio-reassignment action (collector leaving the company).
+- **Daily cash closure**: per collector, per day — system shows expected vs. registered, collector reports delivered cash/Yape, supervisor/admin validates, differences are recorded with an observation; outflows (new loan disbursements, refunds) are also tracked as cash movements, not just inflows. Modeled by `DailyCashClosure`/`DailyCashMovement` in `daily-control.model.ts`, but the current `control-diario` route is wired to `InMemoryDailyControlRepository` (fixture data), **not** a Supabase-backed implementation yet — see the Daily Control gotcha below.
+- **Reports/exports**: Excel, PDF and TXT formats; admin/supervisor can export every report, collectors can only export their own payment history/schedule. `DailyControlExportService` already implements `csv`/`xlsx`/`pdf` (via dynamic `import('exceljs')` / `jspdf`+`jspdf-autotable`) for the daily-control report — follow that pattern (dynamic import, keep the heavy export libs out of the main bundle) for new export features; no TXT exporter exists yet.
+- **Timezone**: all dates/times are Peru time (`es-PE`, America/Lima); the business day closes on that clock.
+- **Auth lockout**: repeated failed PIN attempts should lock the account; the admin can issue a new PIN. Cross-check `supabase/functions/admin-reset-collector-pin` and any rate-limiting before assuming this is fully enforced server-side.
 
 ## Authentication
 

@@ -81,14 +81,14 @@ import { AuthService } from '../auth.service';
             }
           </div>
 
-          <p-button
-            type="submit"
-            label="Cambiar PIN"
-            icon="pi pi-lock"
-            [loading]="changing()"
-            [disabled]="pinForm().invalid()"
-            fluid
-          />
+          <button pButton type="submit" fluid [disabled]="changing() || pinForm().invalid()">
+            @if (changing()) {
+              <i class="pi pi-spin pi-spinner"></i>
+            } @else {
+              <i class="pi pi-lock"></i>
+            }
+            Cambiar PIN
+          </button>
         </form>
       </section>
     </main>

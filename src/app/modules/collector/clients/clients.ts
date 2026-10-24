@@ -64,7 +64,9 @@ import { CollectionDashboardStore } from '../collection-dashboard.store';
           </div>
           <h3 class="mt-4 mb-1 text-lg font-semibold text-surface-950 dark:text-surface-0">No hay clientes</h3>
           <p class="mt-0 mb-4 text-sm text-surface-500 dark:text-surface-400">No se encontraron clientes con esa búsqueda.</p>
-          <p-button type="button" severity="secondary" variant="outlined" label="Limpiar búsqueda" (click)="store.clearFilters()"></p-button>
+          <button pButton type="button" severity="secondary" variant="outlined" (click)="store.clearFilters()">
+            Limpiar búsqueda
+          </button>
         </div>
       }
     </div>

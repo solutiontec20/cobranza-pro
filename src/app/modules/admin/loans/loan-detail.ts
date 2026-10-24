@@ -117,23 +117,14 @@ const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
 
           <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
             @if (detail.loan.status === 'active' && remainingBalance() > 0) {
-              <p-button
-                label="Registrar pago"
-                icon="pi pi-money-bill"
-                severity="success"
-                styleClass="w-full sm:w-auto"
-                (onClick)="openPaymentDialog()"
-              />
+              <button pButton severity="success" class="w-full sm:w-auto" (click)="openPaymentDialog()">
+                <i class="pi pi-money-bill"></i> Registrar pago
+              </button>
             }
             @if (canEdit() && !editing()) {
-              <p-button
-                label="Editar préstamo"
-                icon="pi pi-pencil"
-                severity="secondary"
-                variant="outlined"
-                styleClass="w-full sm:w-auto"
-                (onClick)="startEditing()"
-              />
+              <button pButton severity="secondary" variant="outlined" class="w-full sm:w-auto" (click)="startEditing()">
+                <i class="pi pi-pencil"></i> Editar préstamo
+              </button>
             }
           </div>
         </header>
@@ -364,22 +355,17 @@ const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
               </section>
 
               <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <p-button
-                  type="button"
-                  label="Cancelar"
-                  severity="secondary"
-                  variant="text"
-                  styleClass="w-full sm:w-auto"
-                  (onClick)="cancelEditing()"
-                />
-                <p-button
-                  type="submit"
-                  label="Guardar cambios"
-                  icon="pi pi-check"
-                  styleClass="w-full sm:w-auto"
-                  [loading]="store.saving()"
-                  [disabled]="editForm().invalid()"
-                />
+                <button pButton type="button" severity="secondary" variant="text" class="w-full sm:w-auto" (click)="cancelEditing()">
+                  Cancelar
+                </button>
+                <button pButton type="submit" class="w-full sm:w-auto" [disabled]="store.saving() || editForm().invalid()">
+                  @if (store.saving()) {
+                    <i class="pi pi-spin pi-spinner"></i>
+                  } @else {
+                    <i class="pi pi-check"></i>
+                  }
+                  Guardar cambios
+                </button>
               </div>
             </form>
           </section>
@@ -596,12 +582,9 @@ const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
         </div>
 
         <ng-template #footer>
-          <p-button
-            label="Listo"
-            severity="success"
-            styleClass="w-full"
-            (onClick)="closePaymentDialog()"
-          />
+          <button pButton severity="success" class="w-full" (click)="closePaymentDialog()">
+            Listo
+          </button>
         </ng-template>
       } @else {
         <form class="flex flex-col gap-5" (submit)="submitPayment(); $event.preventDefault()">
@@ -702,24 +685,19 @@ const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
           </div>
 
           <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <p-button
-              type="button"
-              label="Cancelar"
-              severity="secondary"
-              variant="text"
-              styleClass="w-full sm:w-auto"
-              [disabled]="store.paying()"
-              (onClick)="closePaymentDialog()"
-            />
-            <p-button
-              type="submit"
-              label="Confirmar pago"
-              icon="pi pi-check"
-              severity="success"
-              styleClass="w-full sm:w-auto"
-              [loading]="store.paying()"
-              [disabled]="paymentForm().invalid() || !paymentAmountIsValid()"
-            />
+            <button pButton type="button" severity="secondary" variant="text" class="w-full sm:w-auto"
+              [disabled]="store.paying()" (click)="closePaymentDialog()">
+              Cancelar
+            </button>
+            <button pButton type="submit" severity="success" class="w-full sm:w-auto"
+              [disabled]="store.paying() || paymentForm().invalid() || !paymentAmountIsValid()">
+              @if (store.paying()) {
+                <i class="pi pi-spin pi-spinner"></i>
+              } @else {
+                <i class="pi pi-check"></i>
+              }
+              Confirmar pago
+            </button>
           </div>
         </form>
       }

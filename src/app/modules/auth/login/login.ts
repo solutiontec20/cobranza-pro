@@ -1,23 +1,26 @@
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { form, FormField, maxLength, pattern, required, submit } from '@angular/forms/signals';
 import { AuthService } from '../auth.service';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
-import { AutoFocusModule } from 'primeng/autofocus';
+
+interface LoginModel {
+  dni: string;
+  pin: string;
+}
+
 @Component({
   selector: 'login-form',
-  imports: [ReactiveFormsModule, ButtonModule, InputTextModule, IconField, InputIcon],
+  imports: [FormField, ButtonModule, InputTextModule, IconField, InputIcon],
   templateUrl: './login.html',
 })
 export default class Login {
-
   private authService = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
-  private fb = inject(FormBuilder);
 
   errorMessage = signal<string | null>(null);
   successMessage = signal<string | null>(
@@ -28,66 +31,34 @@ export default class Login {
   loading = signal(false);
   showPin = signal(false);
 
-  loginForm = this.fb.group({
-    dni: ['', [Validators.required, Validators.pattern(/^[0-9]{8}$/)]],
-    pin: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
+  protected readonly model = signal<LoginModel>({ dni: '', pin: '' });
+  protected readonly loginForm = form(this.model, (path) => {
+    required(path.dni, { message: 'Ingresá tu DNI.' });
+    pattern(path.dni, /^\d{8}$/, { message: 'El DNI debe contener 8 dígitos.' });
+    maxLength(path.dni, 8, { message: 'El DNI debe contener 8 dígitos.' });
+    required(path.pin, { message: 'Ingresá tu PIN.' });
+    pattern(path.pin, /^\d{6}$/, { message: 'El PIN debe contener 6 dígitos.' });
+    maxLength(path.pin, 6, { message: 'El PIN debe contener 6 dígitos.' });
   });
-
-  onNumericKeyDown(event: KeyboardEvent): void {
-    const allowedNavigationKeys = [
-      'Backspace',
-      'Tab',
-      'Enter',
-      'Escape',
-      'ArrowLeft',
-      'ArrowRight',
-      'ArrowUp',
-      'ArrowDown',
-      'Delete',
-      'Home',
-      'End',
-    ];
-
-    if (allowedNavigationKeys.includes(event.key) || event.ctrlKey || event.metaKey) {
-      return;
-    }
-
-    if (!/^[0-9]$/.test(event.key)) {
-      event.preventDefault();
-    }
-  }
-
-  onNumericInput(event: Event, field: 'dni' | 'pin'): void {
-    const input = event.target as HTMLInputElement;
-    const numericValue = input.value.replace(/\D/g, '');
-    if (input.value !== numericValue) {
-      input.value = numericValue;
-      this.loginForm.get(field)?.setValue(numericValue);
-    }
-  }
 
   async onSubmit() {
     this.errorMessage.set(null);
 
-    if (this.loginForm.invalid) {
-      this.errorMessage.set('Por favor, ingrese un DNI válido (8 dígitos) y su PIN');
-      return;
-    }
+    void submit(this.loginForm, async () => {
+      const { dni, pin } = this.model();
+      this.loading.set(true);
 
-    const { dni, pin } = this.loginForm.value;
-    this.loading.set(true);
-
-    try {
-      await this.authService.login(dni!, pin!);
-      this.navigateBasedOnRole();
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Error de autenticación';
-      this.errorMessage.set(message);
-    } finally {
-      this.loading.set(false);
-    }
+      try {
+        await this.authService.login(dni, pin);
+        this.navigateBasedOnRole();
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Error de autenticación';
+        this.errorMessage.set(message);
+      } finally {
+        this.loading.set(false);
+      }
+    });
   }
-
 
   private navigateBasedOnRole() {
     if (this.authService.mustChangePin()) {
