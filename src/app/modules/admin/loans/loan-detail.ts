@@ -4,6 +4,7 @@ import { form, FormField, max, maxLength, min, required, submit, validate } from
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
@@ -13,10 +14,21 @@ import { TagModule } from 'primeng/tag';
 import {
   LoanFrequency,
   LoanInstallmentStatus,
+  LoanPaymentMethod,
   LoanPaymentRecord,
   LoanStatus,
+  RegisterLoanPaymentResult,
 } from '../../../core/models/loan.model';
-import { calculateLoanSummary, firstDueOn } from './loan-calculations';
+import {
+  calculateLoanPaymentSummary,
+  calculateLoanSummary,
+  firstDueOn,
+} from './loan-calculations';
+import {
+  LoanEditReasonCode,
+  LOAN_EDIT_REASON_OPTIONS,
+  resolveLoanEditReason,
+} from './loan-edit-reasons';
 import { LoansStore } from './loans.store';
 
 interface LoanEditModel {
@@ -25,7 +37,14 @@ interface LoanEditModel {
   frequency: LoanFrequency;
   installmentCount: number;
   startedOn: string;
-  reason: string;
+  reasonCode: LoanEditReasonCode | '';
+  customReason: string;
+}
+
+interface PaymentFormModel {
+  amount: number;
+  paymentMethod: LoanPaymentMethod;
+  notes: string;
 }
 
 type TagSeverity = 'success' | 'warn' | 'danger' | 'secondary' | 'info';
@@ -36,7 +55,14 @@ const emptyEditModel = (): LoanEditModel => ({
   frequency: 'daily',
   installmentCount: 1,
   startedOn: '',
-  reason: '',
+  reasonCode: '',
+  customReason: '',
+});
+
+const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
+  amount,
+  paymentMethod: 'cash',
+  notes: '',
 });
 
 @Component({
@@ -44,6 +70,7 @@ const emptyEditModel = (): LoanEditModel => ({
   imports: [
     ButtonModule,
     CurrencyPipe,
+    DialogModule,
     FormField,
     InputNumberModule,
     MessageModule,
@@ -88,14 +115,18 @@ const emptyEditModel = (): LoanEditModel => ({
             <p class="mt-1 text-sm text-muted-color">DNI {{ detail.client.dni }} · {{ detail.loan.installmentCount }} cuotas</p>
           </div>
 
-          @if (canEdit() && !editing()) {
-            <p-button
-              label="Editar préstamo"
-              icon="pi pi-pencil"
-              styleClass="w-full sm:w-auto"
-              (onClick)="startEditing()"
-            />
-          }
+          <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            @if (detail.loan.status === 'active' && remainingBalance() > 0) {
+              <button pButton severity="success" class="w-full sm:w-auto" (click)="openPaymentDialog()">
+                <i class="pi pi-money-bill"></i> Registrar pago
+              </button>
+            }
+            @if (canEdit() && !editing()) {
+              <button pButton severity="secondary" variant="outlined" class="w-full sm:w-auto" (click)="startEditing()">
+                <i class="pi pi-pencil"></i> Editar préstamo
+              </button>
+            }
+          </div>
         </header>
 
         <div class="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)]">
@@ -150,7 +181,7 @@ const emptyEditModel = (): LoanEditModel => ({
               <div class="mt-5 flex flex-col gap-1">
                 <span class="text-sm text-muted-color">Saldo pendiente</span>
                 <span class="text-3xl font-bold tracking-tight text-color sm:text-4xl">
-                  {{ detail.loan.balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                  {{ remainingBalance() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
                 </span>
                 <span class="text-sm text-muted-color">
                   Pagado {{ totalPaid() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }} de
@@ -276,18 +307,37 @@ const emptyEditModel = (): LoanEditModel => ({
               </div>
 
               <div>
-                <label for="edit-reason" class="mb-2 block text-sm font-medium text-color">Motivo de la edición</label>
-                <textarea
-                  id="edit-reason"
-                  rows="3"
-                  class="w-full resize-y rounded-md border border-surface px-3 py-2.5 text-color outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-surface-950"
-                  placeholder="Describe por qué se corrigen las condiciones del préstamo"
-                  [formField]="editForm.reason"
-                ></textarea>
-                @if (editForm.reason().touched() && editForm.reason().invalid()) {
-                  <small class="mt-1 block text-red-600">{{ editForm.reason().errors()[0]?.message }}</small>
+                <label for="edit-reason-code" class="mb-2 block text-sm font-medium text-color">Motivo de la edición</label>
+                <p-select
+                  inputId="edit-reason-code"
+                  [formField]="editForm.reasonCode"
+                  [options]="editReasonOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Selecciona un motivo"
+                  appendTo="body"
+                  styleClass="w-full"
+                />
+                @if (editForm.reasonCode().touched() && editForm.reasonCode().invalid()) {
+                  <small class="mt-1 block text-red-600">{{ editForm.reasonCode().errors()[0]?.message }}</small>
                 }
               </div>
+
+              @if (editModel().reasonCode === 'other') {
+                <div>
+                  <label for="edit-custom-reason" class="mb-2 block text-sm font-medium text-color">Justificación</label>
+                  <textarea
+                    id="edit-custom-reason"
+                    rows="3"
+                    class="w-full resize-y rounded-md border border-surface px-3 py-2.5 text-color outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-surface-950"
+                    placeholder="Describe por qué se corrigen las condiciones del préstamo"
+                    [formField]="editForm.customReason"
+                  ></textarea>
+                  @if (editForm.customReason().touched() && editForm.customReason().invalid()) {
+                    <small class="mt-1 block text-red-600">{{ editForm.customReason().errors()[0]?.message }}</small>
+                  }
+                </div>
+              }
 
               <section class="grid grid-cols-2 gap-3 rounded-xl bg-surface-50 p-4 text-sm dark:bg-surface-800 sm:grid-cols-3" aria-label="Nuevo resumen del préstamo">
                 <div>
@@ -305,22 +355,17 @@ const emptyEditModel = (): LoanEditModel => ({
               </section>
 
               <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <p-button
-                  type="button"
-                  label="Cancelar"
-                  severity="secondary"
-                  variant="text"
-                  styleClass="w-full sm:w-auto"
-                  (onClick)="cancelEditing()"
-                />
-                <p-button
-                  type="submit"
-                  label="Guardar cambios"
-                  icon="pi pi-check"
-                  styleClass="w-full sm:w-auto"
-                  [loading]="store.saving()"
-                  [disabled]="editForm().invalid()"
-                />
+                <button pButton type="button" severity="secondary" variant="text" class="w-full sm:w-auto" (click)="cancelEditing()">
+                  Cancelar
+                </button>
+                <button pButton type="submit" class="w-full sm:w-auto" [disabled]="store.saving() || editForm().invalid()">
+                  @if (store.saving()) {
+                    <i class="pi pi-spin pi-spinner"></i>
+                  } @else {
+                    <i class="pi pi-check"></i>
+                  }
+                  Guardar cambios
+                </button>
               </div>
             </form>
           </section>
@@ -494,6 +539,169 @@ const emptyEditModel = (): LoanEditModel => ({
         </section>
       }
     </main>
+
+    <p-dialog
+      [visible]="paymentDialogVisible()"
+      (visibleChange)="onPaymentDialogVisibleChange($event)"
+      [modal]="true"
+      [draggable]="false"
+      [closable]="!store.paying()"
+      [closeOnEscape]="!store.paying()"
+      [header]="paymentResult() ? 'Pago registrado' : 'Registrar pago'"
+      styleClass="w-[calc(100vw-1.5rem)] max-w-lg"
+    >
+      @if (paymentResult(); as result) {
+        <div class="flex flex-col items-center gap-4 py-3 text-center" aria-live="polite">
+          <div class="flex size-16 items-center justify-center rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+            <i class="pi pi-check-circle text-3xl" aria-hidden="true"></i>
+          </div>
+          <div>
+            <p class="text-3xl font-bold tabular-nums text-green-700 dark:text-green-400">
+              {{ result.allocatedAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+            </p>
+            <p class="mt-1 text-sm text-muted-color">registrado para {{ detail()?.client?.fullName }}</p>
+          </div>
+          <dl class="w-full rounded-lg border border-surface p-4 text-sm">
+            <div class="flex items-center justify-between gap-3">
+              <dt class="text-left text-muted-color">
+                Nuevo saldo del préstamo #{{ selectedLoanReference() }}
+              </dt>
+              <dd class="font-bold tabular-nums text-color">
+                {{ confirmedPaymentBalance() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              </dd>
+            </div>
+            @if (result.resultingLoanStatus === 'paid') {
+              <div class="mt-3 border-t border-surface pt-3 font-semibold text-green-700 dark:text-green-400">
+                Préstamo cancelado en su totalidad
+              </div>
+            }
+          </dl>
+          @if (store.error()) {
+            <p-message severity="warn" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
+          }
+        </div>
+
+        <ng-template #footer>
+          <button pButton severity="success" class="w-full" (click)="closePaymentDialog()">
+            Listo
+          </button>
+        </ng-template>
+      } @else {
+        <form class="flex flex-col gap-5" (submit)="submitPayment(); $event.preventDefault()">
+          @if (detail(); as currentDetail) {
+            <section class="rounded-lg bg-surface-50 p-4 text-sm dark:bg-surface-800" aria-label="Resumen antes del pago">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <p class="text-muted-color">Cliente</p>
+                  <p class="mt-1 font-semibold text-color">{{ currentDetail.client.fullName }}</p>
+                  <p class="mt-1 text-xs text-muted-color">
+                    Préstamo #{{ selectedLoanReference() }}
+                  </p>
+                </div>
+                <div class="text-right">
+                  <p class="text-muted-color">Saldo de este préstamo</p>
+                  <p class="mt-1 text-lg font-bold tabular-nums text-color">
+                    {{ remainingBalance() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                  </p>
+                </div>
+              </div>
+            </section>
+          }
+
+          @if (store.error()) {
+            <p-message severity="error" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
+          }
+
+          <div>
+            <label for="payment-amount" class="mb-2 block text-sm font-medium text-color">Monto recibido</label>
+            <p-inputnumber
+              inputId="payment-amount"
+              [formField]="paymentForm.amount"
+              mode="currency"
+              currency="PEN"
+              locale="es-PE"
+              [min]="0.01"
+              [max]="remainingBalance()"
+              styleClass="w-full"
+              inputStyleClass="w-full text-xl font-bold tabular-nums"
+            />
+            @if (paymentForm.amount().touched() && paymentForm.amount().invalid()) {
+              <small class="mt-1 block text-red-600">{{ paymentForm.amount().errors()[0]?.message }}</small>
+            }
+          </div>
+
+          @if (quickPaymentAmounts().length > 0) {
+            <div>
+              <p class="mb-2 text-sm font-medium text-color">Montos rápidos</p>
+              <div class="flex flex-wrap gap-2">
+                @for (amount of quickPaymentAmounts(); track amount) {
+                  <button
+                    type="button"
+                    class="min-h-10 rounded-lg border border-surface px-3 text-sm font-semibold text-color outline-none hover:border-primary hover:text-primary focus-visible:ring-2 focus-visible:ring-primary"
+                    [class.border-primary]="paymentModel().amount === amount"
+                    [class.bg-primary-50]="paymentModel().amount === amount"
+                    [class.text-primary]="paymentModel().amount === amount"
+                    (click)="selectPaymentAmount(amount)"
+                  >
+                    {{ amount | currency: 'PEN' : 'symbol' : '1.0-2' : 'es-PE' }}
+                  </button>
+                }
+              </div>
+            </div>
+          }
+
+          <div>
+            <label for="payment-method" class="mb-2 block text-sm font-medium text-color">Medio de pago</label>
+            <p-select
+              inputId="payment-method"
+              [formField]="paymentForm.paymentMethod"
+              [options]="paymentMethodOptions"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              styleClass="w-full"
+            />
+          </div>
+
+          <div>
+            <label for="payment-notes" class="mb-2 block text-sm font-medium text-color">Observación (opcional)</label>
+            <textarea
+              id="payment-notes"
+              rows="2"
+              class="w-full resize-y rounded-md border border-surface px-3 py-2.5 text-color outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-surface-950"
+              placeholder="Ej: Pago completo de la cuota"
+              [formField]="paymentForm.notes"
+            ></textarea>
+            @if (paymentForm.notes().touched() && paymentForm.notes().invalid()) {
+              <small class="mt-1 block text-red-600">{{ paymentForm.notes().errors()[0]?.message }}</small>
+            }
+          </div>
+
+          <div class="flex items-center justify-between gap-3 rounded-lg border border-surface p-4 text-sm">
+            <span class="text-muted-color">Saldo de este préstamo después del pago</span>
+            <strong class="text-lg tabular-nums text-color">
+              {{ paymentBalancePreview() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+            </strong>
+          </div>
+
+          <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button pButton type="button" severity="secondary" variant="text" class="w-full sm:w-auto"
+              [disabled]="store.paying()" (click)="closePaymentDialog()">
+              Cancelar
+            </button>
+            <button pButton type="submit" severity="success" class="w-full sm:w-auto"
+              [disabled]="store.paying() || paymentForm().invalid() || !paymentAmountIsValid()">
+              @if (store.paying()) {
+                <i class="pi pi-spin pi-spinner"></i>
+              } @else {
+                <i class="pi pi-check"></i>
+              }
+              Confirmar pago
+            </button>
+          </div>
+        </form>
+      }
+    </p-dialog>
   `,
 })
 export default class LoanDetailPage {
@@ -508,8 +716,23 @@ export default class LoanDetailPage {
     { label: 'Semanal', value: 'weekly' },
     { label: 'Mensual', value: 'monthly' },
   ];
+  protected readonly editReasonOptions = LOAN_EDIT_REASON_OPTIONS;
+  protected readonly paymentMethodOptions: Array<{ label: string; value: LoanPaymentMethod }> = [
+    { label: 'Efectivo', value: 'cash' },
+    { label: 'Yape', value: 'yape' },
+    { label: 'Plin', value: 'plin' },
+    { label: 'Transferencia', value: 'transfer' },
+  ];
 
   protected readonly detail = this.store.selectedDetail;
+  protected readonly paymentDialogVisible = signal(false);
+  protected readonly paymentResult = signal<RegisterLoanPaymentResult | null>(null);
+  protected readonly paymentModel = signal<PaymentFormModel>(emptyPaymentModel());
+  protected readonly paymentForm = form(this.paymentModel, (path) => {
+    min(path.amount, 0.01, { message: 'El monto debe ser mayor que cero.' });
+    required(path.paymentMethod, { message: 'Selecciona el medio de pago.' });
+    maxLength(path.notes, 500, { message: 'La observación no puede superar 500 caracteres.' });
+  });
   protected readonly editModel = signal<LoanEditModel>(emptyEditModel());
   protected readonly editForm = form(this.editModel, (path) => {
     min(path.principal, 0.01, { message: 'El capital debe ser mayor que cero.' });
@@ -517,8 +740,13 @@ export default class LoanDetailPage {
     min(path.installmentCount, 1, { message: 'Debe existir al menos una cuota.' });
     max(path.installmentCount, 32767, { message: 'La cantidad de cuotas es demasiado alta.' });
     required(path.startedOn, { message: 'Selecciona la fecha de inicio.' });
-    required(path.reason, { message: 'Ingresa el motivo de la edición.' });
-    maxLength(path.reason, 500, { message: 'El motivo no puede superar 500 caracteres.' });
+    required(path.reasonCode, { message: 'Selecciona el motivo de la edición.' });
+    maxLength(path.customReason, 500, { message: 'La justificación no puede superar 500 caracteres.' });
+    validate(path.customReason, ({ valueOf }) =>
+      valueOf(path.reasonCode) === 'other' && valueOf(path.customReason).trim().length === 0
+        ? { kind: 'required', message: 'Ingresa una justificación.' }
+        : undefined,
+    );
     validate(path.installmentCount, ({ valueOf }) => {
       const summary = calculateLoanSummary(
         valueOf(path.principal),
@@ -531,10 +759,12 @@ export default class LoanDetailPage {
     });
   });
 
-  protected readonly totalPaid = computed(() => {
-    const loan = this.detail()?.loan;
-    return loan ? loan.totalAmount - loan.balance : 0;
+  protected readonly paymentSummary = computed(() => {
+    const detail = this.detail();
+    return calculateLoanPaymentSummary(detail?.loan.totalAmount ?? 0, detail?.payments ?? []);
   });
+  protected readonly totalPaid = computed(() => this.paymentSummary().paidAmount);
+  protected readonly remainingBalance = computed(() => this.paymentSummary().remainingBalance);
   protected readonly paidPercentage = computed(() => {
     const loan = this.detail()?.loan;
     if (!loan || loan.totalAmount <= 0) return 0;
@@ -565,6 +795,40 @@ export default class LoanDetailPage {
     const model = this.editModel();
     return firstDueOn(model.startedOn, model.frequency);
   });
+  protected readonly quickPaymentAmounts = computed(() => {
+    const detail = this.detail();
+    const balance = this.remainingBalance();
+    if (!detail || balance <= 0) return [];
+
+    const nextInstallment =
+      detail.installments.find((installment) => installment.outstandingAmount > 0)?.outstandingAmount ??
+      detail.loan.installmentAmount;
+
+    return [...new Set([5, 10, 15, nextInstallment, balance])]
+      .filter((amount) => amount > 0 && amount <= balance)
+      .map((amount) => Math.round(amount * 100) / 100);
+  });
+  protected readonly paymentAmountIsValid = computed(() => {
+    const balance = this.remainingBalance();
+    const amount = this.paymentModel().amount;
+    return Number.isFinite(amount) && amount > 0 && amount <= balance;
+  });
+  protected readonly paymentBalancePreview = computed(() => {
+    const balance = this.remainingBalance();
+    const amount = this.paymentModel().amount;
+    return Math.max(0, Math.round((balance - (Number.isFinite(amount) ? amount : 0)) * 100) / 100);
+  });
+  protected readonly selectedLoanReference = computed(() =>
+    (this.detail()?.loan.id ?? '').slice(0, 8).toUpperCase(),
+  );
+  protected readonly confirmedPaymentBalance = computed(() => {
+    const result = this.paymentResult();
+    if (!result) return 0;
+
+    return this.detail()?.payments.some((payment) => payment.id === result.paymentId)
+      ? this.remainingBalance()
+      : result.remainingBalance;
+  });
 
   constructor() {
     void this.store.loadDetail(this.loanId);
@@ -581,7 +845,8 @@ export default class LoanDetailPage {
       frequency: loan.frequency,
       installmentCount: loan.installmentCount,
       startedOn: loan.startedOn,
-      reason: '',
+      reasonCode: '',
+      customReason: '',
     });
     this.editForm().reset();
     this.editing.set(true);
@@ -592,9 +857,71 @@ export default class LoanDetailPage {
     this.store.clearError();
   }
 
+  protected openPaymentDialog(): void {
+    const detail = this.detail();
+    const balance = this.remainingBalance();
+    if (!detail || detail.loan.status !== 'active' || balance <= 0) return;
+
+    const suggestedAmount =
+      detail.installments.find((installment) => installment.outstandingAmount > 0)?.outstandingAmount ??
+      detail.loan.installmentAmount;
+
+    this.editing.set(false);
+    this.store.clearError();
+    this.paymentResult.set(null);
+    this.paymentModel.set(emptyPaymentModel(Math.min(suggestedAmount, balance)));
+    this.paymentForm().reset();
+    this.paymentDialogVisible.set(true);
+  }
+
+  protected closePaymentDialog(): void {
+    if (this.store.paying()) return;
+    this.paymentDialogVisible.set(false);
+    this.paymentResult.set(null);
+    this.store.clearError();
+  }
+
+  protected onPaymentDialogVisibleChange(visible: boolean): void {
+    if (visible) {
+      this.paymentDialogVisible.set(true);
+      return;
+    }
+    this.closePaymentDialog();
+  }
+
+  protected selectPaymentAmount(amount: number): void {
+    this.paymentModel.update((model) => ({ ...model, amount }));
+  }
+
+  protected submitPayment(): void {
+    if (!this.paymentAmountIsValid()) return;
+
+    void submit(this.paymentForm, async () => {
+      const model = this.paymentModel();
+      const result = await this.store.registerPayment({
+        loanId: this.loanId,
+        amount: model.amount,
+        paymentMethod: model.paymentMethod,
+        notes: model.notes.trim(),
+      });
+
+      if (result) {
+        this.paymentResult.set(result);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Pago registrado',
+          detail: 'El saldo y el cronograma fueron actualizados.',
+        });
+      }
+    });
+  }
+
   protected saveChanges(): void {
     void submit(this.editForm, async () => {
       const model = this.editModel();
+      const reason = resolveLoanEditReason(model.reasonCode, model.customReason);
+      if (!reason) return;
+
       const updated = await this.store.update({
         loanId: this.loanId,
         principal: model.principal,
@@ -602,7 +929,7 @@ export default class LoanDetailPage {
         frequency: model.frequency,
         installmentCount: model.installmentCount,
         startedOn: model.startedOn,
-        reason: model.reason.trim(),
+        reason,
       });
 
       if (updated) {

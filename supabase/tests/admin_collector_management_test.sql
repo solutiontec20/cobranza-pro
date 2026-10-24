@@ -14,10 +14,10 @@ values
 
 insert into public.profiles (id, dni, full_name, phone, role, active)
 values
-  ('10000000-0000-0000-0000-000000000001', '10000001', 'Collector One', '911111111', 'collector', true),
-  ('10000000-0000-0000-0000-000000000002', '10000002', 'Collector Two', null, 'collector', true),
-  ('10000000-0000-0000-0000-000000000003', '10000003', 'Supervisor', null, 'supervisor', true),
-  ('10000000-0000-0000-0000-000000000004', '10000004', 'Administrator', null, 'admin', true);
+  ('10000000-0000-0000-0000-000000000001', '91000001', 'Collector One', '911111111', 'collector', true),
+  ('10000000-0000-0000-0000-000000000002', '91000002', 'Collector Two', null, 'collector', true),
+  ('10000000-0000-0000-0000-000000000003', '91000003', 'Supervisor', null, 'supervisor', true),
+  ('10000000-0000-0000-0000-000000000004', '91000004', 'Administrator', null, 'admin', true);
 
 insert into public.customers (
   id,
@@ -49,7 +49,11 @@ select throws_ok(
 set local request.jwt.claim.sub = '10000000-0000-0000-0000-000000000003';
 
 select results_eq(
-  $$ select count(*) from public.admin_list_collectors() $$,
+  $$
+    select count(*)
+    from public.admin_list_collectors()
+    where dni in ('91000001', '91000002')
+  $$,
   array[2::bigint],
   'Supervisors can list collectors'
 );
@@ -58,7 +62,7 @@ select throws_ok(
   $$
     select * from public.admin_create_collector_profile(
       '10000000-0000-0000-0000-000000000005',
-      '10000005',
+      '91000005',
       'New Collector',
       '922222222'
     )
@@ -71,7 +75,11 @@ select throws_ok(
 set local request.jwt.claim.sub = '10000000-0000-0000-0000-000000000004';
 
 select results_eq(
-  $$ select count(*) from public.admin_list_collectors() $$,
+  $$
+    select count(*)
+    from public.admin_list_collectors()
+    where dni in ('91000001', '91000002')
+  $$,
   array[2::bigint],
   'Administrators can list collectors'
 );
@@ -80,7 +88,7 @@ select throws_ok(
   $$
     select * from public.admin_create_collector_profile(
       '10000000-0000-0000-0000-000000000005',
-      '10000005',
+      '91000005',
       'New Collector',
       '822222222'
     )
@@ -94,7 +102,7 @@ select lives_ok(
   $$
     select * from public.admin_create_collector_profile(
       '10000000-0000-0000-0000-000000000005',
-      '10000005',
+      '91000005',
       'New Collector',
       '922222222'
     )

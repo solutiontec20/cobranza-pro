@@ -47,6 +47,25 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+button,
+a {
+  touch-action: manipulation;
+}
+
+.auth-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.auth-panel {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-top: max(1.25rem, env(safe-area-inset-top));
+  padding-right: max(1.25rem, env(safe-area-inset-right));
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+  padding-left: max(1.25rem, env(safe-area-inset-left));
+}
+
 ::selection {
   color: #ffffff;
   background: #2563eb;
@@ -60,6 +79,19 @@ body {
   isolation: isolate;
 }
 
+.app-shell .p-sidebar-layout,
+.app-shell .p-sidebar-main,
+.app-shell .p-sidebar-panel {
+  min-height: 0;
+}
+
+.app-shell .p-sidebar-panel {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .app-shell .p-sidebar-aside {
   border-right: 1px solid var(--cp-border);
   background: var(--cp-panel);
@@ -68,6 +100,105 @@ body {
 
 .app-dark .app-shell .p-sidebar-aside {
   box-shadow: 8px 0 28px rgb(0 0 0 / 16%);
+}
+
+.app-shell
+  .p-sidebar[data-collapsible-mode='icon'][data-state='collapsed']
+  .p-sidebar-header,
+.app-shell
+  .p-sidebar[data-collapsible-mode='icon'][data-state='collapsed']
+  .p-sidebar-content,
+.app-shell
+  .p-sidebar[data-collapsible-mode='icon'][data-state='collapsed']
+  .p-sidebar-footer {
+  padding-inline: 0;
+}
+
+.app-shell
+  .p-sidebar[data-collapsible-mode='icon'][data-state='collapsed']
+  .app-sidebar-brand {
+  width: 100%;
+  justify-content: center;
+  gap: 0 !important;
+  padding-inline: 0 !important;
+}
+
+.app-shell
+  .p-sidebar[data-collapsible-mode='icon'][data-state='collapsed']
+  .app-sidebar-brand
+  > div {
+  width: 100%;
+  justify-content: center;
+  gap: 0;
+}
+
+.app-shell
+  .p-sidebar[data-collapsible-mode='icon'][data-state='collapsed']
+  .app-sidebar-brand
+  span,
+.app-shell
+  .p-sidebar[data-collapsible-mode='icon'][data-state='collapsed']
+  .p-sidebar-footer
+  .min-w-0.flex-col {
+  display: none;
+}
+
+.app-shell
+  .p-sidebar[data-collapsible-mode='icon'][data-state='collapsed']
+  .p-sidebar-group {
+  padding-inline: 0;
+}
+
+.app-shell
+  .p-sidebar[data-collapsible-mode='icon'][data-state='collapsed']
+  .p-sidebar-menu {
+  align-items: center;
+}
+
+.app-shell
+  .p-sidebar[data-collapsible-mode='icon'][data-state='collapsed']
+  .p-sidebar-menu-button {
+  margin-inline: auto;
+  justify-content: center;
+  gap: 0;
+  padding-inline: 0;
+}
+
+.app-shell
+  .p-sidebar[data-collapsible-mode='icon'][data-state='collapsed']
+  .p-sidebar-menu-button
+  > span {
+  display: none;
+}
+
+.app-shell
+  .p-sidebar[data-collapsible-mode='icon'][data-state='collapsed']
+  .p-sidebar-menu-button[data-active='true']::before {
+  top: 0.2rem;
+  bottom: auto;
+  left: 50%;
+  width: 1rem;
+  height: 0.18rem;
+  transform: translateX(-50%);
+}
+
+.app-shell
+  .p-sidebar[data-collapsible-mode='icon'][data-state='collapsed']
+  .p-sidebar-footer
+  > div {
+  flex-direction: column;
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.app-shell
+  .p-sidebar[data-collapsible-mode='icon'][data-state='collapsed']
+  .p-sidebar-footer
+  > div
+  > div {
+  width: 100%;
+  flex: none;
+  justify-content: center;
 }
 
 .app-shell .p-sidebar-panel,
@@ -82,10 +213,16 @@ body {
 }
 
 .app-shell .p-sidebar-content {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 0.4rem 0.65rem;
+  scrollbar-gutter: stable;
 }
 
 .app-shell .p-sidebar-footer {
+  flex: none;
   border-top: 1px solid var(--cp-border);
   padding: 0.85rem 0.65rem;
 }
@@ -162,7 +299,12 @@ body {
 }
 
 .app-workspace {
+  display: flex;
+  height: 100%;
   min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--cp-app-bg);
 }
 
@@ -181,33 +323,39 @@ body {
 }
 
 .app-menu-button,
-.app-icon-button {
+.app-icon-button,
+.app-sidebar-close {
   border: 1px solid transparent !important;
   color: #52627a !important;
 }
 
 .app-menu-button:hover,
-.app-icon-button:hover {
+.app-icon-button:hover,
+.app-sidebar-close:hover {
   border-color: #bfdbfe !important;
   color: #1d4ed8 !important;
   background: #eff6ff !important;
 }
 
 .app-dark .app-menu-button,
-.app-dark .app-icon-button {
+.app-dark .app-icon-button,
+.app-dark .app-sidebar-close {
   color: #a9b7ca !important;
 }
 
 .app-dark .app-menu-button:hover,
-.app-dark .app-icon-button:hover {
+.app-dark .app-icon-button:hover,
+.app-dark .app-sidebar-close:hover {
   border-color: #334e75 !important;
   color: #bfdbfe !important;
   background: rgb(37 99 235 / 15%) !important;
 }
 
 .app-content {
-  height: calc(100% - 4rem);
+  min-height: 0;
+  flex: 1;
   overflow: auto;
+  overscroll-behavior: contain;
   background-image: linear-gradient(rgb(37 99 235 / 2.5%) 1px, transparent 1px);
   background-size: 100% 3.5rem;
 }
@@ -376,8 +524,53 @@ body {
   }
 
   .app-content {
-    height: calc(100% - 3.75rem);
     background-image: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .app-shell.app-mobile-nav-open .app-content {
+    overflow: hidden;
+  }
+
+  .app-shell .p-sidebar-spacer {
+    display: none !important;
+  }
+
+  .app-shell .p-sidebar[data-collapsible-mode='offcanvas'] {
+    --px-sidebar-width: min(18rem, 86vw) !important;
+  }
+
+  .app-shell .p-sidebar[data-collapsible-mode='offcanvas'] .p-sidebar-aside {
+    width: var(--px-sidebar-width) !important;
+    max-width: 86vw;
+    height: 100dvh;
+    overflow: hidden;
+    border-right: 0;
+    padding-left: env(safe-area-inset-left);
+    box-shadow: none;
+    overscroll-behavior: contain;
+  }
+
+  .app-dark .app-shell .p-sidebar[data-collapsible-mode='offcanvas'] .p-sidebar-aside {
+    box-shadow: none;
+  }
+
+  .app-shell .p-sidebar[data-collapsible-mode='offcanvas'] .p-sidebar-content {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .app-shell .p-sidebar-header {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+
+  .app-shell .p-sidebar-footer {
+    padding-bottom: max(0.85rem, env(safe-area-inset-bottom));
+  }
+
+  .app-shell .p-sidebar-backdrop {
+    overscroll-behavior: contain;
   }
 }
 

@@ -74,7 +74,7 @@ select throws_ok(
   $$
     select * from public.admin_create_loan(
       '60000000-0000-0000-0000-000000000001', 100, 10, 'daily', 3,
-      '2026-10-18', '2026-10-18'
+      '2026-10-17', '2026-10-17'
     )
   $$,
   '42501',
@@ -88,7 +88,7 @@ select lives_ok(
   $$
     select * from public.admin_create_loan(
       '60000000-0000-0000-0000-000000000001', 100, 10, 'daily', 3,
-      '2026-10-18', '2026-10-18'
+      '2026-10-17', '2026-10-17'
     )
   $$,
   'Administrators create a loan atomically'
@@ -98,8 +98,8 @@ reset role;
 
 select is(
   (select first_due_on from public.loans where customer_id = '60000000-0000-0000-0000-000000000001'),
-  '2026-10-19'::date,
-  'A daily first due date on Sunday moves to Monday'
+  '2026-10-17'::date,
+  'A daily first due date may fall on Saturday'
 );
 
 select results_eq(
@@ -111,8 +111,8 @@ select results_eq(
     )
     order by installment_number
   $$,
-  array['2026-10-19'::date, '2026-10-20'::date, '2026-10-21'::date],
-  'Daily installments use business days'
+  array['2026-10-17'::date, '2026-10-19'::date, '2026-10-20'::date],
+  'Daily installments include Saturday and skip Sunday'
 );
 
 select results_eq(
@@ -240,7 +240,7 @@ select results_eq(
     6,
     'daily'::text,
     '2026-10-24'::date,
-    '2026-10-26'::date
+    '2026-10-24'::date
   ) $$,
   'Loan terms, disbursed amount, and normalized first due date are updated'
 );
@@ -256,14 +256,14 @@ select results_eq(
     order by installment_number
   $$,
   array[
+    '2026-10-24'::date,
     '2026-10-26'::date,
     '2026-10-27'::date,
     '2026-10-28'::date,
     '2026-10-29'::date,
-    '2026-10-30'::date,
-    '2026-11-02'::date
+    '2026-10-30'::date
   ],
-  'Replacement daily installments normalize weekends and use business days'
+  'Replacement daily installments include Saturday and skip Sunday'
 );
 
 select results_eq(
