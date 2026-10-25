@@ -105,27 +105,28 @@
           </div>
         </dl>
         @if (authService.isAdmin()) {
-        <div class="grid gap-2 sm:grid-cols-3">
-          <button pButton fluid size="small" severity="secondary" variant="outlined"
-            [disabled]="store.editingCollectorId() === collector.id" (click)="openEditDialog(collector)">
-            @if (store.editingCollectorId() === collector.id) {
-            <i class="pi pi-spin pi-spinner"></i>
-            } @else {
-            <i class="pi pi-pencil"></i>
-            }
-            Editar
-          </button>
+        <div class="flex flex-col gap-2">
+          <div class="grid grid-cols-2 gap-2">
+            <button pButton fluid size="small" severity="secondary" variant="outlined"
+              [disabled]="store.editingCollectorId() === collector.id" (click)="openEditDialog(collector)">
+              @if (store.editingCollectorId() === collector.id) {
+              <i class="pi pi-spin pi-spinner"></i>
+              } @else {
+              <i class="pi pi-pencil"></i>
+              }
+              Editar
+            </button>
 
-          <button pButton fluid size="small" severity="secondary" variant="outlined" [disabled]="!collector.active"
-            (click)="openResetDialog(collector)">
-            @if (store.resettingCollectorId() === collector.id) {
-            <i class="pi pi-spin pi-spinner"></i>
-            } @else {
-            <i class="pi pi-key"></i>
-            }
-
-            Restablecer PIN
-          </button>
+            <button pButton fluid size="small" severity="secondary" variant="outlined" [disabled]="!collector.active"
+              (click)="openResetDialog(collector)">
+              @if (store.resettingCollectorId() === collector.id) {
+              <i class="pi pi-spin pi-spinner"></i>
+              } @else {
+              <i class="pi pi-key"></i>
+              }
+              <span class="min-w-0 truncate">Restablecer PIN</span>
+            </button>
+          </div>
 
           <button pButton fluid size="small" [severity]="collector.active ? 'danger' : 'success'" variant="outlined"
             [disabled]="store.updatingCollectorId() === collector.id" (click)="openStatusDialog(collector)">
@@ -136,8 +137,6 @@
             }
             {{collector.active ? 'Desactivar' : 'Activar'}}
           </button>
-
-
         </div>
         }
       </article>
@@ -183,7 +182,7 @@
             @if (authService.isAdmin()) {
             <td class="px-5 py-4">
               <div class="flex flex-wrap justify-end gap-2">
-                <button pButton size="small" severity="secondary" variant="outlined"
+                <button pButton size="small" severity="secondary" variant="outlined" class="shrink-0 whitespace-nowrap"
                   [disabled]="store.editingCollectorId() === collector.id" (click)="openEditDialog(collector)">
                   @if (store.editingCollectorId() === collector.id) {
                   <i class="pi pi-spin pi-spinner"></i>
@@ -193,8 +192,8 @@
                   Editar
                 </button>
 
-                <button pButton size="small" severity="secondary" variant="outlined" [disabled]="!collector.active"
-                  (click)="openResetDialog(collector)">
+                <button pButton size="small" severity="secondary" variant="outlined" class="shrink-0 whitespace-nowrap"
+                  [disabled]="!collector.active" (click)="openResetDialog(collector)">
                   @if (store.resettingCollectorId() === collector.id) {
                   <i class="pi pi-spin pi-spinner"></i>
                   } @else {
@@ -204,7 +203,8 @@
                 </button>
 
                 <button pButton size="small" [severity]="collector.active ? 'danger' : 'success'" variant="outlined"
-                  [disabled]="store.updatingCollectorId() === collector.id" (click)="openStatusDialog(collector)">
+                  class="shrink-0 whitespace-nowrap" [disabled]="store.updatingCollectorId() === collector.id"
+                  (click)="openStatusDialog(collector)">
                   @if (store.updatingCollectorId() === collector.id) {
                   <i class="pi pi-spin pi-spinner"></i>
                   } @else {
