@@ -78,6 +78,7 @@ describe('SupabaseLoanRepository', () => {
                   customer: {
                     id: 'customer-1',
                     full_name: 'Ana Flores',
+                    document_number: '45678901',
                     collector_id: 'collector-1',
                     collector: { id: 'collector-1', full_name: 'Luis Ramos' },
                   },
@@ -127,6 +128,7 @@ describe('SupabaseLoanRepository', () => {
     expect(result.balance).toBe(90);
     expect(result.installmentAmount).toBe(4);
     expect(result.endDate).toBe('2026-11-04');
+    expect(result.clientDni).toBe('45678901');
   });
 
   it.each([

@@ -775,6 +775,18 @@ export type Database = {
           phone: string;
         }[];
       };
+      admin_update_collector_profile: {
+        Args: { p_collector_id: string; p_full_name: string; p_phone?: string; p_reason: string };
+        Returns: {
+          active: boolean;
+          active_customer_count: number;
+          created_at: string;
+          dni: string;
+          full_name: string;
+          id: string;
+          phone: string;
+        }[];
+      };
       admin_update_loan: {
         Args: {
           p_frequency: Database['public']['Enums']['loan_frequency'];

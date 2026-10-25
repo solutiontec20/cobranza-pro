@@ -1,11 +1,13 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { AppError } from '../../../core/errors/app-error';
 import {
   CreateLoanInput,
   LoanClientOption,
   LoanDetail,
+  LoanFrequency,
   LoanInstallment,
   LoanListItem,
+  LoanStatus,
   RegisterLoanPaymentInput,
   RegisterLoanPaymentResult,
   RenewLoanInput,
@@ -13,6 +15,9 @@ import {
   UpdateLoanInput,
 } from '../../../core/models/loan.model';
 import { LOAN_REPOSITORY } from '../../../core/repositories/loan.repository';
+
+export type LoanStatusFilter = 'all' | LoanStatus;
+export type LoanFrequencyFilter = 'all' | LoanFrequency;
 
 @Injectable()
 export class LoansStore {
@@ -31,6 +36,39 @@ export class LoansStore {
   readonly paying = signal(false);
   readonly renewing = signal(false);
   readonly error = signal<string | null>(null);
+
+  readonly query = signal('');
+  readonly statusFilter = signal<LoanStatusFilter>('all');
+  readonly collectorFilter = signal<string | null>(null);
+  readonly frequencyFilter = signal<LoanFrequencyFilter>('all');
+
+  readonly collectorOptions = computed(() => {
+    const byId = new Map<string, string>();
+    for (const loan of this.loans()) {
+      byId.set(loan.collectorId, loan.collectorName);
+    }
+    return [...byId.entries()]
+      .map(([id, fullName]) => ({ id, fullName }))
+      .sort((left, right) => left.fullName.localeCompare(right.fullName, 'es-PE'));
+  });
+
+  readonly filteredLoans = computed(() => {
+    const query = this.normalize(this.query());
+    const status = this.statusFilter();
+    const collectorId = this.collectorFilter();
+    const frequency = this.frequencyFilter();
+
+    return this.loans().filter((loan) => {
+      if (status !== 'all' && loan.status !== status) return false;
+      if (collectorId !== null && loan.collectorId !== collectorId) return false;
+      if (frequency !== 'all' && loan.frequency !== frequency) return false;
+      if (!query) return true;
+
+      return [loan.clientName, loan.clientDni, loan.collectorName]
+        .map((value) => this.normalize(value))
+        .some((value) => value.includes(query));
+    });
+  });
 
   async load(): Promise<void> {
     this.loading.set(true);
@@ -192,7 +230,22 @@ export class LoansStore {
     this.error.set(null);
   }
 
+  clearFilters(): void {
+    this.query.set('');
+    this.statusFilter.set('all');
+    this.collectorFilter.set(null);
+    this.frequencyFilter.set('all');
+  }
+
   private messageFrom(error: unknown, fallback: string): string {
     return AppError.from(error).message || fallback;
+  }
+
+  private normalize(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase('es-PE')
+      .trim();
   }
 }

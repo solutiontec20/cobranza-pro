@@ -7,6 +7,7 @@ import {
   ResetCollectorPinInput,
   ResetCollectorPinResult,
   SetCollectorActiveInput,
+  UpdateCollectorInput,
 } from '../models/collector.model';
 import { CollectorRepository } from '../repositories/collector.repository';
 import { Database } from '../supabase/database.types';
@@ -86,6 +87,48 @@ export class SupabaseCollectorRepository implements CollectorRepository {
     }
 
     return this.toCollector(row);
+  }
+
+  async update(input: UpdateCollectorInput): Promise<Collector> {
+    const { data, error } = await this.supabase.rpc('admin_update_collector_profile', {
+      p_collector_id: input.collectorId,
+      p_full_name: input.fullName,
+      p_phone: input.phone ?? undefined,
+      p_reason: input.reason,
+    });
+
+    if (error) {
+      throw this.updateError(error);
+    }
+
+    const row = data?.[0];
+    if (!row) {
+      throw new AppError('SUPABASE_RPC', 'La edición no devolvió el cobrador actualizado.');
+    }
+
+    return this.toCollector(row);
+  }
+
+  private updateError(error: unknown): AppError {
+    const message = error instanceof Error ? error.message : '';
+
+    if (message.includes('COLLECTOR_UPDATE_FORBIDDEN')) {
+      return new AppError('AUTH_UNAUTHORIZED', 'Solo un administrador puede editar los datos del cobrador.', error);
+    }
+    if (message.includes('COLLECTOR_UPDATE_REASON_REQUIRED')) {
+      return new AppError('VALIDATION', 'Ingresá el motivo de la edición.', error);
+    }
+    if (message.includes('COLLECTOR_NAME_REQUIRED')) {
+      return new AppError('VALIDATION', 'Ingresá el nombre completo del cobrador.', error);
+    }
+    if (message.includes('COLLECTOR_PHONE_INVALID')) {
+      return new AppError('VALIDATION', 'El teléfono debe contener 9 dígitos e iniciar en 9.', error);
+    }
+    if (message.includes('COLLECTOR_NOT_FOUND')) {
+      return new AppError('VALIDATION', 'No se encontró el cobrador.', error);
+    }
+
+    return this.toAppError(error, 'No se pudo editar el cobrador.');
   }
 
   private toCollector(row: CollectorRow): Collector {

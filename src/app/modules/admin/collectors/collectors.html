@@ -105,7 +105,17 @@
           </div>
         </dl>
         @if (authService.isAdmin()) {
-        <div class="grid gap-2 sm:grid-cols-2">
+        <div class="grid gap-2 sm:grid-cols-3">
+          <button pButton fluid size="small" severity="secondary" variant="outlined"
+            [disabled]="store.editingCollectorId() === collector.id" (click)="openEditDialog(collector)">
+            @if (store.editingCollectorId() === collector.id) {
+            <i class="pi pi-spin pi-spinner"></i>
+            } @else {
+            <i class="pi pi-pencil"></i>
+            }
+            Editar
+          </button>
+
           <button pButton fluid size="small" severity="secondary" variant="outlined" [disabled]="!collector.active"
             (click)="openResetDialog(collector)">
             @if (store.resettingCollectorId() === collector.id) {
@@ -172,7 +182,17 @@
             </td>
             @if (authService.isAdmin()) {
             <td class="px-5 py-4">
-              <div class="flex justify-end gap-2">
+              <div class="flex flex-wrap justify-end gap-2">
+                <button pButton size="small" severity="secondary" variant="outlined"
+                  [disabled]="store.editingCollectorId() === collector.id" (click)="openEditDialog(collector)">
+                  @if (store.editingCollectorId() === collector.id) {
+                  <i class="pi pi-spin pi-spinner"></i>
+                  } @else {
+                  <i class="pi pi-pencil"></i>
+                  }
+                  Editar
+                </button>
+
                 <button pButton size="small" severity="secondary" variant="outlined" [disabled]="!collector.active"
                   (click)="openResetDialog(collector)">
                   @if (store.resettingCollectorId() === collector.id) {
@@ -393,4 +413,68 @@
 </p-dialog>
 } @error {
 <p-message severity="error" styleClass="w-full">No se pudo cargar el formulario de cambio de estado.</p-message>
+}
+
+@defer (when editVisible()) {
+<p-dialog header="Editar cobrador" [modal]="true" [visible]="editVisible()" (visibleChange)="editVisible.set($event)"
+  [breakpoints]="{ '640px': '100vw' }" styleClass="w-[calc(100vw-2rem)] max-w-xl">
+  @if (selectedCollector(); as collector) {
+  <form class="flex flex-col gap-4" (submit)="editCollector(); $event.preventDefault()">
+    <p class="text-sm text-muted-color">
+      Vas a editar los datos de <strong class="text-color">{{ collector.fullName }}</strong>.
+      El DNI no se puede modificar porque es su identificador de acceso.
+    </p>
+    <div>
+      <label class="mb-2 block text-sm font-medium text-color">DNI</label>
+      <input type="text" pInputText class="w-full" [value]="collector.dni" disabled readonly />
+    </div>
+    <div>
+      <label for="edit-collector-name" class="mb-2 block text-sm font-medium text-color">Nombre completo</label>
+      <input id="edit-collector-name" pInputText class="w-full" autocomplete="name" [formField]="editForm.fullName" />
+      @if (editForm.fullName().touched() && editForm.fullName().invalid()) {
+      <small class="mt-1 block text-red-600">{{
+        editForm.fullName().errors()[0]?.message
+        }}</small>
+      }
+    </div>
+    <div>
+      <label for="edit-collector-phone" class="mb-2 block text-sm font-medium text-color">Teléfono (opcional)</label>
+      <input id="edit-collector-phone" pInputText class="w-full" inputmode="tel" autocomplete="tel"
+        [formField]="editForm.phone" />
+      @if (editForm.phone().touched() && editForm.phone().invalid()) {
+      <small class="mt-1 block text-red-600">{{
+        editForm.phone().errors()[0]?.message
+        }}</small>
+      }
+    </div>
+    <div>
+      <label for="edit-collector-reason" class="mb-2 block text-sm font-medium text-color">Motivo</label>
+      <textarea id="edit-collector-reason" pInputText rows="3" class="w-full resize-y"
+        [formField]="editForm.reason"></textarea>
+      @if (editForm.reason().touched() && editForm.reason().invalid()) {
+      <small class="mt-1 block text-red-600">{{
+        editForm.reason().errors()[0]?.message
+        }}</small>
+      }
+    </div>
+    <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      <button pButton type="button" severity="secondary" variant="text" class="w-full sm:w-auto"
+        (click)="editVisible.set(false)">
+        Cancelar
+      </button>
+      <button pButton type="submit" class="w-full sm:w-auto"
+        [disabled]="editForm().invalid() || store.editingCollectorId() === collector.id">
+        @if (store.editingCollectorId() === collector.id) {
+        <i class="pi pi-spin pi-spinner"></i>
+        } @else {
+        <i class="pi pi-check"></i>
+        }
+        Guardar cambios
+      </button>
+    </div>
+  </form>
+  }
+</p-dialog>
+} @error {
+<p-message severity="error" styleClass="w-full">No se pudo cargar el formulario de edición del cobrador.</p-message>
 }

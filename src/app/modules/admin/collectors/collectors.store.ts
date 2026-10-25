@@ -6,6 +6,7 @@ import {
   ResetCollectorPinInput,
   ResetCollectorPinResult,
   SetCollectorActiveInput,
+  UpdateCollectorInput,
 } from '../../../core/models/collector.model';
 import { COLLECTOR_REPOSITORY } from '../../../core/repositories/collector.repository';
 
@@ -19,6 +20,7 @@ export class CollectorsStore {
   readonly error = signal<string | null>(null);
   readonly creating = signal(false);
   readonly updatingCollectorId = signal<string | null>(null);
+  readonly editingCollectorId = signal<string | null>(null);
   readonly resettingCollectorId = signal<string | null>(null);
 
   readonly filteredCollectors = computed(() => {
@@ -93,6 +95,26 @@ export class CollectorsStore {
       return false;
     } finally {
       this.updatingCollectorId.set(null);
+    }
+  }
+
+  async update(input: UpdateCollectorInput): Promise<boolean> {
+    this.editingCollectorId.set(input.collectorId);
+    this.error.set(null);
+
+    try {
+      const updated = await this.repository.update(input);
+      this.collectors.update((collectors) =>
+        collectors
+          .map((collector) => (collector.id === updated.id ? updated : collector))
+          .sort((left, right) => left.fullName.localeCompare(right.fullName, 'es-PE')),
+      );
+      return true;
+    } catch (error) {
+      this.error.set(this.messageFrom(error, 'No se pudo editar el cobrador.'));
+      return false;
+    } finally {
+      this.editingCollectorId.set(null);
     }
   }
 

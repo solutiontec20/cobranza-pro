@@ -22,6 +22,7 @@ describe('CollectorsStore', () => {
   let repository: {
     list: ReturnType<typeof vi.fn<CollectorRepository['list']>>;
     create: ReturnType<typeof vi.fn<CollectorRepository['create']>>;
+    update: ReturnType<typeof vi.fn<CollectorRepository['update']>>;
     resetPin: ReturnType<typeof vi.fn<CollectorRepository['resetPin']>>;
     setActive: ReturnType<typeof vi.fn<CollectorRepository['setActive']>>;
   };
@@ -30,6 +31,7 @@ describe('CollectorsStore', () => {
     repository = {
       list: vi.fn<CollectorRepository['list']>().mockResolvedValue([collector]),
       create: vi.fn<CollectorRepository['create']>(),
+      update: vi.fn<CollectorRepository['update']>(),
       resetPin: vi.fn<CollectorRepository['resetPin']>(),
       setActive: vi.fn<CollectorRepository['setActive']>(),
     };
@@ -96,5 +98,40 @@ describe('CollectorsStore', () => {
     expect(result?.temporaryPin).toBe('482907');
     expect(repository.resetPin).toHaveBeenCalledOnce();
     expect(store.resettingCollectorId()).toBeNull();
+  });
+
+  it('updates the edited collector in state, keeping DNI unchanged', async () => {
+    await store.load();
+    const updated = { ...collector, fullName: 'María Quispe Flores', phone: '911112222' };
+    repository.update.mockResolvedValue(updated);
+
+    const result = await store.update({
+      collectorId: collector.id,
+      fullName: updated.fullName,
+      phone: updated.phone,
+      reason: 'Corrección de datos personales',
+    });
+
+    expect(result).toBe(true);
+    expect(store.collectors()).toEqual([updated]);
+    expect(store.editingCollectorId()).toBeNull();
+  });
+
+  it('surfaces the edit error without mutating state', async () => {
+    await store.load();
+    repository.update.mockRejectedValue(
+      new AppError('VALIDATION', 'No se encontró el cobrador.'),
+    );
+
+    const result = await store.update({
+      collectorId: collector.id,
+      fullName: 'Nombre inválido',
+      phone: null,
+      reason: 'Corrección',
+    });
+
+    expect(result).toBe(false);
+    expect(store.error()).toContain('No se encontró el cobrador.');
+    expect(store.collectors()).toEqual([collector]);
   });
 });

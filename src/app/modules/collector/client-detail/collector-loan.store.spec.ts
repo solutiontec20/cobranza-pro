@@ -12,6 +12,7 @@ const detail: LoanDetail = {
     id: 'loan-1',
     clientId: 'customer-1',
     clientName: 'Juan Pérez',
+    clientDni: '12345678',
     collectorId: 'collector-1',
     collectorName: 'Pedro Castillo',
     principal: 100,

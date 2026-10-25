@@ -45,6 +45,7 @@ export interface LoanListItem {
 
   clientId: string;
   clientName: string;
+  clientDni: string;
 
   collectorId: string;
   collectorName: string;

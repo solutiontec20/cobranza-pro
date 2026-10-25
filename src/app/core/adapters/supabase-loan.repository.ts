@@ -53,6 +53,7 @@ export class SupabaseLoanRepository implements LoanRepository {
         customer:customers!loans_customer_id_fkey (
           id,
           full_name,
+          document_number,
           collector_id,
           collector:profiles!customers_collector_id_fkey (
             id,
@@ -184,6 +185,7 @@ export class SupabaseLoanRepository implements LoanRepository {
 
         clientId: customer.id,
         clientName: customer.full_name,
+        clientDni: customer.document_number,
 
         collectorId: collector.id,
         collectorName: collector.full_name,
@@ -464,6 +466,7 @@ export class SupabaseLoanRepository implements LoanRepository {
         id: row.id,
         clientId: customer.id,
         clientName: customer.full_name,
+        clientDni: customer.document_number,
         collectorId: collector.id,
         collectorName: collector.full_name,
         principal: Number(row.principal_amount),

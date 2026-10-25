@@ -118,6 +118,7 @@ describe('SupabaseLoanRepository loan detail', () => {
       balance: 100,
       installmentAmount: 40,
       endDate: '2026-10-20',
+      clientDni: '12345678',
     });
     expect(detail.installments[0].status).toBe('partial');
     expect(detail.payments).toEqual([

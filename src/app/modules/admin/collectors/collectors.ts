@@ -13,6 +13,7 @@ import { CollectorsStore } from './collectors.store';
 
 const EMPTY_CREATE_MODEL = { fullName: '', dni: '', phone: '', temporaryPin: '' };
 const EMPTY_RESET_MODEL = { reason: '' };
+const EMPTY_EDIT_MODEL = { fullName: '', phone: '', reason: '' };
 
 @Component({
   selector: 'app-collectors',
@@ -35,6 +36,7 @@ export default class Collectors {
   protected readonly createVisible = signal(false);
   protected readonly statusVisible = signal(false);
   protected readonly resetVisible = signal(false);
+  protected readonly editVisible = signal(false);
   protected readonly resetResult = signal<{ collectorName: string; temporaryPin: string } | null>(null);
   protected readonly selectedCollector = signal<Collector | null>(null);
 
@@ -58,6 +60,16 @@ export default class Collectors {
   protected readonly resetModel = signal({ ...EMPTY_RESET_MODEL });
   protected readonly resetForm = form(this.resetModel, (path) => {
     required(path.reason, { message: 'Ingresá el motivo del restablecimiento.' });
+    minLength(path.reason, 5, { message: 'Detallá el motivo en al menos 5 caracteres.' });
+  });
+  protected readonly editModel = signal({ ...EMPTY_EDIT_MODEL });
+  protected readonly editForm = form(this.editModel, (path) => {
+    required(path.fullName, { message: 'Ingresá el nombre completo.' });
+    minLength(path.fullName, 3, { message: 'El nombre debe tener al menos 3 caracteres.' });
+    pattern(path.phone, /^(?:9\d{8})?$/, {
+      message: 'El teléfono debe contener 9 dígitos e iniciar en 9.',
+    });
+    required(path.reason, { message: 'Ingresá el motivo de la edición.' });
     minLength(path.reason, 5, { message: 'Detallá el motivo en al menos 5 caracteres.' });
   });
 
@@ -154,6 +166,42 @@ export default class Collectors {
         this.resetResult.set({
           collectorName: result.collectorName,
           temporaryPin: result.temporaryPin,
+        });
+      }
+    });
+  }
+
+  protected openEditDialog(collector: Collector): void {
+    this.store.clearError();
+    this.selectedCollector.set(collector);
+    this.editModel.set({
+      fullName: collector.fullName,
+      phone: collector.phone ?? '',
+      reason: '',
+    });
+    this.editForm().reset();
+    this.editVisible.set(true);
+  }
+
+  protected editCollector(): void {
+    const collector = this.selectedCollector();
+    if (!collector) return;
+
+    void submit(this.editForm, async () => {
+      const value = this.editModel();
+      const updated = await this.store.update({
+        collectorId: collector.id,
+        fullName: value.fullName.trim(),
+        phone: value.phone.trim() || null,
+        reason: value.reason.trim(),
+      });
+
+      if (updated) {
+        this.editVisible.set(false);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Datos actualizados',
+          detail: 'Los datos del cobrador fueron editados correctamente.',
         });
       }
     });

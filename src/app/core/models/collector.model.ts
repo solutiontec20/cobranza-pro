@@ -21,6 +21,13 @@ export interface SetCollectorActiveInput {
   reason: string;
 }
 
+export interface UpdateCollectorInput {
+  collectorId: string;
+  fullName: string;
+  phone: string | null;
+  reason: string;
+}
+
 export interface ResetCollectorPinInput {
   collectorId: string;
   reason: string;

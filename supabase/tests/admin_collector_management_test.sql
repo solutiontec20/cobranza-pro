@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(27);
+select plan(37);
 
 insert into auth.users (id, email)
 values
@@ -358,6 +358,141 @@ select results_eq(
   $$ select count(*) from public.customers $$,
   array[0::bigint],
   'An inactive collector cannot access the assigned portfolio'
+);
+
+-- ------------------------------------------------------------
+-- admin_update_collector_profile: editing name/phone (DNI is
+-- intentionally immutable, see migration header).
+-- ------------------------------------------------------------
+
+set local role authenticated;
+set local request.jwt.claim.sub = '10000000-0000-0000-0000-000000000002'; -- collector
+
+select throws_ok(
+  $$
+    select * from public.admin_update_collector_profile(
+      p_collector_id => '10000000-0000-0000-0000-000000000005',
+      p_full_name => 'Updated Name',
+      p_reason => 'Correcting a typo'
+    )
+  $$,
+  '42501',
+  'COLLECTOR_UPDATE_FORBIDDEN',
+  'Collectors cannot edit a collector profile'
+);
+
+set local request.jwt.claim.sub = '10000000-0000-0000-0000-000000000003'; -- supervisor
+
+select throws_ok(
+  $$
+    select * from public.admin_update_collector_profile(
+      p_collector_id => '10000000-0000-0000-0000-000000000005',
+      p_full_name => 'Updated Name',
+      p_reason => 'Correcting a typo'
+    )
+  $$,
+  '42501',
+  'COLLECTOR_UPDATE_FORBIDDEN',
+  'Supervisors cannot edit a collector profile'
+);
+
+set local request.jwt.claim.sub = '10000000-0000-0000-0000-000000000004'; -- admin
+
+select throws_ok(
+  $$
+    select * from public.admin_update_collector_profile(
+      p_collector_id => '10000000-0000-0000-0000-000000000005',
+      p_full_name => 'Updated Name',
+      p_reason => '   '
+    )
+  $$,
+  '22023',
+  'COLLECTOR_UPDATE_REASON_REQUIRED',
+  'Editing a collector profile requires an audit reason'
+);
+
+select throws_ok(
+  $$
+    select * from public.admin_update_collector_profile(
+      p_collector_id => '10000000-0000-0000-0000-000000000005',
+      p_full_name => '   ',
+      p_reason => 'Correcting a typo'
+    )
+  $$,
+  '22023',
+  'COLLECTOR_NAME_REQUIRED',
+  'A collector profile update requires a full name'
+);
+
+select throws_ok(
+  $$
+    select * from public.admin_update_collector_profile(
+      p_collector_id => '10000000-0000-0000-0000-000000000005',
+      p_full_name => 'Updated Name',
+      p_reason => 'Correcting a typo',
+      p_phone => '811111111'
+    )
+  $$,
+  '22023',
+  'COLLECTOR_PHONE_INVALID',
+  'A collector profile update rejects an invalid phone format'
+);
+
+select throws_ok(
+  $$
+    select * from public.admin_update_collector_profile(
+      p_collector_id => '99999999-0000-0000-0000-000000000099',
+      p_full_name => 'Updated Name',
+      p_reason => 'Correcting a typo'
+    )
+  $$,
+  'P0002',
+  'COLLECTOR_NOT_FOUND',
+  'Editing an unknown collector id is rejected'
+);
+
+select lives_ok(
+  $$
+    select * from public.admin_update_collector_profile(
+      p_collector_id => '10000000-0000-0000-0000-000000000005',
+      p_full_name => 'Nuevo Nombre Corregido',
+      p_reason => 'Corrección de nombre y teléfono',
+      p_phone => '933333333'
+    )
+  $$,
+  'An administrator can edit a collector full name and phone'
+);
+
+reset role;
+
+select results_eq(
+  $$
+    select full_name, phone
+    from public.profiles
+    where id = '10000000-0000-0000-0000-000000000005'
+  $$,
+  $$ values ('Nuevo Nombre Corregido'::text, '933333333'::text) $$,
+  'The collector profile reflects the edited name and phone'
+);
+
+select is(
+  (select dni from public.profiles where id = '10000000-0000-0000-0000-000000000005'),
+  '91000005',
+  'Editing the profile never changes the DNI'
+);
+
+select results_eq(
+  $$
+    select reason
+    from private.audit_log
+    where table_name = 'profiles'
+      and row_id = '10000000-0000-0000-0000-000000000005'
+      and action = 'UPDATE'
+    order by created_at desc
+    limit 1
+  $$,
+  array['Corrección de nombre y teléfono'::text],
+  'Editing a collector profile preserves the audit reason'
 );
 
 select * from finish();

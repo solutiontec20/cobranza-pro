@@ -19,6 +19,7 @@ const loan: LoanListItem = {
   id: 'loan-1',
   clientId: 'customer-1',
   clientName: 'Ana Flores',
+  clientDni: '45678901',
   collectorId: 'collector-1',
   collectorName: 'María Quispe',
   principal: 100,
@@ -32,6 +33,18 @@ const loan: LoanListItem = {
   startedOn: '2026-10-19',
   endDate: '2026-10-21',
   createdAt: '2026-10-19T12:00:00Z',
+};
+
+const otherLoan: LoanListItem = {
+  ...loan,
+  id: 'loan-2',
+  clientId: 'customer-2',
+  clientName: 'Rosa Vega',
+  clientDni: '71234567',
+  collectorId: 'collector-2',
+  collectorName: 'Luis Ramos',
+  frequency: 'monthly',
+  status: 'paid',
 };
 
 const schedule: LoanInstallment[] = [
@@ -303,6 +316,77 @@ describe('LoansStore', () => {
     expect(store.error()).toBe(
       'El cliente es moroso (más de 5 días de atraso) y no puede renovar su préstamo.',
     );
+  });
+
+  describe('filtering', () => {
+    beforeEach(() => {
+      repository.list.mockResolvedValue([loan, otherLoan]);
+    });
+
+    it('filters by free-text search across client name, DNI and collector name, ignoring accents', async () => {
+      await store.load();
+
+      store.query.set('ana');
+      expect(store.filteredLoans()).toEqual([loan]);
+
+      store.query.set('71234567');
+      expect(store.filteredLoans()).toEqual([otherLoan]);
+
+      store.query.set('ramos');
+      expect(store.filteredLoans()).toEqual([otherLoan]);
+
+      store.query.set('ningún cliente');
+      expect(store.filteredLoans()).toEqual([]);
+    });
+
+    it('filters by status', async () => {
+      await store.load();
+      store.statusFilter.set('paid');
+      expect(store.filteredLoans()).toEqual([otherLoan]);
+    });
+
+    it('filters by collector', async () => {
+      await store.load();
+      store.collectorFilter.set('collector-1');
+      expect(store.filteredLoans()).toEqual([loan]);
+    });
+
+    it('filters by frequency', async () => {
+      await store.load();
+      store.frequencyFilter.set('monthly');
+      expect(store.filteredLoans()).toEqual([otherLoan]);
+    });
+
+    it('combines every active filter', async () => {
+      await store.load();
+      store.statusFilter.set('active');
+      store.collectorFilter.set('collector-2');
+      expect(store.filteredLoans()).toEqual([]);
+    });
+
+    it('exposes the distinct collectors present in the loaded loans, sorted by name', async () => {
+      await store.load();
+      expect(store.collectorOptions()).toEqual([
+        { id: 'collector-2', fullName: 'Luis Ramos' },
+        { id: 'collector-1', fullName: 'María Quispe' },
+      ]);
+    });
+
+    it('clears every filter back to its default', async () => {
+      await store.load();
+      store.query.set('ana');
+      store.statusFilter.set('paid');
+      store.collectorFilter.set('collector-2');
+      store.frequencyFilter.set('monthly');
+
+      store.clearFilters();
+
+      expect(store.query()).toBe('');
+      expect(store.statusFilter()).toBe('all');
+      expect(store.collectorFilter()).toBeNull();
+      expect(store.frequencyFilter()).toBe('all');
+      expect(store.filteredLoans()).toEqual([loan, otherLoan]);
+    });
   });
 });
 
