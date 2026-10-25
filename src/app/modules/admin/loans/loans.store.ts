@@ -8,6 +8,8 @@ import {
   LoanListItem,
   RegisterLoanPaymentInput,
   RegisterLoanPaymentResult,
+  RenewLoanInput,
+  RenewLoanResult,
   UpdateLoanInput,
 } from '../../../core/models/loan.model';
 import { LOAN_REPOSITORY } from '../../../core/repositories/loan.repository';
@@ -27,6 +29,7 @@ export class LoansStore {
   readonly creating = signal(false);
   readonly saving = signal(false);
   readonly paying = signal(false);
+  readonly renewing = signal(false);
   readonly error = signal<string | null>(null);
 
   async load(): Promise<void> {
@@ -151,6 +154,37 @@ export class LoansStore {
       return null;
     } finally {
       this.paying.set(false);
+    }
+  }
+
+  async renew(input: RenewLoanInput): Promise<RenewLoanResult | null> {
+    this.renewing.set(true);
+    this.error.set(null);
+
+    try {
+      const result = await this.repository.renew(input);
+
+      try {
+        const [loans, clients, detail] = await Promise.all([
+          this.repository.list(),
+          this.repository.listAvailableClients(),
+          this.repository.getDetail(result.loanId),
+        ]);
+        this.loans.set(loans);
+        this.availableClients.set(clients);
+        this.selectedDetail.set(detail);
+      } catch (error) {
+        this.error.set(
+          `El préstamo se renovó, pero no se pudo actualizar la información. ${this.messageFrom(error, '')}`.trim(),
+        );
+      }
+
+      return result;
+    } catch (error) {
+      this.error.set(this.messageFrom(error, 'No se pudo renovar el préstamo.'));
+      return null;
+    } finally {
+      this.renewing.set(false);
     }
   }
 

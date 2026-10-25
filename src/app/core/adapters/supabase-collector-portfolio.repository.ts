@@ -5,6 +5,8 @@ import {
   CollectorPortfolioEntry,
   CreateCollectorClientInput,
   CreateCollectorClientResult,
+  CreateCollectorLoanInput,
+  CreateCollectorLoanResult,
 } from '../models/collector-portfolio.model';
 import { CollectorPortfolioRepository } from '../repositories/collector-portfolio.repository';
 import { Database } from '../supabase/database.types';
@@ -13,6 +15,7 @@ import { SUPABASE } from '../supabase/supabase-client';
 type PortfolioRow = Database['public']['Functions']['collector_list_portfolio']['Returns'][number];
 type CreateClientRow =
   Database['public']['Functions']['collector_create_customer_loan']['Returns'][number];
+type CreateLoanRow = Database['public']['Functions']['collector_create_loan']['Returns'][number];
 
 @Service({ autoProvided: false })
 export class SupabaseCollectorPortfolioRepository implements CollectorPortfolioRepository {
@@ -77,6 +80,36 @@ export class SupabaseCollectorPortfolioRepository implements CollectorPortfolioR
     }
 
     return data?.id ?? null;
+  }
+
+  async createLoan(input: CreateCollectorLoanInput): Promise<CreateCollectorLoanResult> {
+    const { data, error } = await this.supabase.rpc('collector_create_loan', {
+      p_customer_id: input.customerId,
+      p_principal: input.principal,
+      p_interest_rate: input.interestRate,
+      p_frequency: input.frequency,
+      p_installment_count: input.installmentCount,
+      p_started_on: input.startedOn,
+    });
+
+    if (error) {
+      throw this.createLoanError(error);
+    }
+
+    const row: CreateLoanRow | undefined = data?.[0];
+    if (!row) {
+      throw new AppError('SUPABASE_RPC', 'La creación no devolvió el préstamo registrado.');
+    }
+
+    return {
+      loanId: row.loan_id,
+      customerId: row.customer_id,
+      totalAmount: Number(row.total_amount),
+      disbursedAmount: Number(row.disbursed_amount),
+      baseInstallmentAmount: Number(row.base_installment_amount),
+      lastInstallmentAmount: Number(row.last_installment_amount),
+      firstDueOn: row.first_due_on,
+    };
   }
 
   // ==========================================================
@@ -193,6 +226,57 @@ export class SupabaseCollectorPortfolioRepository implements CollectorPortfolioR
     }
 
     return this.toAppError(error, 'No se pudo registrar el cliente.');
+  }
+
+  private createLoanError(error: unknown): AppError {
+    const message = this.errorMessage(error);
+
+    if (message.includes('Only active collectors may create loans for their customers')) {
+      return new AppError(
+        'AUTH_UNAUTHORIZED',
+        'Solo un cobrador activo puede crear préstamos.',
+        error,
+      );
+    }
+
+    if (message.includes('Collector cannot create loans for another portfolio')) {
+      return new AppError(
+        'AUTH_UNAUTHORIZED',
+        'No podés crear un préstamo para un cliente que no es tuyo.',
+        error,
+      );
+    }
+
+    if (message.includes('Customer not found')) {
+      return new AppError('VALIDATION', 'No se encontró el cliente.', error);
+    }
+
+    if (message.includes('Cannot create a loan for an inactive customer')) {
+      return new AppError(
+        'VALIDATION',
+        'No se puede crear un préstamo para un cliente inactivo.',
+        error,
+      );
+    }
+
+    if (message.includes('Customer already has an active loan')) {
+      return new AppError('VALIDATION', 'El cliente ya tiene un préstamo activo.', error);
+    }
+
+    if (
+      message.includes('Principal must be greater than zero') ||
+      message.includes('Principal may contain at most two decimals') ||
+      message.includes('Interest rate cannot be negative') ||
+      message.includes('Interest rate may contain at most four decimals') ||
+      message.includes('Loan frequency is required') ||
+      message.includes('Invalid installment count') ||
+      message.includes('Loan start date is required') ||
+      message.includes('Installment amounts must be greater than zero')
+    ) {
+      return new AppError('VALIDATION', 'Revisá los datos ingresados para el préstamo.', error);
+    }
+
+    return this.toAppError(error, 'No se pudo crear el préstamo.');
   }
 
   private toAppError(error: unknown, fallbackMessage: string): AppError {

@@ -4,16 +4,19 @@ import {
   LoanDetail,
   RegisterLoanPaymentInput,
   RegisterLoanPaymentResult,
+  RenewLoanInput,
+  RenewLoanResult,
 } from '../../../core/models/loan.model';
 import { LOAN_REPOSITORY } from '../../../core/repositories/loan.repository';
 
 /**
  * Loan detail + payment registration for the collector module.
  *
- * Deliberately exposes only `loadDetail`/`registerPayment` on top of the shared
+ * Deliberately exposes only `loadDetail`/`registerPayment`/`renew` on top of the shared
  * `LOAN_REPOSITORY` (the same repository/RPCs the admin module uses) — a collector can register
- * a payment for their own portfolio, but must never be able to edit or void one. Not exposing
- * `update`/void-related methods here enforces that business rule at the type level.
+ * a payment or renew a loan for their own portfolio, but must never be able to edit or void a
+ * payment. Not exposing `update`/void-related methods here enforces that business rule at the
+ * type level.
  */
 @Injectable()
 export class CollectorLoanStore {
@@ -22,6 +25,7 @@ export class CollectorLoanStore {
   readonly detail = signal<LoanDetail | null>(null);
   readonly loadingDetail = signal(false);
   readonly paying = signal(false);
+  readonly renewing = signal(false);
   readonly error = signal<string | null>(null);
 
   async loadDetail(loanId: string): Promise<void> {
@@ -61,6 +65,30 @@ export class CollectorLoanStore {
       return null;
     } finally {
       this.paying.set(false);
+    }
+  }
+
+  async renew(input: RenewLoanInput): Promise<RenewLoanResult | null> {
+    this.renewing.set(true);
+    this.error.set(null);
+
+    try {
+      const result = await this.repository.renew(input);
+
+      try {
+        this.detail.set(await this.repository.getDetail(result.loanId));
+      } catch (error) {
+        this.error.set(
+          `El préstamo se renovó, pero no se pudo actualizar la información. ${this.messageFrom(error, '')}`.trim(),
+        );
+      }
+
+      return result;
+    } catch (error) {
+      this.error.set(this.messageFrom(error, 'No se pudo renovar el préstamo.'));
+      return null;
+    } finally {
+      this.renewing.set(false);
     }
   }
 

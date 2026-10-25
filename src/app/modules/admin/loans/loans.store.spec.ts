@@ -5,6 +5,7 @@ import {
   LoanInstallment,
   LoanListItem,
   RegisterLoanPaymentResult,
+  RenewLoanResult,
 } from '../../../core/models/loan.model';
 import { LOAN_REPOSITORY, LoanRepository } from '../../../core/repositories/loan.repository';
 import {
@@ -73,6 +74,7 @@ describe('LoansStore', () => {
     create: ReturnType<typeof vi.fn<LoanRepository['create']>>;
     update: ReturnType<typeof vi.fn<LoanRepository['update']>>;
     registerPayment: ReturnType<typeof vi.fn<LoanRepository['registerPayment']>>;
+    renew: ReturnType<typeof vi.fn<LoanRepository['renew']>>;
   };
 
   beforeEach(() => {
@@ -84,6 +86,7 @@ describe('LoansStore', () => {
       create: vi.fn<LoanRepository['create']>(),
       update: vi.fn<LoanRepository['update']>(),
       registerPayment: vi.fn<LoanRepository['registerPayment']>(),
+      renew: vi.fn<LoanRepository['renew']>(),
     };
     TestBed.configureTestingModule({
       providers: [LoansStore, { provide: LOAN_REPOSITORY, useValue: repository }],
@@ -250,6 +253,56 @@ describe('LoansStore', () => {
     ).resolves.toEqual(paymentResult);
 
     expect(store.error()).toContain('El pago se registró');
+  });
+
+  it('renews a loan and refreshes the complete server state with the new loan id', async () => {
+    const renewResult: RenewLoanResult = {
+      loanId: 'loan-2',
+      clientId: loan.clientId,
+      previousLoanId: loan.id,
+      totalAmount: 110,
+      disbursedAmount: 26.67,
+      baseInstallmentAmount: 36.67,
+      lastInstallmentAmount: 36.66,
+      firstDueOn: '2026-10-27',
+    };
+    repository.renew.mockResolvedValue(renewResult);
+
+    await expect(
+      store.renew({
+        loanId: loan.id,
+        principal: 100,
+        interestRate: 10,
+        frequency: 'daily',
+        installmentCount: 3,
+        startedOn: '2026-10-27',
+      }),
+    ).resolves.toEqual(renewResult);
+
+    expect(repository.list).toHaveBeenCalledOnce();
+    expect(repository.listAvailableClients).toHaveBeenCalledOnce();
+    expect(repository.getDetail).toHaveBeenCalledWith('loan-2');
+    expect(store.renewing()).toBe(false);
+  });
+
+  it('sets an error message when the renewal fails', async () => {
+    repository.renew.mockRejectedValue(
+      new AppError('VALIDATION', 'El cliente es moroso (más de 5 días de atraso) y no puede renovar su préstamo.'),
+    );
+
+    const result = await store.renew({
+      loanId: loan.id,
+      principal: 100,
+      interestRate: 10,
+      frequency: 'daily',
+      installmentCount: 3,
+      startedOn: '2026-10-27',
+    });
+
+    expect(result).toBeNull();
+    expect(store.error()).toBe(
+      'El cliente es moroso (más de 5 días de atraso) y no puede renovar su préstamo.',
+    );
   });
 });
 

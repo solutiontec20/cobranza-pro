@@ -3,6 +3,8 @@ import {
   CollectorPortfolioEntry,
   CreateCollectorClientInput,
   CreateCollectorClientResult,
+  CreateCollectorLoanInput,
+  CreateCollectorLoanResult,
 } from '../models/collector-portfolio.model';
 
 export interface CollectorPortfolioRepository {
@@ -11,6 +13,9 @@ export interface CollectorPortfolioRepository {
 
   /** Atomically creates a new customer and their first loan for the authenticated collector. */
   createClient(input: CreateCollectorClientInput): Promise<CreateCollectorClientResult>;
+
+  /** Creates a loan for an existing customer in the collector's own portfolio. */
+  createLoan(input: CreateCollectorLoanInput): Promise<CreateCollectorLoanResult>;
 
   /** Most recent loan id for a customer in the collector's own portfolio, or null if none. */
   findLatestLoanId(customerId: string): Promise<string | null>;

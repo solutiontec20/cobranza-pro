@@ -193,6 +193,7 @@ const emptyModel = (): LoanFormModel => ({
       [modal]="true"
       [visible]="createDialogVisible()"
       (visibleChange)="createDialogVisible.set($event)"
+      [breakpoints]="{ '640px': '100vw' }"
       styleClass="w-[calc(100vw-1.5rem)] max-w-2xl"
     >
       <form class="flex flex-col gap-5" (submit)="createLoan(); $event.preventDefault()">

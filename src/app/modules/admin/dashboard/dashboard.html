@@ -158,44 +158,83 @@
     </ng-template>
 
     @defer (on viewport) {
-      <p-table [value]="collectorPerformance()" responsiveLayout="scroll" styleClass="p-datatable-sm">
-        <ng-template pTemplate="header">
-          <tr>
-            <th>Cobrador</th>
-            <th>Clientes</th>
-            <th>Esperado hoy</th>
-            <th>Cobrado hoy</th>
-            <th>Pendiente</th>
-            <th>Atrasados</th>
-            <th class="text-center">Acciones</th>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-col>
-          <tr>
-            <td>
-              <div class="font-bold text-surface-900 dark:text-surface-0">{{ col.name }}</div>
-              <div class="text-xs text-surface-500">DNI: {{ col.dni }}</div>
-            </td>
-            <td>{{ col.clientsCount }}</td>
-            <td class="font-medium">{{ col.expectedToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-            <td class="font-bold text-green-600 dark:text-green-400">{{ col.collectedToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-            <td class="text-surface-500">{{ col.pendingToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-            <td>
-              <span class="rounded-full px-2.5 py-1 text-sm font-semibold" [class.bg-green-100]="col.delayedCount === 0" [class.text-green-700]="col.delayedCount === 0" [class.bg-yellow-100]="col.delayedCount > 0" [class.text-yellow-700]="col.delayedCount > 0">
-                {{ col.delayedCount }}
+      <div class="divide-y divide-surface-200 dark:divide-surface-700 lg:hidden">
+        @for (col of collectorPerformance(); track col.id) {
+          <article class="flex flex-col gap-3 p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="truncate font-bold text-surface-900 dark:text-surface-0">{{ col.name }}</p>
+                <p class="mt-0.5 text-xs text-surface-500">DNI: {{ col.dni }}</p>
+              </div>
+              <span class="rounded-full px-2.5 py-1 text-sm font-semibold whitespace-nowrap" [class.bg-green-100]="col.delayedCount === 0" [class.text-green-700]="col.delayedCount === 0" [class.bg-yellow-100]="col.delayedCount > 0" [class.text-yellow-700]="col.delayedCount > 0">
+                {{ col.delayedCount }} atrasados
               </span>
-            </td>
-            <td class="text-center">
-              <button pButton variant="outlined" size="small"><i class="pi pi-eye mr-2"></i>Ver cartera</button>
-            </td>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="empty">
-          <tr>
-            <td colspan="7" class="p-8 text-center text-surface-500">No hay datos de cobradores.</td>
-          </tr>
-        </ng-template>
-      </p-table>
+            </div>
+            <dl class="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <dt class="text-xs text-surface-500">Clientes</dt>
+                <dd class="mt-1 font-medium text-surface-900 dark:text-surface-0">{{ col.clientsCount }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs text-surface-500">Esperado hoy</dt>
+                <dd class="mt-1 font-medium text-surface-900 dark:text-surface-0">{{ col.expectedToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs text-surface-500">Cobrado hoy</dt>
+                <dd class="mt-1 font-bold text-green-600 dark:text-green-400">{{ col.collectedToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs text-surface-500">Pendiente</dt>
+                <dd class="mt-1 font-medium text-surface-500">{{ col.pendingToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+              </div>
+            </dl>
+            <button pButton fluid variant="outlined" size="small"><i class="pi pi-eye mr-2"></i>Ver cartera</button>
+          </article>
+        } @empty {
+          <div class="p-8 text-center text-surface-500">No hay datos de cobradores.</div>
+        }
+      </div>
+
+      <div class="hidden overflow-x-auto lg:block">
+        <p-table [value]="collectorPerformance()" responsiveLayout="scroll" styleClass="p-datatable-sm">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Cobrador</th>
+              <th>Clientes</th>
+              <th>Esperado hoy</th>
+              <th>Cobrado hoy</th>
+              <th>Pendiente</th>
+              <th>Atrasados</th>
+              <th class="text-center">Acciones</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-col>
+            <tr>
+              <td>
+                <div class="font-bold text-surface-900 dark:text-surface-0">{{ col.name }}</div>
+                <div class="text-xs text-surface-500">DNI: {{ col.dni }}</div>
+              </td>
+              <td>{{ col.clientsCount }}</td>
+              <td class="font-medium">{{ col.expectedToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+              <td class="font-bold text-green-600 dark:text-green-400">{{ col.collectedToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+              <td class="text-surface-500">{{ col.pendingToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+              <td>
+                <span class="rounded-full px-2.5 py-1 text-sm font-semibold" [class.bg-green-100]="col.delayedCount === 0" [class.text-green-700]="col.delayedCount === 0" [class.bg-yellow-100]="col.delayedCount > 0" [class.text-yellow-700]="col.delayedCount > 0">
+                  {{ col.delayedCount }}
+                </span>
+              </td>
+              <td class="text-center">
+                <button pButton variant="outlined" size="small"><i class="pi pi-eye mr-2"></i>Ver cartera</button>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="empty">
+            <tr>
+              <td colspan="7" class="p-8 text-center text-surface-500">No hay datos de cobradores.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
     } @placeholder {
       <div class="space-y-3 p-4" aria-hidden="true">
         @for (row of loadingRows; track row) {

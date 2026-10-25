@@ -4,6 +4,8 @@ import {
   CollectorPortfolioEntry,
   CreateCollectorClientInput,
   CreateCollectorClientResult,
+  CreateCollectorLoanInput,
+  CreateCollectorLoanResult,
 } from '../../core/models/collector-portfolio.model';
 import { COLLECTOR_PORTFOLIO_REPOSITORY } from '../../core/repositories/collector-portfolio.repository';
 import {
@@ -85,6 +87,29 @@ export class CollectionDashboardStore {
       return result;
     } catch (error) {
       this.error.set(this.messageFrom(error, 'No se pudo registrar el cliente.'));
+      return null;
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  /**
+   * Creates a loan for a customer who already exists in the collector's portfolio but currently
+   * has no renewable loan (never had one, or their only loan isn't active/paid). Prefer `renew`
+   * (via `CollectorLoanStore`) when the customer has an active or fully paid loan.
+   */
+  async createLoanForCustomer(
+    input: CreateCollectorLoanInput,
+  ): Promise<CreateCollectorLoanResult | null> {
+    this.saving.set(true);
+    this.error.set(null);
+
+    try {
+      const result = await this.repository.createLoan(input);
+      await this.load();
+      return result;
+    } catch (error) {
+      this.error.set(this.messageFrom(error, 'No se pudo crear el préstamo.'));
       return null;
     } finally {
       this.saving.set(false);

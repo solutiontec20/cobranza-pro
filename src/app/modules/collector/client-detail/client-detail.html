@@ -118,6 +118,26 @@
             </button>
           </div>
         }
+
+        @if (canRenew()) {
+          <div class="border-t border-surface-200 p-5 dark:border-surface-700">
+            <button pButton type="button" class="w-full justify-center" severity="info" variant="outlined" (click)="openRenewDialog()">
+              <i class="pi pi-refresh"></i> RENOVAR PRÉSTAMO
+            </button>
+          </div>
+        } @else if (canCreateLoan()) {
+          <div class="border-t border-surface-200 p-5 dark:border-surface-700">
+            <button pButton type="button" class="w-full justify-center" severity="info" variant="outlined" (click)="openCreateLoanDialog()">
+              <i class="pi pi-plus-circle"></i> CREAR NUEVO PRÉSTAMO
+            </button>
+          </div>
+        } @else if (client()?.risk === 'defaulted') {
+          <div class="border-t border-surface-200 p-5 dark:border-surface-700">
+            <p-message severity="warn" styleClass="w-full">
+              Este cliente es moroso (más de 5 días de atraso) y no puede renovar ni recibir un préstamo nuevo.
+            </p-message>
+          </div>
+        }
       </div>
 
       <!-- Installments table -->
@@ -231,6 +251,15 @@
         <p class="text-surface-600 dark:text-surface-400">
           Este cliente no cuenta con préstamos registrados actualmente.
         </p>
+        @if (canCreateLoan()) {
+          <button pButton type="button" class="mt-4" severity="info" (click)="openCreateLoanDialog()">
+            <i class="pi pi-plus-circle"></i> Crear préstamo
+          </button>
+        } @else if (client()?.risk === 'defaulted') {
+          <p-message severity="warn" styleClass="mt-4 w-full">
+            Este cliente es moroso (más de 5 días de atraso) y no puede recibir un préstamo nuevo.
+          </p-message>
+        }
       </div>
     }
   }
@@ -316,11 +345,11 @@
           </span>
         </div>
 
-        <div class="flex justify-end gap-2">
-          <button pButton type="button" severity="secondary" variant="outlined" (click)="closePaymentModal()">
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button pButton type="button" severity="secondary" variant="outlined" class="min-h-11 w-full sm:w-auto" (click)="closePaymentModal()">
             Cancelar
           </button>
-          <button pButton type="submit" severity="success"
+          <button pButton type="submit" severity="success" class="min-h-11 w-full sm:w-auto"
             [disabled]="loanStore.paying() || paymentForm().invalid() || !paymentAmountIsValid()">
             @if (loanStore.paying()) {
               <i class="pi pi-spin pi-spinner"></i>
@@ -405,14 +434,246 @@
         </div>
       </div>
 
-      <div class="mt-4 flex justify-end gap-2">
-        <button pButton type="button" severity="secondary" variant="outlined" (click)="closeReportDialog()">
+      <div class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button pButton type="button" severity="secondary" variant="outlined" class="min-h-11 w-full sm:w-auto" (click)="closeReportDialog()">
           Cerrar
         </button>
-        <button pButton type="button" (click)="copyReportDetails()">
+        <button pButton type="button" class="min-h-11 w-full sm:w-auto" (click)="copyReportDetails()">
           <i class="pi pi-copy"></i> Copiar datos
         </button>
       </div>
     }
   </p-dialog>
 }
+
+<!-- Renewal dialog (closes the previous loan, opens a new one for the same client) -->
+@defer (when renewDialogVisible()) {
+  <p-dialog
+    [visible]="renewDialogVisible()"
+    (visibleChange)="onRenewDialogVisibleChange($event)"
+    [modal]="true"
+    [draggable]="false"
+    [breakpoints]="{ '640px': '100vw' }"
+    styleClass="w-[calc(100vw-1.5rem)] max-w-xl"
+    [header]="renewResult() ? '¡Préstamo renovado!' : 'Renovar préstamo'"
+  >
+    @if (!renewResult()) {
+      <form class="flex flex-col gap-4" (submit)="submitRenewal(); $event.preventDefault()">
+        <p class="m-0 text-sm text-surface-600 dark:text-surface-400">
+          Se cierra el préstamo actual de <strong>{{ client()?.fullName }}</strong> y se abre uno nuevo
+          vinculado al anterior, así no es necesario registrarlo como un cliente nuevo.
+        </p>
+
+        @if (loan()!.balance > 0) {
+          <p-message severity="info" styleClass="w-full">
+            Saldo pendiente del préstamo actual: <strong>{{ loan()!.balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</strong>.
+            El capital del nuevo préstamo debe cubrir, como mínimo, ese saldo.
+          </p-message>
+        }
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="renew-principal" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Nuevo capital</label>
+            <p-inputnumber inputId="renew-principal" [formField]="renewForm.principal" mode="currency" currency="PEN" locale="es-PE" styleClass="w-full" />
+            @if (renewForm.principal().touched() && renewForm.principal().invalid()) {
+              <small class="mt-1 block text-red-600">{{ renewForm.principal().errors()[0]?.message }}</small>
+            }
+          </div>
+          <div>
+            <label for="renew-rate" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Tasa de interés</label>
+            <p-inputnumber inputId="renew-rate" [formField]="renewForm.interestRate" suffix="%" [maxFractionDigits]="4" styleClass="w-full" />
+            @if (renewForm.interestRate().touched() && renewForm.interestRate().invalid()) {
+              <small class="mt-1 block text-red-600">{{ renewForm.interestRate().errors()[0]?.message }}</small>
+            }
+          </div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="renew-frequency" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Frecuencia</label>
+            <p-select inputId="renew-frequency" [formField]="renewForm.frequency" [options]="renewFrequencyOptions" optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full" />
+          </div>
+          <div>
+            <label for="renew-count" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Cantidad de cuotas</label>
+            <p-inputnumber inputId="renew-count" [formField]="renewForm.installmentCount" [useGrouping]="false" styleClass="w-full" />
+            @if (renewForm.installmentCount().touched() && renewForm.installmentCount().invalid()) {
+              <small class="mt-1 block text-red-600">{{ renewForm.installmentCount().errors()[0]?.message }}</small>
+            }
+          </div>
+        </div>
+
+        <div>
+          <label for="renew-start" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Fecha de inicio</label>
+          <input id="renew-start" type="date" [formField]="renewForm.startedOn"
+            class="w-full rounded-md border border-surface-300 px-3 py-2.5 text-surface-950 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-surface-600 dark:bg-surface-950 dark:text-surface-0" />
+          @if (renewForm.startedOn().touched() && renewForm.startedOn().invalid()) {
+            <small class="mt-1 block text-red-600">{{ renewForm.startedOn().errors()[0]?.message }}</small>
+          }
+        </div>
+
+        <section class="grid grid-cols-2 gap-3 rounded-xl border border-surface-200 bg-surface-50 p-4 text-sm dark:border-surface-700 dark:bg-surface-800 sm:grid-cols-3" aria-label="Resumen de la renovación">
+          <div>
+            <p class="m-0 text-surface-500 dark:text-surface-400">Entregado al cliente</p>
+            <p class="mt-1 mb-0 font-semibold">{{ renewDisbursedPreview() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+          </div>
+          <div>
+            <p class="m-0 text-surface-500 dark:text-surface-400">Total a pagar</p>
+            <p class="mt-1 mb-0 font-semibold">{{ renewSummary().totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+          </div>
+          <div class="col-span-2 sm:col-span-1">
+            <p class="m-0 text-surface-500 dark:text-surface-400">Cuota base</p>
+            <p class="mt-1 mb-0 font-semibold text-primary-600 dark:text-primary-400">{{ renewSummary().baseInstallmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+          </div>
+        </section>
+
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button pButton type="button" severity="secondary" variant="outlined" class="min-h-11 w-full sm:w-auto" (click)="closeRenewDialog()">
+            Cancelar
+          </button>
+          <button pButton type="submit" class="min-h-11 w-full sm:w-auto" [disabled]="loanStore.renewing() || renewForm().invalid()">
+            @if (loanStore.renewing()) {
+              <i class="pi pi-spin pi-spinner"></i>
+            } @else {
+              <i class="pi pi-check"></i>
+            }
+            Confirmar renovación
+          </button>
+        </div>
+      </form>
+    } @else {
+      <div class="flex flex-col items-center gap-4 py-4 text-center">
+        <div class="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+          <i class="pi pi-check-circle text-3xl" aria-hidden="true"></i>
+        </div>
+        <div>
+          <p class="m-0 text-xl font-bold text-surface-950 dark:text-surface-0">Préstamo renovado</p>
+          <p class="mt-1 mb-0 text-sm text-surface-500 dark:text-surface-400">
+            Nuevo total a pagar: {{ renewResult()?.totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+          </p>
+        </div>
+        <button pButton type="button" severity="success" class="w-full" (click)="closeRenewDialog()">
+          Listo
+        </button>
+      </div>
+    }
+  </p-dialog>
+} @error {
+  <p class="px-4 text-sm text-red-600 dark:text-red-400" role="alert">
+    No se pudo cargar el formulario de renovación.
+  </p>
+}
+
+<!-- Create loan dialog (for an existing customer with no loan eligible for renewal) -->
+@defer (when createLoanDialogVisible()) {
+  <p-dialog
+    [visible]="createLoanDialogVisible()"
+    (visibleChange)="onCreateLoanDialogVisibleChange($event)"
+    [modal]="true"
+    [draggable]="false"
+    [breakpoints]="{ '640px': '100vw' }"
+    styleClass="w-[calc(100vw-1.5rem)] max-w-xl"
+    [header]="createLoanResult() ? '¡Préstamo creado!' : 'Crear préstamo'"
+  >
+    @if (!createLoanResult()) {
+      <form class="flex flex-col gap-4" (submit)="submitCreateLoan(); $event.preventDefault()">
+        <p class="m-0 text-sm text-surface-600 dark:text-surface-400">
+          Registrá un préstamo nuevo para <strong>{{ client()?.fullName }}</strong>, que ya es tu
+          cliente pero no tiene un préstamo vigente.
+        </p>
+
+        @if (store.error()) {
+          <p-message severity="error" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
+        }
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="create-loan-principal" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Capital</label>
+            <p-inputnumber inputId="create-loan-principal" [formField]="createLoanForm.principal" mode="currency" currency="PEN" locale="es-PE" styleClass="w-full" />
+            @if (createLoanForm.principal().touched() && createLoanForm.principal().invalid()) {
+              <small class="mt-1 block text-red-600">{{ createLoanForm.principal().errors()[0]?.message }}</small>
+            }
+          </div>
+          <div>
+            <label for="create-loan-rate" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Tasa de interés</label>
+            <p-inputnumber inputId="create-loan-rate" [formField]="createLoanForm.interestRate" suffix="%" [maxFractionDigits]="4" styleClass="w-full" />
+            @if (createLoanForm.interestRate().touched() && createLoanForm.interestRate().invalid()) {
+              <small class="mt-1 block text-red-600">{{ createLoanForm.interestRate().errors()[0]?.message }}</small>
+            }
+          </div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label for="create-loan-frequency" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Frecuencia</label>
+            <p-select inputId="create-loan-frequency" [formField]="createLoanForm.frequency" [options]="renewFrequencyOptions" optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full" />
+          </div>
+          <div>
+            <label for="create-loan-count" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Cantidad de cuotas</label>
+            <p-inputnumber inputId="create-loan-count" [formField]="createLoanForm.installmentCount" [useGrouping]="false" styleClass="w-full" />
+            @if (createLoanForm.installmentCount().touched() && createLoanForm.installmentCount().invalid()) {
+              <small class="mt-1 block text-red-600">{{ createLoanForm.installmentCount().errors()[0]?.message }}</small>
+            }
+          </div>
+        </div>
+
+        <div>
+          <label for="create-loan-start" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Fecha de inicio</label>
+          <input id="create-loan-start" type="date" [formField]="createLoanForm.startedOn"
+            class="w-full rounded-md border border-surface-300 px-3 py-2.5 text-surface-950 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-surface-600 dark:bg-surface-950 dark:text-surface-0" />
+          @if (createLoanForm.startedOn().touched() && createLoanForm.startedOn().invalid()) {
+            <small class="mt-1 block text-red-600">{{ createLoanForm.startedOn().errors()[0]?.message }}</small>
+          }
+        </div>
+
+        <section class="grid grid-cols-2 gap-3 rounded-xl border border-surface-200 bg-surface-50 p-4 text-sm dark:border-surface-700 dark:bg-surface-800 sm:grid-cols-3" aria-label="Resumen del préstamo">
+          <div>
+            <p class="m-0 text-surface-500 dark:text-surface-400">Total a pagar</p>
+            <p class="mt-1 mb-0 font-semibold">{{ createLoanSummary().totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+          </div>
+          <div>
+            <p class="m-0 text-surface-500 dark:text-surface-400">Cuota base</p>
+            <p class="mt-1 mb-0 font-semibold text-primary-600 dark:text-primary-400">{{ createLoanSummary().baseInstallmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+          </div>
+          <div class="col-span-2 sm:col-span-1">
+            <p class="m-0 text-surface-500 dark:text-surface-400">Primer pago</p>
+            <p class="mt-1 mb-0 font-semibold">{{ createLoanFirstDueDate() | date: 'dd/MM/yyyy' }}</p>
+          </div>
+        </section>
+
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button pButton type="button" severity="secondary" variant="outlined" class="min-h-11 w-full sm:w-auto" (click)="closeCreateLoanDialog()">
+            Cancelar
+          </button>
+          <button pButton type="submit" class="min-h-11 w-full sm:w-auto" [disabled]="store.saving() || createLoanForm().invalid()">
+            @if (store.saving()) {
+              <i class="pi pi-spin pi-spinner"></i>
+            } @else {
+              <i class="pi pi-check"></i>
+            }
+            Crear préstamo
+          </button>
+        </div>
+      </form>
+    } @else {
+      <div class="flex flex-col items-center gap-4 py-4 text-center">
+        <div class="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+          <i class="pi pi-check-circle text-3xl" aria-hidden="true"></i>
+        </div>
+        <div>
+          <p class="m-0 text-xl font-bold text-surface-950 dark:text-surface-0">Préstamo creado</p>
+          <p class="mt-1 mb-0 text-sm text-surface-500 dark:text-surface-400">
+            Total a pagar: {{ createLoanResult()?.totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+          </p>
+        </div>
+        <button pButton type="button" severity="success" class="w-full" (click)="closeCreateLoanDialog()">
+          Listo
+        </button>
+      </div>
+    }
+  </p-dialog>
+} @error {
+  <p class="px-4 text-sm text-red-600 dark:text-red-400" role="alert">
+    No se pudo cargar el formulario de creación del préstamo.
+  </p>
+}
+

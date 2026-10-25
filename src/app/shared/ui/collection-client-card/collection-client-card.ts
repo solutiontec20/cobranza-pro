@@ -85,14 +85,12 @@ import { CollectionClient } from '../../../modules/collector/collection.model';
           <button
             pButton
             type="button"
-            icon="pi pi-wallet"
-            label="Registrar pago"
             class="ml-auto min-h-10 flex-1 sm:flex-none"
-            [disabled]="client().loanStatus !== 'ACTIVE' || client().balance === 0"
             (click)="paymentRequested.emit(client())"
           >
-        Cobrar
-        </button>
+            <i [class]="actionIcon()" aria-hidden="true"></i>
+            {{ actionLabel() }}
+          </button>
         </footer>
       </div>
     </article>
@@ -134,4 +132,18 @@ export class CollectionClientCard {
         return `Moroso: ${client.overdueDays} d`;
     }
   });
+  /**
+   * The card's single action always navigates to the client detail screen (see
+   * `CollectorDashboard.requestPayment` / `CollectorClients.goToDetail`) — it must never be
+   * disabled, because clients without an active loan with balance are exactly the ones who need
+   * to reach the detail screen to renew or create a loan.
+   */
+  readonly actionLabel = computed(() =>
+    this.client().loanStatus === 'ACTIVE' && this.client().balance > 0 ? 'Cobrar' : 'Ver detalle',
+  );
+  readonly actionIcon = computed(() =>
+    this.client().loanStatus === 'ACTIVE' && this.client().balance > 0
+      ? 'pi pi-wallet'
+      : 'pi pi-arrow-right',
+  );
 }

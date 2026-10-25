@@ -63,6 +63,7 @@ describe('CollectionDashboardStore', () => {
   let repository: {
     listPortfolio: ReturnType<typeof vi.fn<CollectorPortfolioRepository['listPortfolio']>>;
     createClient: ReturnType<typeof vi.fn<CollectorPortfolioRepository['createClient']>>;
+    createLoan: ReturnType<typeof vi.fn<CollectorPortfolioRepository['createLoan']>>;
     findLatestLoanId: ReturnType<typeof vi.fn<CollectorPortfolioRepository['findLatestLoanId']>>;
   };
 
@@ -72,6 +73,7 @@ describe('CollectionDashboardStore', () => {
         .fn<CollectorPortfolioRepository['listPortfolio']>()
         .mockResolvedValue([overdueEntry, currentEntry, noLoanEntry]),
       createClient: vi.fn<CollectorPortfolioRepository['createClient']>(),
+      createLoan: vi.fn<CollectorPortfolioRepository['createLoan']>(),
       findLatestLoanId: vi.fn<CollectorPortfolioRepository['findLatestLoanId']>(),
     };
     TestBed.configureTestingModule({
@@ -174,5 +176,45 @@ describe('CollectionDashboardStore', () => {
     repository.findLatestLoanId.mockResolvedValue('loan-9');
     await expect(store.findLoanId('customer-3')).resolves.toBe('loan-9');
     expect(repository.findLatestLoanId).toHaveBeenCalledWith('customer-3');
+  });
+
+  it('creates a loan for an existing customer and reloads the portfolio', async () => {
+    repository.createLoan.mockResolvedValue({
+      loanId: 'loan-10',
+      customerId: 'customer-3',
+      totalAmount: 110,
+      disbursedAmount: 100,
+      baseInstallmentAmount: 36.67,
+      lastInstallmentAmount: 36.66,
+      firstDueOn: '2026-10-25',
+    });
+
+    const result = await store.createLoanForCustomer({
+      customerId: 'customer-3',
+      principal: 100,
+      interestRate: 10,
+      frequency: 'daily',
+      installmentCount: 3,
+      startedOn: '2026-10-25',
+    });
+
+    expect(result?.loanId).toBe('loan-10');
+    expect(repository.listPortfolio).toHaveBeenCalledTimes(1);
+  });
+
+  it('sets an error when creating a loan for an existing customer fails', async () => {
+    repository.createLoan.mockRejectedValue(new Error('El cliente ya tiene un préstamo activo.'));
+
+    const result = await store.createLoanForCustomer({
+      customerId: 'customer-3',
+      principal: 100,
+      interestRate: 10,
+      frequency: 'daily',
+      installmentCount: 3,
+      startedOn: '2026-10-25',
+    });
+
+    expect(result).toBeNull();
+    expect(store.error()).toBe('El cliente ya tiene un préstamo activo.');
   });
 });

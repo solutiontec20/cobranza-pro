@@ -53,3 +53,28 @@ export interface CreateCollectorClientResult {
   lastInstallmentAmount: number;
   firstDueOn: string;
 }
+
+/**
+ * Creates a loan for a customer who already exists in the collector's own portfolio but
+ * currently has no renewable loan (never had one, or their only loan isn't active/paid).
+ * Use `renew_loan`/`CollectorLoanStore.renew` instead when the customer has an active or fully
+ * paid loan to link the new one to.
+ */
+export interface CreateCollectorLoanInput {
+  customerId: string;
+  principal: number;
+  interestRate: number;
+  frequency: LoanFrequency;
+  installmentCount: number;
+  startedOn: string;
+}
+
+export interface CreateCollectorLoanResult {
+  loanId: string;
+  customerId: string;
+  totalAmount: number;
+  disbursedAmount: number;
+  baseInstallmentAmount: number;
+  lastInstallmentAmount: number;
+  firstDueOn: string;
+}

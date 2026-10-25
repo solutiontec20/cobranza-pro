@@ -142,6 +142,28 @@ export interface UpdateLoanInput {
   reason: string;
 }
 
+export interface RenewLoanInput {
+  loanId: string;
+  principal: number;
+  interestRate: number;
+
+  frequency: LoanFrequency;
+  installmentCount: number;
+
+  startedOn: string;
+}
+
+export interface RenewLoanResult {
+  loanId: string;
+  clientId: string;
+  previousLoanId: string;
+  totalAmount: number;
+  disbursedAmount: number;
+  baseInstallmentAmount: number;
+  lastInstallmentAmount: number;
+  firstDueOn: string;
+}
+
 export interface RegisterLoanPaymentInput {
   loanId: string;
   amount: number;

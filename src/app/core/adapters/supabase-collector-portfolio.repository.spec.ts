@@ -244,4 +244,83 @@ describe('SupabaseCollectorPortfolioRepository', () => {
 
     await expect(repository.findLatestLoanId('customer-10')).resolves.toBeNull();
   });
+
+  it('creates a loan for an existing customer', async () => {
+    rpc.mockResolvedValue({
+      data: [
+        {
+          loan_id: 'loan-11',
+          customer_id: 'customer-11',
+          total_amount: 110,
+          disbursed_amount: 100,
+          base_installment_amount: 36.67,
+          last_installment_amount: 36.66,
+          first_due_on: '2026-10-25',
+        },
+      ],
+      error: null,
+    });
+
+    await expect(
+      repository.createLoan({
+        customerId: 'customer-11',
+        principal: 100,
+        interestRate: 10,
+        frequency: 'daily',
+        installmentCount: 3,
+        startedOn: '2026-10-25',
+      }),
+    ).resolves.toEqual({
+      loanId: 'loan-11',
+      customerId: 'customer-11',
+      totalAmount: 110,
+      disbursedAmount: 100,
+      baseInstallmentAmount: 36.67,
+      lastInstallmentAmount: 36.66,
+      firstDueOn: '2026-10-25',
+    });
+
+    expect(rpc).toHaveBeenCalledWith('collector_create_loan', {
+      p_customer_id: 'customer-11',
+      p_principal: 100,
+      p_interest_rate: 10,
+      p_frequency: 'daily',
+      p_installment_count: 3,
+      p_started_on: '2026-10-25',
+    });
+  });
+
+  it.each([
+    [
+      'Only active collectors may create loans for their customers',
+      'Solo un cobrador activo puede crear préstamos.',
+    ],
+    [
+      'Collector cannot create loans for another portfolio',
+      'No podés crear un préstamo para un cliente que no es tuyo.',
+    ],
+    ['Customer already has an active loan', 'El cliente ya tiene un préstamo activo.'],
+    [
+      'Cannot create a loan for an inactive customer',
+      'No se puede crear un préstamo para un cliente inactivo.',
+    ],
+  ])('translates the loan creation error %s', async (databaseMessage, expectedMessage) => {
+    rpc.mockResolvedValue({
+      data: null,
+      error: { code: '22023', message: databaseMessage },
+    });
+
+    const promise = repository.createLoan({
+      customerId: 'customer-11',
+      principal: 100,
+      interestRate: 10,
+      frequency: 'daily',
+      installmentCount: 3,
+      startedOn: '2026-10-25',
+    });
+
+    await expect(promise).rejects.toMatchObject({
+      message: expectedMessage,
+    });
+  });
 });

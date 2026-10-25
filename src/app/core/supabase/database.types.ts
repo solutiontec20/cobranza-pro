@@ -20,7 +20,6 @@ export type Database = {
           validated_at: string | null;
           validated_by: string | null;
         };
-        ComputedFields: never;
         Insert: {
           business_date: string;
           collector_id: string;
@@ -96,7 +95,6 @@ export type Database = {
           reversal_of_id: string | null;
           updated_at: string;
         };
-        ComputedFields: never;
         Insert: {
           amount: number;
           business_date?: string;
@@ -199,7 +197,6 @@ export type Database = {
           phone: string | null;
           updated_at: string;
         };
-        ComputedFields: never;
         Insert: {
           active?: boolean;
           address?: string | null;
@@ -255,7 +252,6 @@ export type Database = {
           superseded_by: string | null;
           supersession_reason: string | null;
         };
-        ComputedFields: never;
         Insert: {
           created_at?: string;
           due_date: string;
@@ -315,7 +311,6 @@ export type Database = {
           total_amount: number;
           updated_at: string;
         };
-        ComputedFields: never;
         Insert: {
           close_reason?: string | null;
           closed_at?: string | null;
@@ -395,7 +390,6 @@ export type Database = {
           superseded_at: string | null;
           supersession_reason: string | null;
         };
-        ComputedFields: never;
         Insert: {
           amount: number;
           created_at?: string;
@@ -457,7 +451,6 @@ export type Database = {
           voided_at: string | null;
           voided_by: string | null;
         };
-        ComputedFields: never;
         Insert: {
           amount: number;
           business_date?: string;
@@ -546,7 +539,6 @@ export type Database = {
           role: Database['public']['Enums']['app_role'];
           updated_at: string;
         };
-        ComputedFields: never;
         Insert: {
           active?: boolean;
           created_at?: string;
@@ -584,7 +576,6 @@ export type Database = {
           max_overdue_days: number | null;
           outstanding_amount: number | null;
         };
-        ComputedFields: never;
         Relationships: [];
       };
       installment_balances: {
@@ -599,7 +590,6 @@ export type Database = {
           scheduled_amount: number | null;
           status: string | null;
         };
-        ComputedFields: never;
         Relationships: [
           {
             foreignKeyName: 'installments_loan_id_fkey';
@@ -728,6 +718,25 @@ export type Database = {
           total_amount: number;
         }[];
       };
+      collector_create_loan: {
+        Args: {
+          p_customer_id: string;
+          p_frequency: Database['public']['Enums']['loan_frequency'];
+          p_installment_count: number;
+          p_interest_rate: number;
+          p_principal: number;
+          p_started_on: string;
+        };
+        Returns: {
+          base_installment_amount: number;
+          customer_id: string;
+          disbursed_amount: number;
+          first_due_on: string;
+          last_installment_amount: number;
+          loan_id: string;
+          total_amount: number;
+        }[];
+      };
       collector_list_portfolio: {
         Args: { p_business_date?: string };
         Returns: {
@@ -767,6 +776,26 @@ export type Database = {
           payment_id: string;
           remaining_balance: number;
           resulting_loan_status: Database['public']['Enums']['loan_status'];
+        }[];
+      };
+      renew_loan: {
+        Args: {
+          p_frequency: Database['public']['Enums']['loan_frequency'];
+          p_installment_count: number;
+          p_interest_rate: number;
+          p_loan_id: string;
+          p_principal: number;
+          p_started_on: string;
+        };
+        Returns: {
+          base_installment_amount: number;
+          customer_id: string;
+          disbursed_amount: number;
+          first_due_on: string;
+          last_installment_amount: number;
+          loan_id: string;
+          previous_loan_id: string;
+          total_amount: number;
         }[];
       };
       service_complete_collector_pin_change: { Args: { p_user_id: string }; Returns: undefined };

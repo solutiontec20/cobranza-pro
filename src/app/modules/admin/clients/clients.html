@@ -8,7 +8,7 @@
       </p>
     </div>
 
-    <button pButton [disabled]="store.loading() || store.collectors().length === 0" (click)="openCreateDialog()">
+    <button pButton class="w-full sm:w-auto" [disabled]="store.loading() || store.collectors().length === 0" (click)="openCreateDialog()">
       <i class="pi pi-user-plus"></i> Nuevo cliente
     </button>
 
@@ -56,54 +56,96 @@
       </p>
     </div>
     } @else {
-    <p-table [value]="filteredClients()" [rows]="10" [paginator]="filteredClients().length > 10"
-      responsiveLayout="scroll" styleClass="p-datatable-sm">
-      <ng-template #header>
-        <tr>
-          <th>DNI</th>
-          <th>Cliente</th>
-          <th>Teléfono</th>
-          <th>Cobrador</th>
-          <th>Riesgo</th>
-          <th>Saldo</th>
-          <th>Estado</th>
-          <th class="text-center">Acciones</th>
-        </tr>
-      </ng-template>
-      <ng-template #body let-client>
-        <tr>
-          <td class="font-semibold">{{ client.dni }}</td>
-          <td>
-            <span class="font-semibold">{{ client.fullName }}</span><br />
-            <small class="text-muted-color">{{ client.address || 'Sin dirección' }}</small>
-          </td>
-          <td>{{ client.phone || '—' }}</td>
-          <td><p-tag severity="secondary" [value]="client.collectorName" /></td>
-          <td><p-tag [severity]="riskSeverity(client)" [value]="riskLabel(client)" /></td>
-          <td class="font-semibold" [class.text-red-600]="client.outstandingAmount > 0">
-            {{ client.outstandingAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
-          </td>
-          <td>
-            <p-tag [severity]="client.active ? 'success' : 'secondary'"
-              [value]="client.active ? 'Activo' : 'Inactivo'" />
-          </td>
-          <td class="text-center">
+    <div class="divide-y divide-surface lg:hidden">
+      @for (client of filteredClients(); track client.id) {
+      <article class="flex flex-col gap-3 p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="truncate font-semibold text-color">{{ client.fullName }}</p>
+            <p class="mt-0.5 text-sm text-muted-color">DNI {{ client.dni }}</p>
+          </div>
+          <p-tag [severity]="client.active ? 'success' : 'secondary'"
+            [value]="client.active ? 'Activo' : 'Inactivo'" />
+        </div>
+        <p class="text-sm text-muted-color">{{ client.address || 'Sin dirección' }}</p>
+        <dl class="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <dt class="text-muted-color">Teléfono</dt>
+            <dd class="mt-1 font-medium text-color">{{ client.phone || '—' }}</dd>
+          </div>
+          <div>
+            <dt class="text-muted-color">Cobrador</dt>
+            <dd class="mt-1"><p-tag severity="secondary" [value]="client.collectorName" /></dd>
+          </div>
+          <div>
+            <dt class="text-muted-color">Riesgo</dt>
+            <dd class="mt-1"><p-tag [severity]="riskSeverity(client)" [value]="riskLabel(client)" /></dd>
+          </div>
+          <div>
+            <dt class="text-muted-color">Saldo</dt>
+            <dd class="mt-1 font-semibold" [class.text-red-600]="client.outstandingAmount > 0">
+              {{ client.outstandingAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+            </dd>
+          </div>
+        </dl>
+        <button pButton fluid severity="secondary" variant="outlined" size="small" (click)="openEditDialog(client)">
+          <i class="pi pi-pencil"></i> Editar
+        </button>
+      </article>
+      }
+    </div>
 
-            <button pButton severity="secondary" variant="outlined" size="small" (click)="openEditDialog(client)">
-              <i class="pi pi-pencil"></i> Editar
-            </button>
+    <div class="hidden overflow-x-auto lg:block">
+      <p-table [value]="filteredClients()" [rows]="10" [paginator]="filteredClients().length > 10"
+        responsiveLayout="scroll" styleClass="p-datatable-sm">
+        <ng-template #header>
+          <tr>
+            <th>DNI</th>
+            <th>Cliente</th>
+            <th>Teléfono</th>
+            <th>Cobrador</th>
+            <th>Riesgo</th>
+            <th>Saldo</th>
+            <th>Estado</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-client>
+          <tr>
+            <td class="font-semibold">{{ client.dni }}</td>
+            <td>
+              <span class="font-semibold">{{ client.fullName }}</span><br />
+              <small class="text-muted-color">{{ client.address || 'Sin dirección' }}</small>
+            </td>
+            <td>{{ client.phone || '—' }}</td>
+            <td><p-tag severity="secondary" [value]="client.collectorName" /></td>
+            <td><p-tag [severity]="riskSeverity(client)" [value]="riskLabel(client)" /></td>
+            <td class="font-semibold" [class.text-red-600]="client.outstandingAmount > 0">
+              {{ client.outstandingAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+            </td>
+            <td>
+              <p-tag [severity]="client.active ? 'success' : 'secondary'"
+                [value]="client.active ? 'Activo' : 'Inactivo'" />
+            </td>
+            <td class="text-center">
 
-          </td>
-        </tr>
-      </ng-template>
-    </p-table>
+              <button pButton severity="secondary" variant="outlined" size="small" (click)="openEditDialog(client)">
+                <i class="pi pi-pencil"></i> Editar
+              </button>
+
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
     }
   </section>
 </main>
 
 @defer (when dialogVisible()) {
 <p-dialog [header]="dialogMode() === 'create' ? 'Registrar cliente' : 'Editar cliente'" [modal]="true"
-  [visible]="dialogVisible()" (visibleChange)="dialogVisible.set($event)" styleClass="w-[calc(100vw-2rem)] max-w-2xl">
+  [visible]="dialogVisible()" (visibleChange)="dialogVisible.set($event)"
+  [breakpoints]="{ '640px': '100vw' }" styleClass="w-[calc(100vw-2rem)] max-w-2xl">
   <form class="flex flex-col gap-5" (submit)="saveClient(); $event.preventDefault()">
     <div class="grid gap-4 sm:grid-cols-2">
       <div>
@@ -172,13 +214,13 @@
     </div>
     }
 
-    <div class="flex justify-end gap-2">
-      <button pButton type="button" severity="secondary" variant="text" (click)="dialogVisible.set(false)">
+    <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      <button pButton type="button" severity="secondary" variant="text" class="w-full sm:w-auto" (click)="dialogVisible.set(false)">
         Cancelar
       </button>
 
 
-      <button pButton type="submit"
+      <button pButton type="submit" class="w-full sm:w-auto"
         [disabled]="store.saving() || clientForm().invalid() || store.collectors().length === 0">
         @if (store.saving()) {
         <i class="pi pi-spin pi-spinner"></i>
