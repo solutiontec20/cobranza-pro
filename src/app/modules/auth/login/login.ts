@@ -60,6 +60,19 @@ export default class Login {
     });
   }
 
+  /**
+   * Blocks any keystroke, paste or autofill that would insert a non-digit
+   * character into the DNI/PIN fields, so letters and symbols can never be
+   * typed in the first place (the `pattern`/`maxLength` validators above
+   * still run as a safety net, e.g. for browsers without `beforeinput`).
+   */
+  protected blockNonNumericInput(event: InputEvent): void {
+    const incomingText = event.data;
+    if (incomingText !== null && !/^\d*$/.test(incomingText)) {
+      event.preventDefault();
+    }
+  }
+
   private navigateBasedOnRole() {
     if (this.authService.mustChangePin()) {
       this.router.navigate(['/cambiar-pin']);
