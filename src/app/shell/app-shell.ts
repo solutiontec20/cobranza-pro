@@ -110,6 +110,19 @@ import { Topbar } from './topbar/topbar';
                               <span>Mis clientes</span>
                             </a>
                           </p-sidebar-menu-item>
+                          <p-sidebar-menu-item>
+                            <a
+                              pSidebarMenuButton
+                              routerLink="/cobrador/cierre-caja"
+                              routerLinkActive
+                              #collectorCashClosure="routerLinkActive"
+                              [isActive]="collectorCashClosure.isActive"
+                              (click)="closeNavigation()"
+                            >
+                              <i class="pi pi-calculator" aria-hidden="true"></i>
+                              <span>Cierre de caja</span>
+                            </a>
+                          </p-sidebar-menu-item>
                         </p-sidebar-menu>
                       </p-sidebar-group-content>
                     </p-sidebar-group>
@@ -146,6 +159,12 @@ import { Topbar } from './topbar/topbar';
                             <a pSidebarMenuButton routerLink="/admin/control-diario" routerLinkActive #adminDailyControl="routerLinkActive" [isActive]="adminDailyControl.isActive" (click)="closeNavigation()">
                               <i class="pi pi-file-excel" aria-hidden="true"></i>
                               <span>Control diario</span>
+                            </a>
+                          </p-sidebar-menu-item>
+                          <p-sidebar-menu-item>
+                            <a pSidebarMenuButton routerLink="/admin/cierre-caja" routerLinkActive #adminCashClosure="routerLinkActive" [isActive]="adminCashClosure.isActive" (click)="closeNavigation()">
+                              <i class="pi pi-calculator" aria-hidden="true"></i>
+                              <span>Cierre de caja</span>
                             </a>
                           </p-sidebar-menu-item>
                           <p-sidebar-menu-item>

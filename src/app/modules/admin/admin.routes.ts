@@ -1,12 +1,15 @@
 import { Routes } from '@angular/router';
 import { InMemoryDailyControlRepository } from '../../core/adapters/in-memory-daily-control.repository';
+import { SupabaseCashClosureRepository } from '../../core/adapters/supabase-cash-closure.repository';
 import { SupabaseClientRepository } from '../../core/adapters/supabase-client.repository';
 import { SupabaseCollectorRepository } from '../../core/adapters/supabase-collector.repository';
 import { SupabaseLoanRepository } from '../../core/adapters/supabase-loan.repository';
+import { CASH_CLOSURE_REPOSITORY } from '../../core/repositories/cash-closure.repository';
 import { CLIENT_REPOSITORY } from '../../core/repositories/client.repository';
 import { COLLECTOR_REPOSITORY } from '../../core/repositories/collector.repository';
 import { DAILY_CONTROL_REPOSITORY } from '../../core/repositories/daily-control.repository';
 import { LOAN_REPOSITORY } from '../../core/repositories/loan.repository';
+import { CashClosureStore } from './cash-closure/cash-closure.store';
 import { ClientsStore } from './clients/clients.store';
 import { CollectorsStore } from './collectors/collectors.store';
 import { DailyControlExportService } from './daily-control/daily-control-export.service';
@@ -61,5 +64,15 @@ export const ADMIN_ROUTES: Routes = [
       { provide: DAILY_CONTROL_REPOSITORY, useClass: InMemoryDailyControlRepository },
     ],
   },
+  {
+    path: 'cierre-caja',
+    title: 'Cierre de caja | CobranzaPro',
+    loadComponent: () => import('./cash-closure/cash-closure'),
+    providers: [
+      CashClosureStore,
+      { provide: CASH_CLOSURE_REPOSITORY, useClass: SupabaseCashClosureRepository },
+    ],
+  },
   { path: 'auditoria', loadComponent: () => import('./audit/audit') },
 ];
+

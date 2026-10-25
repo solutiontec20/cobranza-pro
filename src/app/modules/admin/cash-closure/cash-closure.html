@@ -1,0 +1,359 @@
+<main class="mx-auto flex w-full max-w-7xl flex-col gap-5 p-3 sm:p-6" aria-labelledby="cash-closure-title">
+  <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <p class="mb-1 text-sm font-medium text-primary">Operaciones</p>
+      <h1 id="cash-closure-title" class="text-2xl font-bold text-color sm:text-3xl">Cierre de caja</h1>
+      <p class="mt-1 max-w-2xl text-sm text-muted-color">
+        Apertura, viáticos, cobranza por medio de pago, desembolsos y gastos de cada cobrador, por día.
+      </p>
+    </div>
+    <label class="flex flex-col gap-2 text-sm font-medium text-color">
+      Fecha
+      <p-datepicker [ngModel]="selectedDate()" (ngModelChange)="changeDate($event)" dateFormat="dd/mm/yy"
+        [showIcon]="true" [showButtonBar]="true" inputId="cash-closure-date" appendTo="body" />
+    </label>
+  </header>
+
+  @if (store.error()) {
+    <p-message severity="error" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
+  }
+
+  @if (store.loading()) {
+    <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Cargando cierres de caja" aria-live="polite">
+      @for (row of loadingRows; track row) {
+        <p-skeleton height="6rem" borderRadius="0.75rem" />
+      }
+    </section>
+  } @else if (store.days().length === 0) {
+    <section class="rounded-xl border border-dashed border-surface bg-surface-0 px-6 py-14 text-center dark:bg-surface-900">
+      <i class="pi pi-wallet mb-4 text-4xl text-muted-color" aria-hidden="true"></i>
+      <h2 class="text-lg font-semibold text-color">No hay cobradores activos</h2>
+    </section>
+  } @else {
+    <div class="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
+      <!-- Collector list -->
+      <nav class="flex flex-col gap-2 overflow-x-auto lg:overflow-visible" aria-label="Cobradores">
+        <div class="flex gap-2 lg:flex-col">
+          @for (day of store.days(); track day.collectorId) {
+            <button
+              type="button"
+              class="min-w-[14rem] shrink-0 rounded-xl border p-3 text-left transition-colors lg:min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              [class.border-primary]="store.selectedCollectorId() === day.collectorId"
+              [class.bg-primary-50]="store.selectedCollectorId() === day.collectorId"
+              [class.dark:bg-primary-950]="store.selectedCollectorId() === day.collectorId"
+              [class.border-surface]="store.selectedCollectorId() !== day.collectorId"
+              (click)="selectCollector(day)"
+            >
+              <div class="flex items-start justify-between gap-2">
+                <span class="min-w-0 truncate font-semibold text-color">{{ day.collectorName }}</span>
+                @if (day.closure) {
+                  <p-tag [severity]="closureStatusSeverity(day.closure.status)" [value]="closureStatusLabel(day.closure.status)" />
+                } @else {
+                  <p-tag severity="secondary" value="Sin enviar" />
+                }
+              </div>
+              <p class="mt-2 text-xs text-muted-color">Efectivo esperado</p>
+              <p class="font-bold tabular-nums text-color">
+                {{ calculateExpectedCashFor(day) | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              </p>
+              @if (pendingCountFor(day) > 0) {
+                <p class="mt-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                  {{ pendingCountFor(day) }} gasto(s) pendiente(s)
+                </p>
+              }
+            </button>
+          }
+        </div>
+      </nav>
+
+      <!-- Selected collector detail -->
+      @if (store.selectedDay(); as day) {
+        <section class="flex flex-col gap-4">
+          <div class="flex flex-col gap-3 rounded-xl border border-surface bg-surface-0 p-4 shadow-sm dark:bg-surface-900 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 class="text-lg font-semibold text-color">{{ day.collectorName }}</h2>
+              <p class="text-sm text-muted-color">Jornada del {{ store.businessDate() }}</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button pButton size="small" severity="secondary" variant="outlined" (click)="openOpeningDialog('opening')">
+                <i class="pi pi-wallet"></i> Registrar apertura
+              </button>
+              <button pButton size="small" severity="secondary" variant="outlined" (click)="openOpeningDialog('allowance')">
+                <i class="pi pi-car"></i> Registrar viático
+              </button>
+              <button pButton size="small" severity="secondary" variant="outlined" (click)="openExpenseDialog()">
+                <i class="pi pi-receipt"></i> Registrar gasto
+              </button>
+            </div>
+          </div>
+
+          <!-- Breakdown -->
+          <dl class="grid grid-cols-2 gap-3 rounded-xl border border-surface bg-surface-0 p-4 shadow-sm dark:bg-surface-900 sm:grid-cols-4">
+            <div>
+              <dt class="text-xs text-muted-color">Apertura</dt>
+              <dd class="mt-1 font-semibold text-color">{{ day.breakdown.openingAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted-color">Viáticos entregados</dt>
+              <dd class="mt-1 font-semibold text-color">{{ day.breakdown.allowanceAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted-color">Cobrado en efectivo</dt>
+              <dd class="mt-1 font-semibold text-green-600 dark:text-green-400">{{ day.breakdown.cashCollectedAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted-color">Cobrado digital (Yape/Plin/Transf.)</dt>
+              <dd class="mt-1 font-semibold text-color">{{ totalCollected() - day.breakdown.cashCollectedAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted-color">Préstamos entregados (efectivo)</dt>
+              <dd class="mt-1 font-semibold text-red-600 dark:text-red-400">− {{ day.breakdown.loanDisbursementAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted-color">Gastos aprobados</dt>
+              <dd class="mt-1 font-semibold text-red-600 dark:text-red-400">− {{ day.breakdown.operatingExpenseAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted-color">Total cobranza (todo medio)</dt>
+              <dd class="mt-1 font-semibold text-color">{{ totalCollected() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+            </div>
+            <div class="rounded-lg bg-primary-50 p-2 dark:bg-primary-950/30">
+              <dt class="text-xs font-semibold text-primary-700 dark:text-primary-300">Efectivo esperado</dt>
+              <dd class="mt-1 text-lg font-bold text-primary-700 dark:text-primary-300">
+                {{ calculateExpectedCashFor(day) | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              </dd>
+            </div>
+          </dl>
+
+          <!-- Closure status -->
+          <div class="rounded-xl border border-surface bg-surface-0 p-4 shadow-sm dark:bg-surface-900">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="font-semibold text-color">Cierre del día</h3>
+              @if (day.closure) {
+                <p-tag [severity]="closureStatusSeverity(day.closure.status)" [value]="closureStatusLabel(day.closure.status)" />
+              } @else {
+                <p-tag severity="secondary" value="El cobrador aún no envió su cierre" />
+              }
+            </div>
+
+            @if (day.closure) {
+              <dl class="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                <div>
+                  <dt class="text-xs text-muted-color">Entregado</dt>
+                  <dd class="mt-1 font-semibold text-color">{{ day.closure.deliveredAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                </div>
+                <div>
+                  <dt class="text-xs text-muted-color">Diferencia</dt>
+                  <dd class="mt-1 font-bold" [class.text-red-600]="day.closure.differenceAmount < 0" [class.text-green-600]="day.closure.differenceAmount > 0">
+                    {{ day.closure.differenceAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                  </dd>
+                </div>
+                <div class="col-span-2">
+                  <dt class="text-xs text-muted-color">Observación</dt>
+                  <dd class="mt-1 text-color">{{ day.closure.observation || '—' }}</dd>
+                </div>
+              </dl>
+              @if (day.closure.status === 'submitted') {
+                <button pButton class="mt-4 w-full sm:w-auto" (click)="openValidateDialog()">
+                  <i class="pi pi-check-circle"></i> Validar cierre
+                </button>
+              } @else if (day.closure.status === 'validated') {
+                <p class="mt-3 text-xs text-muted-color">
+                  Validado el {{ formatDateTime(day.closure.validatedAt) }}
+                </p>
+              }
+            } @else {
+              <p class="mt-3 text-sm text-muted-color">
+                El efectivo esperado se recalcula en tiempo real; el cobrador debe enviar cuánto entrega realmente para poder validar.
+              </p>
+            }
+          </div>
+
+          <!-- Expenses -->
+          <div class="rounded-xl border border-surface bg-surface-0 p-4 shadow-sm dark:bg-surface-900">
+            <h3 class="font-semibold text-color">Gastos operativos (viáticos utilizados)</h3>
+            @if (day.expenses.length === 0) {
+              <p class="mt-3 text-sm text-muted-color">No se registraron gastos para este día.</p>
+            } @else {
+              <ul class="mt-3 divide-y divide-surface">
+                @for (expense of day.expenses; track expense.id) {
+                  <li class="flex flex-wrap items-center justify-between gap-2 py-3">
+                    <div class="min-w-0">
+                      <p class="font-medium text-color">{{ categoryLabel(expense.category) }} — {{ expense.amount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+                      <p class="text-xs text-muted-color">{{ expense.description || 'Sin descripción' }}</p>
+                      @if (expense.status === 'rejected') {
+                        <p class="mt-1 text-xs text-red-600 dark:text-red-400">Motivo: {{ expense.rejectionReason }}</p>
+                      }
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <p-tag [severity]="expenseStatusSeverity(expense.status)" [value]="expenseStatusLabel(expense.status)" />
+                      @if (expense.status === 'pending') {
+                        <button pButton size="small" severity="success" variant="outlined" (click)="approveExpense(expense)">
+                          <i class="pi pi-check"></i> Aprobar
+                        </button>
+                        <button pButton size="small" severity="danger" variant="outlined" (click)="openRejectDialog(expense)">
+                          <i class="pi pi-times"></i> Rechazar
+                        </button>
+                      }
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  }
+</main>
+
+<!-- Opening / allowance dialog -->
+@defer (when openingDialogVisible()) {
+  <p-dialog
+    [header]="openingDialogKind() === 'opening' ? 'Registrar apertura' : 'Registrar viático'"
+    [modal]="true"
+    [visible]="openingDialogVisible()"
+    (visibleChange)="openingDialogVisible.set($event)"
+    [breakpoints]="{ '640px': '100vw' }"
+    styleClass="w-[calc(100vw-1.5rem)] max-w-md"
+  >
+    <form class="flex flex-col gap-4" (submit)="submitOpening(); $event.preventDefault()">
+      @if (store.error()) {
+        <p-message severity="error" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
+      }
+      <p class="text-sm text-muted-color">
+        @if (openingDialogKind() === 'opening') {
+          Dinero entregado al cobrador al inicio del día. Sigue siendo dinero de la empresa bajo su responsabilidad.
+        } @else {
+          Dinero para combustible, peajes, pasajes, estacionamiento u otros gastos de trabajo. El sobrante no usado vuelve a caja.
+        }
+      </p>
+      <div>
+        <label for="opening-amount" class="mb-2 block text-sm font-medium text-color">Monto</label>
+        <p-inputnumber inputId="opening-amount" [formField]="openingForm.amount" mode="currency" currency="PEN" locale="es-PE" styleClass="w-full" />
+        @if (openingForm.amount().touched() && openingForm.amount().invalid()) {
+          <small class="mt-1 block text-red-600">{{ openingForm.amount().errors()[0]?.message }}</small>
+        }
+      </div>
+      <div>
+        <label for="opening-notes" class="mb-2 block text-sm font-medium text-color">Nota (opcional)</label>
+        <input id="opening-notes" pInputText [formField]="openingForm.notes" class="w-full rounded-md border border-surface px-3 py-2.5 text-color outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-surface-950" />
+      </div>
+      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button pButton type="button" severity="secondary" variant="text" class="w-full sm:w-auto" (click)="openingDialogVisible.set(false)">Cancelar</button>
+        <button pButton type="submit" class="w-full sm:w-auto" [disabled]="store.saving() || openingForm().invalid()">
+          @if (store.saving()) { <i class="pi pi-spin pi-spinner"></i> } @else { <i class="pi pi-check"></i> }
+          Guardar
+        </button>
+      </div>
+    </form>
+  </p-dialog>
+}
+
+<!-- Request expense on behalf of collector dialog -->
+@defer (when expenseDialogVisible()) {
+  <p-dialog
+    header="Registrar gasto operativo"
+    [modal]="true"
+    [visible]="expenseDialogVisible()"
+    (visibleChange)="expenseDialogVisible.set($event)"
+    [breakpoints]="{ '640px': '100vw' }"
+    styleClass="w-[calc(100vw-1.5rem)] max-w-md"
+  >
+    <form class="flex flex-col gap-4" (submit)="submitExpense(); $event.preventDefault()">
+      @if (store.error()) {
+        <p-message severity="error" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
+      }
+      <div>
+        <label for="expense-category" class="mb-2 block text-sm font-medium text-color">Categoría</label>
+        <p-select inputId="expense-category" [formField]="expenseForm.category" [options]="categoryOptions" optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full" />
+      </div>
+      <div>
+        <label for="expense-amount" class="mb-2 block text-sm font-medium text-color">Monto</label>
+        <p-inputnumber inputId="expense-amount" [formField]="expenseForm.amount" mode="currency" currency="PEN" locale="es-PE" styleClass="w-full" />
+        @if (expenseForm.amount().touched() && expenseForm.amount().invalid()) {
+          <small class="mt-1 block text-red-600">{{ expenseForm.amount().errors()[0]?.message }}</small>
+        }
+      </div>
+      <div>
+        <label for="expense-description" class="mb-2 block text-sm font-medium text-color">Descripción</label>
+        <input id="expense-description" pInputText [formField]="expenseForm.description" class="w-full rounded-md border border-surface px-3 py-2.5 text-color outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-surface-950" />
+      </div>
+      <p class="text-xs text-muted-color">Queda pendiente de aprobación; solo al aprobarse descuenta del efectivo esperado.</p>
+      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button pButton type="button" severity="secondary" variant="text" class="w-full sm:w-auto" (click)="expenseDialogVisible.set(false)">Cancelar</button>
+        <button pButton type="submit" class="w-full sm:w-auto" [disabled]="store.saving() || expenseForm().invalid()">
+          @if (store.saving()) { <i class="pi pi-spin pi-spinner"></i> } @else { <i class="pi pi-check"></i> }
+          Registrar
+        </button>
+      </div>
+    </form>
+  </p-dialog>
+}
+
+<!-- Reject expense dialog -->
+@defer (when rejectDialogVisible()) {
+  <p-dialog
+    header="Rechazar gasto"
+    [modal]="true"
+    [visible]="rejectDialogVisible()"
+    (visibleChange)="rejectDialogVisible.set($event)"
+    [breakpoints]="{ '640px': '100vw' }"
+    styleClass="w-[calc(100vw-1.5rem)] max-w-md"
+  >
+    <form class="flex flex-col gap-4" (submit)="submitReject(); $event.preventDefault()">
+      @if (store.error()) {
+        <p-message severity="error" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
+      }
+      <div>
+        <label for="reject-reason" class="mb-2 block text-sm font-medium text-color">Motivo del rechazo</label>
+        <textarea id="reject-reason" rows="3" [formField]="rejectForm.reason" class="w-full resize-y rounded-md border border-surface px-3 py-2.5 text-color outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-surface-950"></textarea>
+        @if (rejectForm.reason().touched() && rejectForm.reason().invalid()) {
+          <small class="mt-1 block text-red-600">{{ rejectForm.reason().errors()[0]?.message }}</small>
+        }
+      </div>
+      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button pButton type="button" severity="secondary" variant="text" class="w-full sm:w-auto" (click)="rejectDialogVisible.set(false)">Cancelar</button>
+        <button pButton type="submit" severity="danger" class="w-full sm:w-auto" [disabled]="store.saving() || rejectForm().invalid()">
+          @if (store.saving()) { <i class="pi pi-spin pi-spinner"></i> } @else { <i class="pi pi-times"></i> }
+          Rechazar
+        </button>
+      </div>
+    </form>
+  </p-dialog>
+}
+
+<!-- Validate closure dialog -->
+@defer (when validateDialogVisible()) {
+  <p-dialog
+    header="Validar cierre de caja"
+    [modal]="true"
+    [visible]="validateDialogVisible()"
+    (visibleChange)="validateDialogVisible.set($event)"
+    [breakpoints]="{ '640px': '100vw' }"
+    styleClass="w-[calc(100vw-1.5rem)] max-w-md"
+  >
+    <form class="flex flex-col gap-4" (submit)="submitValidate(); $event.preventDefault()">
+      @if (store.error()) {
+        <p-message severity="error" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
+      }
+      <p class="text-sm text-muted-color">
+        Confirmá que revisaste el efectivo entregado por el cobrador frente al esperado.
+      </p>
+      <div>
+        <label for="validate-observation" class="mb-2 block text-sm font-medium text-color">Observación (opcional)</label>
+        <textarea id="validate-observation" rows="3" [formField]="validateForm.observation" class="w-full resize-y rounded-md border border-surface px-3 py-2.5 text-color outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-surface-950"></textarea>
+        @if (validateForm.observation().touched() && validateForm.observation().invalid()) {
+          <small class="mt-1 block text-red-600">{{ validateForm.observation().errors()[0]?.message }}</small>
+        }
+      </div>
+      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button pButton type="button" severity="secondary" variant="text" class="w-full sm:w-auto" (click)="validateDialogVisible.set(false)">Cancelar</button>
+        <button pButton type="submit" severity="success" class="w-full sm:w-auto" [disabled]="store.saving() || validateForm().invalid()">
+          @if (store.saving()) { <i class="pi pi-spin pi-spinner"></i> } @else { <i class="pi pi-check-circle"></i> }
+          Validar
+        </button>
+      </div>
+    </form>
+  </p-dialog>
+}

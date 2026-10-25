@@ -1,8 +1,11 @@
 import { Routes } from '@angular/router';
+import { SupabaseCashClosureRepository } from '../../core/adapters/supabase-cash-closure.repository';
 import { SupabaseCollectorPortfolioRepository } from '../../core/adapters/supabase-collector-portfolio.repository';
 import { SupabaseLoanRepository } from '../../core/adapters/supabase-loan.repository';
+import { CASH_CLOSURE_REPOSITORY } from '../../core/repositories/cash-closure.repository';
 import { COLLECTOR_PORTFOLIO_REPOSITORY } from '../../core/repositories/collector-portfolio.repository';
 import { LOAN_REPOSITORY } from '../../core/repositories/loan.repository';
+import { CollectorCashClosureStore } from './cash-closure/collector-cash-closure.store';
 import { CollectorLoanStore } from './client-detail/collector-loan.store';
 import { CollectionDashboardStore } from './collection-dashboard.store';
 
@@ -14,6 +17,8 @@ export const COLLECTOR_ROUTES: Routes = [
       { provide: COLLECTOR_PORTFOLIO_REPOSITORY, useClass: SupabaseCollectorPortfolioRepository },
       CollectorLoanStore,
       { provide: LOAN_REPOSITORY, useClass: SupabaseLoanRepository },
+      CollectorCashClosureStore,
+      { provide: CASH_CLOSURE_REPOSITORY, useClass: SupabaseCashClosureRepository },
     ],
     children: [
       {
@@ -32,6 +37,11 @@ export const COLLECTOR_ROUTES: Routes = [
         title: 'Detalle de Cliente | CobranzaPro',
       },
       {
+        path: 'cierre-caja',
+        loadComponent: () => import('./cash-closure/cash-closure'),
+        title: 'Cierre de caja | CobranzaPro',
+      },
+      {
         path: ':id',
         loadComponent: () => import('./client-detail/client-detail'),
         title: 'Detalle de Cliente | CobranzaPro',
@@ -39,3 +49,4 @@ export const COLLECTOR_ROUTES: Routes = [
     ],
   },
 ];
+

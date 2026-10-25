@@ -796,6 +796,24 @@ commit;
 -- This still exercises the real production flow end-to-end:
 -- collector submits today's closure -> PostgreSQL calculates expected=0
 -- -> delivered=0 is stored -> admin validates the closure.
+--
+-- Collector C is deliberately seeded with must_change_pin = true (see
+-- section 1) to demo the forced-PIN-change login flow. Every
+-- cash-closure RPC requires an operational profile
+-- (private.current_app_role() returns NULL while must_change_pin is
+-- true), so we momentarily clear just that flag, run the closure flow,
+-- then restore must_change_pin = true so the forced-change login demo
+-- for DNI 20000003 still works afterwards. This is a plain bookkeeping
+-- update (not the service_complete_collector_pin_change RPC): that RPC
+-- also stamps credentials_invalid_before, which private.current_app_role()
+-- then checks against the session JWT's `iat` claim — a check seed.sql's
+-- simplified `request.jwt.claim.sub`-only fake session can never satisfy,
+-- which would re-break this same flow. Only the real `profiles` flag
+-- changes here, never the actual Supabase Auth password/PIN, so the
+-- documented demo credentials are unaffected.
+update public.profiles
+set must_change_pin = false
+where id = '00000000-0000-0000-0000-000000000013';
 
 begin;
 set local role authenticated;
@@ -821,6 +839,11 @@ from public.validate_cash_closure(
 );
 
 commit;
+
+-- Restore the forced-PIN-change demo state for collector C.
+update public.profiles
+set must_change_pin = true
+where id = '00000000-0000-0000-0000-000000000013';
 
 
 -- ============================================================
