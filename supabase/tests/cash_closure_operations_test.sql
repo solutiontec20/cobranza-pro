@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(35);
+select plan(37);
 
 -- Anchor every date in this test to the current Lima business date, so the
 -- suite never depends on the wall-clock time it happens to run at (mirrors
@@ -102,6 +102,21 @@ select ok(
     'EXECUTE'
   ),
   'Authenticated callers may execute register_cash_opening subject to in-function authorization'
+);
+
+-- A bare `create view` only grants SELECT to its owner, not to
+-- `authenticated` — regression test for the bug fixed in
+-- 20261025150000_grant_cash_day_breakdown_select.sql (both admin and
+-- collector screens load this view first on every page load, so a
+-- missing grant here manifested as a generic "no tenés permisos" for
+-- every role, not just a specific action).
+select ok(
+  has_table_privilege(
+    'authenticated',
+    'public.collector_cash_day_breakdown',
+    'SELECT'
+  ),
+  'Authenticated callers may select from the cash day breakdown view'
 );
 
 -- ------------------------------------------------------------
@@ -429,6 +444,27 @@ select results_eq(
   $$,
   'The breakdown view reports every category exactly as in the worked example'
 );
+
+-- The check above runs as the superuser psql/pgTAP connection, which
+-- bypasses GRANT checks entirely and would not have caught the missing
+-- `grant select ... to authenticated` on the view. Repeat it end-to-end
+-- as the actual `authenticated` role collector A uses in production, to
+-- regression-test 20261025150000_grant_cash_day_breakdown_select.sql.
+set local role authenticated;
+set local request.jwt.claim.sub = '96000000-0000-0000-0000-000000000001'; -- collector A
+
+select results_eq(
+  $$
+    select cash_collected_amount
+    from public.collector_cash_day_breakdown
+    where collector_id = '96000000-0000-0000-0000-000000000001'
+      and business_date = current_setting('cobranzapro_test.today')::date
+  $$,
+  $$ values (650.00::numeric) $$,
+  'Collector A can select their own row from the breakdown view as the authenticated role'
+);
+
+reset role;
 
 -- ------------------------------------------------------------
 -- 8. Submitting without an observation when there is a difference is blocked

@@ -143,3 +143,87 @@ reportó el usuario.
   `20261025140000_cash_closure_operational_profile_guard.sql` aplicada al proyecto remoto
   "Cobranza Pro Dev"; `pnpm supabase migration list` confirma sincronización completa (18/18
   migraciones) entre local y remoto.
+
+## Bug fix #2 (real root cause): falta de GRANT en la vista de desglose — y consolidación de módulos duplicados
+
+### Problem
+El usuario reportó que, **después** del fix anterior, tanto la vista de admin como la de cobrador
+seguían mostrando "no tenés permisos para realizar esta acción" — ya no solo en una acción
+puntual, sino apenas se abría la pantalla. También señaló que había dos flujos de cierre de caja
+coexistiendo: el nuevo módulo real (`/admin/cierre-caja`, `/cobrador/cierre-caja`) y una sección
+"Cierre operativo del día" dentro de Control Diario, marcada como "Datos de prueba"/"Flujo de
+propuesta" (100% fixture, `InMemoryDailyControlRepository`).
+
+### Root cause (real)
+`public.collector_cash_day_breakdown` (creada en `20261025130000_cash_closure_operations.sql`)
+**nunca recibió un `grant select ... to authenticated`** — a diferencia de `cash_movements`/
+`cash_closures`/`cash_expenses`, que sí lo tienen explícito justo después de su `create policy`. Un
+`CREATE VIEW` desnudo en PostgreSQL no otorga SELECT a ningún rol salvo al propietario. Como
+`SupabaseCashClosureRepository.fetchDays()` consulta esa vista PRIMERO en cada carga de pantalla
+(tanto `listDay` del admin como `getOwnDay` del cobrador), la consulta fallaba con "permission
+denied for view collector_cash_day_breakdown" (42501) para **cualquier** usuario autenticado,
+sin importar el rol — porque el rechazo ocurría al nivel del GRANT, antes de evaluar RLS o la
+lógica de rol de las RPCs. El adapter no tiene una traducción específica para ese mensaje, así que
+caía al genérico "No tenés permisos para realizar esta acción.", justo lo que vieron ambos roles
+al simplemente abrir la pantalla (no solo al ejecutar una acción puntual).
+
+Esto explica por qué el pgTAP no lo detectó: la sección 7 de `cash_closure_operations_test.sql`
+consultaba la vista con `results_eq` pero sin `set local role authenticated` primero, corriendo
+como superusuario (`postgres`), que ignora los GRANT por completo.
+
+### Authorized scope (fix + decisión del usuario)
+- Otorgar `GRANT SELECT` a `authenticated` sobre la vista (migración nueva, nunca se edita la ya
+  aplicada).
+- Decisión explícita del usuario (`ask_user`): mantener **solo** el módulo real `/cierre-caja`
+  (RPCs de Supabase) como flujo oficial, y eliminar la sección fixture "Cierre operativo del día"
+  de Control Diario para no confundir a los usuarios en producción con datos de prueba
+  superpuestos al flujo real.
+
+### Delivery
+1. Migración `20261025150000_grant_cash_day_breakdown_select.sql`: `grant select on
+   public.collector_cash_day_breakdown to authenticated;`.
+2. `cash_closure_operations_test.sql`: nueva aserción `has_table_privilege('authenticated', ...,
+   'SELECT')` sobre la vista, más una repetición de la verificación del desglose (sección 7) bajo
+   `set local role authenticated` como collector A real — para que una futura regresión de este
+   tipo sea detectada por el propio rol `authenticated`, no solo por el superusuario de pgTAP.
+   `plan(35)` → `plan(37)`.
+3. Eliminación de "Cierre operativo del día" (fixture) de Control Diario, conservando intacto el
+   reporte de cartera (programado/cobrado/mora), que sigue siendo una funcionalidad legítima y
+   separada:
+   - `daily-control.model.ts`: se quitan `DailyCashClosure*`/`DailyCashMovement*`/
+     `DailyPaymentMethod`/`Submit|ValidateDailyCashClosureInput`.
+   - `daily-control.repository.ts`: la interfaz pierde `listClosures`/`submitClosure`/
+     `validateClosure`.
+   - `in-memory-daily-control.repository.ts`: se quita el `Map` de cierres, la generación de
+     fixtures de movimientos/cierres y los 3 métodos; se conserva `listCollectors`/`getReport`.
+   - `daily-control.store.ts`: se quitan `closures`, `selectedClosureId`, `selectedClosure`,
+     `focusClosure`, `validateSelected`, `setClosures`.
+   - `daily-control.ts`/`.html`: se quita toda la sección "Cierre operativo del día" (navegación
+     por cobrador, panel de movimientos, acción de validar), el `TextareaModule` que solo usaba
+     esa sección, y los métodos/signals asociados (`validationObservation`, `focusClosure`,
+     `validateClosure`, `closureStatusLabel`, `closureStatusSeverity`, `movementLabel`,
+     `formatDateTime`).
+   - Specs actualizados (`in-memory-daily-control.repository.spec.ts`,
+     `daily-control.store.spec.ts`) quitando los casos de cierre, conservando los de reporte.
+4. Responsive de los filtros de Control Diario: la grilla usaba columnas de ancho fijo
+   (`13rem_18rem_14rem_minmax(14rem,1fr)_auto`) sin `min-w-0` en los `<label>` ni `styleClass`/
+   ancho completo en `p-datepicker`/`p-select` — en viewports donde el contenido disponible
+   (restando el sidebar) era menor a la suma fija de esas columnas, los campos se desbordaban.
+   Fix: columnas envueltas en `minmax(0, …)` para que puedan encogerse, `min-w-0` en cada
+   `<label>`/contenedor, y `styleClass="w-full"` en `p-datepicker`/`p-select` (mismo patrón ya
+   usado en el módulo de cierre de caja) para que ocupen el ancho de su celda.
+
+### Verification evidence
+- `pnpm supabase db reset` → migraciones + seed aplican limpio.
+- `pnpm supabase db lint --local --level error` → sin errores.
+- `pnpm supabase test db` → **217/217 tests, 11/11 archivos PASS**
+  (`cash_closure_operations_test.sql` con 37/37, incluyendo la nueva verificación de GRANT bajo el
+  rol `authenticated`).
+- `pnpm test:ci` → **112/112 tests, 16/16 archivos PASS** (specs de Control Diario reducidos y
+  verdes tras quitar los casos de cierre fixture).
+- `pnpm build` → build de producción exitoso; el chunk `daily-control` bajó de ~82.7 kB a ~50.3 kB
+  tras quitar la UI/lógica de cierre fixture.
+- `pnpm e2e` → spec de login sigue pasando (1/1).
+- `pnpm supabase db push` → migración `20261025150000_grant_cash_day_breakdown_select.sql`
+  aplicada al proyecto remoto "Cobranza Pro Dev" (continuación directa del mismo flujo de fix ya
+  autorizado explícitamente por el usuario en este hilo).
