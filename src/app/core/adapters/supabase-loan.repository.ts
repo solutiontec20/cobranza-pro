@@ -749,10 +749,10 @@ export class SupabaseLoanRepository implements LoanRepository {
       );
     }
 
-    if (message.includes('Only administrators may update loans')) {
+    if (message.includes('Only administrators or supervisors may update loans')) {
       return new AppError(
         'AUTH_UNAUTHORIZED',
-        'Solo un administrador puede editar préstamos.',
+        'Solo un administrador o supervisor puede editar préstamos.',
         error,
       );
     }
