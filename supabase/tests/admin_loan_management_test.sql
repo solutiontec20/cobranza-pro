@@ -2,17 +2,19 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(28);
+select plan(34);
 
 insert into auth.users (id, email)
 values
   ('50000000-0000-0000-0000-000000000001', 'loan.collector@test.local'),
-  ('50000000-0000-0000-0000-000000000002', 'loan.admin@test.local');
+  ('50000000-0000-0000-0000-000000000002', 'loan.admin@test.local'),
+  ('50000000-0000-0000-0000-000000000003', 'loan.supervisor@test.local');
 
 insert into public.profiles (id, dni, full_name, role, active)
 values
   ('50000000-0000-0000-0000-000000000001', '50000001', 'Loan Collector', 'collector', true),
-  ('50000000-0000-0000-0000-000000000002', '50000002', 'Loan Administrator', 'admin', true);
+  ('50000000-0000-0000-0000-000000000002', '50000002', 'Loan Administrator', 'admin', true),
+  ('50000000-0000-0000-0000-000000000003', '50000003', 'Loan Supervisor', 'supervisor', true);
 
 insert into public.customers (id, document_number, full_name, collector_id, created_by, active)
 values
@@ -44,6 +46,22 @@ values
     '60000000-0000-0000-0000-000000000004',
     '60000004',
     'Closed Cash Customer',
+    '50000000-0000-0000-0000-000000000001',
+    '50000000-0000-0000-0000-000000000002',
+    true
+  ),
+  (
+    '60000000-0000-0000-0000-000000000005',
+    '60000005',
+    'Supervisor Update Customer',
+    '50000000-0000-0000-0000-000000000001',
+    '50000000-0000-0000-0000-000000000002',
+    true
+  ),
+  (
+    '60000000-0000-0000-0000-000000000006',
+    '60000006',
+    'Weekly Schedule Customer',
     '50000000-0000-0000-0000-000000000001',
     '50000000-0000-0000-0000-000000000002',
     true
@@ -156,6 +174,57 @@ select is(
 set local role authenticated;
 set local request.jwt.claim.sub = '50000000-0000-0000-0000-000000000002';
 
+-- ============================================================
+-- Weekly schedule always falls on the same weekday
+-- (REQUERIMIENTO.md section 4: "Semanal: siempre el mismo dia
+-- de la semana").
+-- ============================================================
+
+select lives_ok(
+  $$
+    select * from public.admin_create_loan(
+      '60000000-0000-0000-0000-000000000006', 100, 10, 'weekly', 4,
+      '2026-10-19', '2026-10-19'
+    )
+  $$,
+  'A weekly loan is created for the same-weekday schedule check'
+);
+
+reset role;
+
+select results_eq(
+  $$
+    select due_date
+    from public.installments
+    where loan_id = (
+      select id from public.loans where customer_id = '60000000-0000-0000-0000-000000000006'
+    )
+    order by installment_number
+  $$,
+  array[
+    '2026-10-19'::date,
+    '2026-10-26'::date,
+    '2026-11-02'::date,
+    '2026-11-09'::date
+  ],
+  'Weekly installments land on the same calendar weekday every time'
+);
+
+select is(
+  (
+    select count(*) filter (where extract(isodow from due_date) <> 1)
+    from public.installments
+    where loan_id = (
+      select id from public.loans where customer_id = '60000000-0000-0000-0000-000000000006'
+    )
+  ),
+  0::bigint,
+  'Every weekly installment keeps the Monday of the first due date'
+);
+
+set local role authenticated;
+set local request.jwt.claim.sub = '50000000-0000-0000-0000-000000000002';
+
 select throws_ok(
   $$
     select * from public.admin_create_loan(
@@ -190,7 +259,7 @@ select throws_ok(
     )
   $$,
   '42501',
-  'Only administrators may update loans',
+  'Only administrators or supervisors may update loans',
   'Collectors cannot update loans'
 );
 
@@ -391,6 +460,16 @@ select lives_ok(
   'Payment-history test loan is created'
 );
 
+select lives_ok(
+  $$
+    select * from public.admin_create_loan(
+      '60000000-0000-0000-0000-000000000005', 60, 10, 'daily', 3,
+      '2026-10-19', '2026-10-19'
+    )
+  $$,
+  'Supervisor-authorization test loan is created'
+);
+
 reset role;
 
 insert into public.payments (
@@ -444,6 +523,46 @@ select lives_ok(
 );
 
 reset role;
+
+-- ============================================================
+-- Supervisors may also correct an existing loan
+-- (REQUERIMIENTO.md section 7: "solo el administrador y el
+-- supervisor pueden modificarlos despues"). admin_update_loan
+-- previously rejected supervisors with a 42501 error; this test
+-- locks in the fix.
+-- ============================================================
+
+set local role authenticated;
+set local request.jwt.claim.sub = '50000000-0000-0000-0000-000000000003';
+
+select lives_ok(
+  $$
+    select * from public.admin_update_loan(
+      (select id from public.loans where customer_id = '60000000-0000-0000-0000-000000000005'),
+      65, 10, 'daily', 4, '2026-10-20', 'Supervisor correction test'
+    )
+  $$,
+  'Supervisors may update an existing loan'
+);
+
+reset role;
+
+select results_eq(
+  $$
+    select
+      principal_amount,
+      installment_count::integer,
+      first_due_on
+    from public.loans
+    where customer_id = '60000000-0000-0000-0000-000000000005'
+  $$,
+  $$ values (
+    65.00::numeric,
+    4,
+    '2026-10-20'::date
+  ) $$,
+  'A supervisor-driven update is applied just like an administrator one'
+);
 
 insert into public.cash_closures (
   collector_id,
