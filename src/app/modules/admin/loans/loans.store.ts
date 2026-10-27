@@ -1,5 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { AppError } from '../../../core/errors/app-error';
+import { normalizeSearchText } from '../../../core/calculations/text';
 import {
   CreateLoanInput,
   LoanClientOption,
@@ -53,7 +54,7 @@ export class LoansStore {
   });
 
   readonly filteredLoans = computed(() => {
-    const query = this.normalize(this.query());
+    const query = normalizeSearchText(this.query());
     const status = this.statusFilter();
     const collectorId = this.collectorFilter();
     const frequency = this.frequencyFilter();
@@ -65,7 +66,7 @@ export class LoansStore {
       if (!query) return true;
 
       return [loan.clientName, loan.clientDni, loan.collectorName]
-        .map((value) => this.normalize(value))
+        .map(normalizeSearchText)
         .some((value) => value.includes(query));
     });
   });
@@ -239,13 +240,5 @@ export class LoansStore {
 
   private messageFrom(error: unknown, fallback: string): string {
     return AppError.from(error).message || fallback;
-  }
-
-  private normalize(value: string): string {
-    return value
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLocaleLowerCase('es-PE')
-      .trim();
   }
 }

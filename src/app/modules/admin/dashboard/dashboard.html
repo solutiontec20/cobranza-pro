@@ -32,7 +32,7 @@
         <span class="metric-icon"><i class="pi pi-wallet" aria-hidden="true"></i></span>
         <span class="metric-label">Capital prestado</span>
       </div>
-      <p class="metric-value">{{ kpis().capitalPrestado | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+      <p class="metric-value">{{ kpis().capitalPrestado | penCurrency }}</p>
       <p class="metric-caption">Monto base otorgado</p>
     </p-card>
 
@@ -41,7 +41,7 @@
         <span class="metric-icon"><i class="pi pi-money-bill" aria-hidden="true"></i></span>
         <span class="metric-label">Total a cobrar</span>
       </div>
-      <p class="metric-value metric-value--accent">{{ kpis().totalEsperado | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+      <p class="metric-value metric-value--accent">{{ kpis().totalEsperado | penCurrency }}</p>
       <p class="metric-caption">Capital más intereses</p>
     </p-card>
 
@@ -50,7 +50,7 @@
         <span class="metric-icon"><i class="pi pi-check-circle" aria-hidden="true"></i></span>
         <span class="metric-label">Total cobrado</span>
       </div>
-      <p class="metric-value metric-value--accent">{{ kpis().totalCobrado | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+      <p class="metric-value metric-value--accent">{{ kpis().totalCobrado | penCurrency }}</p>
       <p class="metric-caption">Recuperado a la fecha</p>
     </p-card>
 
@@ -59,7 +59,7 @@
         <span class="metric-icon"><i class="pi pi-clock" aria-hidden="true"></i></span>
         <span class="metric-label">Saldo pendiente</span>
       </div>
-      <p class="metric-value metric-value--accent">{{ kpis().saldoPendiente | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+      <p class="metric-value metric-value--accent">{{ kpis().saldoPendiente | penCurrency }}</p>
       <p class="metric-caption">Por cobrar en campo</p>
     </p-card>
 
@@ -191,15 +191,15 @@
               </div>
               <div>
                 <dt class="text-xs text-surface-500">Esperado hoy</dt>
-                <dd class="mt-1 font-medium text-surface-900 dark:text-surface-0">{{ col.expectedToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                <dd class="mt-1 font-medium text-surface-900 dark:text-surface-0">{{ col.expectedToday | penCurrency }}</dd>
               </div>
               <div>
                 <dt class="text-xs text-surface-500">Cobrado hoy</dt>
-                <dd class="mt-1 font-bold text-green-600 dark:text-green-400">{{ col.collectedToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                <dd class="mt-1 font-bold text-green-600 dark:text-green-400">{{ col.collectedToday | penCurrency }}</dd>
               </div>
               <div>
                 <dt class="text-xs text-surface-500">Pendiente</dt>
-                <dd class="mt-1 font-medium text-surface-500">{{ col.pendingToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                <dd class="mt-1 font-medium text-surface-500">{{ col.pendingToday | penCurrency }}</dd>
               </div>
             </dl>
             <button pButton fluid variant="outlined" size="small"><i class="pi pi-eye mr-2"></i>Ver cartera</button>
@@ -229,9 +229,9 @@
                 <div class="text-xs text-surface-500">DNI: {{ col.dni }}</div>
               </td>
               <td>{{ col.clientsCount }}</td>
-              <td class="font-medium">{{ col.expectedToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-              <td class="font-bold text-green-600 dark:text-green-400">{{ col.collectedToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-              <td class="text-surface-500">{{ col.pendingToday | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+              <td class="font-medium">{{ col.expectedToday | penCurrency }}</td>
+              <td class="font-bold text-green-600 dark:text-green-400">{{ col.collectedToday | penCurrency }}</td>
+              <td class="text-surface-500">{{ col.pendingToday | penCurrency }}</td>
               <td>
                 <span class="rounded-full px-2.5 py-1 text-sm font-semibold" [class.bg-green-100]="col.delayedCount === 0" [class.text-green-700]="col.delayedCount === 0" [class.bg-yellow-100]="col.delayedCount > 0" [class.text-yellow-700]="col.delayedCount > 0">
                   {{ col.delayedCount }}

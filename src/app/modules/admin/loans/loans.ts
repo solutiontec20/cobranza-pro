@@ -1,4 +1,3 @@
-import { CurrencyPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { form, FormField, max, min, required, submit, validate } from '@angular/forms/signals';
@@ -14,6 +13,8 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { LoanFrequency, LoanStatus } from '../../../core/models/loan.model';
+import { EsDate } from '../../../shared/pipes/es-date';
+import { PenCurrency } from '../../../shared/pipes/pen-currency';
 import { calculateLoanSummary, firstDueOn, toDateInput } from './loan-calculations';
 import { LoanFrequencyFilter, LoanStatusFilter, LoansStore } from './loans.store';
 
@@ -39,13 +40,14 @@ const emptyModel = (): LoanFormModel => ({
   selector: 'app-admin-loans',
   imports: [
     ButtonModule,
-    CurrencyPipe,
     DialogModule,
+    EsDate,
     FormField,
     FormsModule,
     InputNumberModule,
     InputTextModule,
     MessageModule,
+    PenCurrency,
     RouterLink,
     SelectModule,
     SkeletonModule,
@@ -148,13 +150,13 @@ const emptyModel = (): LoanFormModel => ({
                   <div>
                     <dt class="text-muted-color">Cuota</dt>
                     <dd class="mt-1 font-semibold text-primary">
-                      {{ loan.installmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                      {{ loan.installmentAmount | penCurrency }}
                     </dd>
                   </div>
                   <div>
                     <dt class="text-muted-color">Saldo</dt>
                     <dd class="mt-1 font-semibold text-color">
-                      {{ loan.balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                      {{ loan.balance | penCurrency }}
                     </dd>
                   </div>
                   <div>
@@ -164,7 +166,7 @@ const emptyModel = (): LoanFormModel => ({
                 </dl>
 
                 <div class="mt-3 flex items-center justify-between text-xs text-muted-color">
-                  <span>Inicio: {{ formatDate(loan.startedOn) }}</span>
+                  <span>Inicio: {{ loan.startedOn | esDate }}</span>
                   <span>{{ loan.installmentCount }} cuotas</span>
                 </div>
 
@@ -206,13 +208,13 @@ const emptyModel = (): LoanFormModel => ({
               <tr>
                 <td>
                   <span class="font-semibold">{{ loan.clientName }}</span><br />
-                  <small class="text-muted-color">DNI {{ loan.clientDni }} · Inicio: {{ formatDate(loan.startedOn) }}</small>
+                  <small class="text-muted-color">DNI {{ loan.clientDni }} · Inicio: {{ loan.startedOn | esDate }}</small>
                 </td>
                 <td>{{ loan.collectorName }}</td>
-                <td>{{ loan.principal | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-                <td class="font-semibold">{{ loan.totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-                <td>{{ loan.installmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-                <td class="font-semibold">{{ loan.balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+                <td>{{ loan.principal | penCurrency }}</td>
+                <td class="font-semibold">{{ loan.totalAmount | penCurrency }}</td>
+                <td>{{ loan.installmentAmount | penCurrency }}</td>
+                <td class="font-semibold">{{ loan.balance | penCurrency }}</td>
                 <td><p-tag severity="secondary" [value]="frequencyLabel(loan.frequency)" /></td>
                 <td>
                   <p-tag
@@ -346,15 +348,15 @@ const emptyModel = (): LoanFormModel => ({
         <section class="grid grid-cols-2 gap-3 rounded-xl border border-surface bg-surface-50 p-4 text-sm dark:bg-surface-800 sm:grid-cols-3" aria-label="Resumen del préstamo">
           <div>
             <p class="text-muted-color">Total</p>
-            <p class="mt-1 font-semibold">{{ summary().totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+            <p class="mt-1 font-semibold">{{ summary().totalAmount | penCurrency }}</p>
           </div>
           <div>
             <p class="text-muted-color">Cuota base</p>
-            <p class="mt-1 font-semibold text-primary">{{ summary().baseInstallmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+            <p class="mt-1 font-semibold text-primary">{{ summary().baseInstallmentAmount | penCurrency }}</p>
           </div>
           <div class="col-span-2 sm:col-span-1">
             <p class="text-muted-color">Primer pago</p>
-            <p class="mt-1 font-semibold">{{ formatDate(firstDueDate()) }}</p>
+            <p class="mt-1 font-semibold">{{ firstDueDate() | esDate }}</p>
           </div>
         </section>
 
@@ -489,10 +491,5 @@ export default class Loans {
 
   protected statusLabel(status: LoanStatus): string {
     return { active: 'Activo', paid: 'Pagado', renewed: 'Renovado', voided: 'Anulado' }[status];
-  }
-
-  protected formatDate(value: string): string {
-    if (!value) return '—';
-    return new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium' }).format(new Date(`${value}T00:00:00`));
   }
 }

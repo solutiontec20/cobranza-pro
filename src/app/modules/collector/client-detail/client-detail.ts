@@ -1,4 +1,3 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { form, FormField, max, maxLength, min, required, submit, validate } from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -29,6 +28,8 @@ import {
 import { CollectionDashboardStore } from '../collection-dashboard.store';
 import { CollectionRisk } from '../collection.model';
 import { CollectorLoanStore } from './collector-loan.store';
+import { EsDate } from '../../../shared/pipes/es-date';
+import { PenCurrency } from '../../../shared/pipes/pen-currency';
 
 interface PaymentFormModel {
   amount: number;
@@ -80,12 +81,12 @@ type TagSeverity = 'success' | 'warn' | 'danger' | 'secondary' | 'info';
   selector: 'app-client-detail',
   imports: [
     ButtonModule,
-    CurrencyPipe,
-    DatePipe,
+    EsDate,
     DialogModule,
     FormField,
     InputNumberModule,
     MessageModule,
+    PenCurrency,
     SelectModule,
     SkeletonModule,
     TableModule,

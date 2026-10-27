@@ -1,4 +1,3 @@
-import { CurrencyPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -9,11 +8,14 @@ import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { SortIcon, TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
+import { parseDateValue, toIsoDateLima } from '../../../core/calculations/date-time';
 import {
   DailyControlExportFormat,
   DailyControlStatus,
   DailyControlStatusFilter,
 } from '../../../core/models/daily-control.model';
+import { EsDate } from '../../../shared/pipes/es-date';
+import { PenCurrency } from '../../../shared/pipes/pen-currency';
 import { AuthService } from '../../auth/auth.service';
 import { DailyControlExportService } from './daily-control-export.service';
 import { DailyControlStore } from './daily-control.store';
@@ -22,11 +24,12 @@ import { DailyControlStore } from './daily-control.store';
   selector: 'app-daily-control',
   imports: [
     ButtonModule,
-    CurrencyPipe,
     DatePickerModule,
+    EsDate,
     FormsModule,
     InputTextModule,
     MessageModule,
+    PenCurrency,
     SelectModule,
     SkeletonModule,
     SortIcon,
@@ -41,7 +44,7 @@ export default class DailyControl {
   private readonly authService = inject(AuthService);
 
   protected readonly loadingRows = [1, 2, 3, 4, 5];
-  protected readonly selectedDate = signal(dateFromIso(this.store.filters().businessDate));
+  protected readonly selectedDate = signal(parseDateValue(this.store.filters().businessDate));
   protected readonly exporting = signal<DailyControlExportFormat | null>(null);
   protected readonly exportError = signal<string | null>(null);
 
@@ -70,7 +73,7 @@ export default class DailyControl {
   protected async changeDate(value: Date | null): Promise<void> {
     if (!value) return;
     this.selectedDate.set(value);
-    await this.store.updateFilters({ businessDate: toIsoDate(value) });
+    await this.store.updateFilters({ businessDate: toIsoDateLima(value) });
   }
 
   protected async changeCollector(value: string | null): Promise<void> {
@@ -87,7 +90,7 @@ export default class DailyControl {
 
   protected async clearFilters(): Promise<void> {
     await this.store.clearFilters();
-    this.selectedDate.set(dateFromIso(this.store.filters().businessDate));
+    this.selectedDate.set(parseDateValue(this.store.filters().businessDate));
   }
 
   protected async exportReport(format: DailyControlExportFormat): Promise<void> {
@@ -115,15 +118,6 @@ export default class DailyControl {
     }
   }
 
-  protected formatDate(value: string | null): string {
-    if (!value) return '—';
-    return new Intl.DateTimeFormat('es-PE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    }).format(dateFromIso(value));
-  }
-
   protected statusLabel(status: DailyControlStatus): string {
     return { on_track: 'Al día', overdue: 'Con atraso', paid: 'Pagado' }[status];
   }
@@ -133,19 +127,4 @@ export default class DailyControl {
     if (status === 'paid') return 'secondary';
     return 'success';
   }
-}
-
-function dateFromIso(value: string): Date {
-  return new Date(`${value}T12:00:00`);
-}
-
-function toIsoDate(value: Date): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Lima',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(value);
-  const record = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${record['year']}-${record['month']}-${record['day']}`;
 }

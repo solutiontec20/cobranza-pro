@@ -1,4 +1,5 @@
 import { LoanPaymentRecord } from '../models/loan.model';
+import { roundMoney } from './money';
 
 export interface LoanPaymentSummary {
   paidAmount: number;
@@ -20,8 +21,4 @@ export function calculateLoanPaymentSummary(
     paidAmount,
     remainingBalance: roundMoney(Math.max(0, totalAmount - paidAmount)),
   };
-}
-
-function roundMoney(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
 }

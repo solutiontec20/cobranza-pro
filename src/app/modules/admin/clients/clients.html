@@ -84,7 +84,7 @@
           <div>
             <dt class="text-muted-color">Saldo</dt>
             <dd class="mt-1 font-semibold" [class.text-red-600]="client.outstandingAmount > 0">
-              {{ client.outstandingAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              {{ client.outstandingAmount | penCurrency }}
             </dd>
           </div>
         </dl>
@@ -121,7 +121,7 @@
             <td><p-tag severity="secondary" [value]="client.collectorName" /></td>
             <td><p-tag [severity]="riskSeverity(client)" [value]="riskLabel(client)" /></td>
             <td class="font-semibold" [class.text-red-600]="client.outstandingAmount > 0">
-              {{ client.outstandingAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              {{ client.outstandingAmount | penCurrency }}
             </td>
             <td>
               <p-tag [severity]="client.active ? 'success' : 'secondary'"
@@ -150,7 +150,7 @@
     <div class="grid gap-4 sm:grid-cols-2">
       <div>
         <label for="client-dni" class="mb-2 block text-sm font-medium text-color">DNI</label>
-        <input pInputText id="client-dni" [formField]="clientForm.dni" class="w-full" inputmode="numeric" />
+        <input pInputText appDigitsOnly id="client-dni" [formField]="clientForm.dni" class="w-full" inputmode="numeric" />
         @if (clientForm.dni().touched() && clientForm.dni().invalid()) {
         <small class="mt-1 block text-red-600">{{ clientForm.dni().errors()[0]?.message }}</small>
         }
@@ -167,7 +167,7 @@
     <div class="grid gap-4 sm:grid-cols-2">
       <div>
         <label for="client-phone" class="mb-2 block text-sm font-medium text-color">Teléfono</label>
-        <input pInputText id="client-phone" [formField]="clientForm.phone" class="w-full" inputmode="tel" />
+        <input pInputText appDigitsOnly id="client-phone" [formField]="clientForm.phone" class="w-full" inputmode="tel" />
         @if (clientForm.phone().touched() && clientForm.phone().invalid()) {
         <small class="mt-1 block text-red-600">{{ clientForm.phone().errors()[0]?.message }}</small>
         }

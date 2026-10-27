@@ -1,5 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { AppError } from '../../core/errors/app-error';
+import { currentLimaDate } from '../../core/calculations/date-time';
+import { normalizeSearchText } from '../../core/calculations/text';
 import {
   CollectorPortfolioEntry,
   CreateCollectorClientInput,
@@ -54,7 +56,7 @@ export class CollectionDashboardStore {
   });
 
   readonly filteredClients = computed(() => {
-    const query = this.normalize(this.query());
+    const query = normalizeSearchText(this.query());
     const filter = this.activeFilter();
     const order = this.sortOrder();
 
@@ -193,7 +195,7 @@ export class CollectionDashboardStore {
   private matchesQuery(client: CollectionClient, query: string) {
     if (!query) return true;
     return [client.fullName, client.dni, client.phone]
-      .map((value) => this.normalize(value))
+      .map(normalizeSearchText)
       .some((value) => value.includes(query));
   }
 
@@ -234,26 +236,7 @@ export class CollectionDashboardStore {
     }
   }
 
-  private normalize(value: string) {
-    return value
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLocaleLowerCase('es-PE')
-      .trim();
-  }
-
   private messageFrom(error: unknown, fallback: string): string {
     return AppError.from(error).message || fallback;
   }
-}
-
-function currentLimaDate(): string {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Lima',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${value['year']}-${value['month']}-${value['day']}`;
 }

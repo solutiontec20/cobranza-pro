@@ -1,5 +1,6 @@
 import { inject, Service } from '@angular/core';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { roundMoney } from '../calculations/money';
 import { AppError } from '../errors/app-error';
 import {
   DailyControlCollectorOption,
@@ -93,20 +94,16 @@ export class SupabaseDailyControlRepository implements DailyControlRepository {
   }
 
   private summarize(rows: DailyControlRow[]): DailyControlSummary {
-    const scheduledAmount = this.roundMoney(rows.reduce((total, row) => total + row.scheduledOnDate, 0));
-    const collectedAmount = this.roundMoney(rows.reduce((total, row) => total + row.collectedOnDate, 0));
+    const scheduledAmount = roundMoney(rows.reduce((total, row) => total + row.scheduledOnDate, 0));
+    const collectedAmount = roundMoney(rows.reduce((total, row) => total + row.collectedOnDate, 0));
 
     return {
       scheduledAmount,
       collectedAmount,
-      operationalDifference: this.roundMoney(scheduledAmount - collectedAmount),
+      operationalDifference: roundMoney(scheduledAmount - collectedAmount),
       attendedClients: rows.filter((row) => row.collectedOnDate > 0).length,
       overdueClients: rows.filter((row) => row.status === 'overdue').length,
     };
-  }
-
-  private roundMoney(value: number): number {
-    return Math.round((value + Number.EPSILON) * 100) / 100;
   }
 
   private reportError(error: unknown): AppError {

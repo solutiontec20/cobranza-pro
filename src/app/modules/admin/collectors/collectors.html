@@ -173,7 +173,7 @@
               {{ collector.activeCustomerCount }}
             </td>
             <td class="px-5 py-4 text-sm text-muted-color">
-              {{ formatDate(collector.createdAt) }}
+              {{ collector.createdAt | esDate }}
             </td>
             <td class="px-5 py-4">
               <p-tag [severity]="collector.active ? 'success' : 'secondary'"
@@ -240,7 +240,7 @@
     <div class="grid gap-4 sm:grid-cols-2">
       <div>
         <label for="collector-dni" class="mb-2 block text-sm font-medium text-color">DNI</label>
-        <input id="collector-dni" pInputText class="w-full" inputmode="numeric" autocomplete="off"
+        <input id="collector-dni" pInputText appDigitsOnly class="w-full" inputmode="numeric" autocomplete="off"
           [formField]="createForm.dni" />
         @if (createForm.dni().touched() && createForm.dni().invalid()) {
         <small class="mt-1 block text-red-600">{{
@@ -250,7 +250,7 @@
       </div>
       <div>
         <label for="collector-phone" class="mb-2 block text-sm font-medium text-color">Teléfono (opcional)</label>
-        <input id="collector-phone" pInputText class="w-full" inputmode="tel" autocomplete="tel"
+        <input id="collector-phone" pInputText appDigitsOnly class="w-full" inputmode="tel" autocomplete="tel"
           [formField]="createForm.phone" />
         @if (createForm.phone().touched() && createForm.phone().invalid()) {
         <small class="mt-1 block text-red-600">{{
@@ -261,7 +261,7 @@
     </div>
     <div>
       <label for="collector-pin" class="mb-2 block text-sm font-medium text-color">PIN temporal</label>
-      <input id="collector-pin" pInputText type="password" class="w-full" inputmode="numeric"
+      <input id="collector-pin" pInputText appDigitsOnly type="password" class="w-full" inputmode="numeric"
         autocomplete="new-password" [formField]="createForm.temporaryPin" />
       <small class="mt-1 block text-muted-color">Debe tener exactamente 6 dígitos.</small>
       @if (createForm.temporaryPin().touched() && createForm.temporaryPin().invalid()) {
@@ -439,7 +439,7 @@
     </div>
     <div>
       <label for="edit-collector-phone" class="mb-2 block text-sm font-medium text-color">Teléfono (opcional)</label>
-      <input id="edit-collector-phone" pInputText class="w-full" inputmode="tel" autocomplete="tel"
+      <input id="edit-collector-phone" pInputText appDigitsOnly class="w-full" inputmode="tel" autocomplete="tel"
         [formField]="editForm.phone" />
       @if (editForm.phone().touched() && editForm.phone().invalid()) {
       <small class="mt-1 block text-red-600">{{

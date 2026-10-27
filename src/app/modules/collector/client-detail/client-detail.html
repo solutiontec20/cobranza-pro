@@ -76,37 +76,37 @@
           <div class="px-5 py-3">
             <dt class="text-xs text-surface-500 dark:text-surface-400">Monto prestado</dt>
             <dd class="mt-1 mb-0 font-semibold tabular-nums text-surface-950 dark:text-surface-0">
-              {{ loan()!.principal | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              {{ loan()!.principal | penCurrency }}
             </dd>
           </div>
           <div class="px-5 py-3">
             <dt class="text-xs text-surface-500 dark:text-surface-400">Interés ({{ loan()!.interestRate }}%)</dt>
             <dd class="mt-1 mb-0 font-semibold tabular-nums text-primary-600 dark:text-primary-400">
-              {{ loan()!.totalAmount - loan()!.principal | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              {{ loan()!.totalAmount - loan()!.principal | penCurrency }}
             </dd>
           </div>
           <div class="px-5 py-3">
             <dt class="text-xs text-surface-500 dark:text-surface-400">Total a pagar</dt>
             <dd class="mt-1 mb-0 font-semibold tabular-nums text-surface-950 dark:text-surface-0">
-              {{ loan()!.totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              {{ loan()!.totalAmount | penCurrency }}
             </dd>
           </div>
           <div class="px-5 py-3">
             <dt class="text-xs text-surface-500 dark:text-surface-400">Valor cuota</dt>
             <dd class="mt-1 mb-0 font-semibold tabular-nums text-primary-600 dark:text-primary-400">
-              {{ loan()!.installmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              {{ loan()!.installmentAmount | penCurrency }}
             </dd>
           </div>
           <div class="px-5 py-3">
             <dt class="text-xs text-surface-500 dark:text-surface-400">Total pagado</dt>
             <dd class="mt-1 mb-0 font-semibold tabular-nums text-green-700 dark:text-green-400">
-              {{ loan()!.totalAmount - loan()!.balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              {{ loan()!.totalAmount - loan()!.balance | penCurrency }}
             </dd>
           </div>
           <div class="px-5 py-3">
             <dt class="text-xs text-surface-500 dark:text-surface-400">Saldo pendiente</dt>
             <dd class="mt-1 mb-0 font-bold tabular-nums" [class.text-red-600]="loan()!.balance > 0" [class.text-green-700]="loan()!.balance === 0">
-              {{ loan()!.balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              {{ loan()!.balance | penCurrency }}
             </dd>
           </div>
         </dl>
@@ -160,15 +160,15 @@
             <ng-template #body let-inst>
               <tr>
                 <td class="font-bold">#{{ inst.installmentNumber }}</td>
-                <td>{{ inst.dueDate | date: 'dd/MM/yyyy' }}</td>
+                <td>{{ inst.dueDate | esDate: 'short' }}</td>
                 <td class="text-right tabular-nums">
-                  {{ inst.scheduledAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                  {{ inst.scheduledAmount | penCurrency }}
                 </td>
                 <td class="text-right tabular-nums text-green-700 dark:text-green-400">
-                  {{ inst.paidAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                  {{ inst.paidAmount | penCurrency }}
                 </td>
                 <td class="text-right tabular-nums">
-                  {{ inst.outstandingAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                  {{ inst.outstandingAmount | penCurrency }}
                 </td>
                 <td>
                   <p-tag [severity]="getInstallmentSeverity(inst.status)" [value]="getInstallmentLabel(inst.status)" />
@@ -217,9 +217,9 @@
               </ng-template>
               <ng-template #body let-pago>
                 <tr>
-                  <td>{{ pago.paidAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+                  <td>{{ pago.paidAt | esDate: 'short-datetime' }}</td>
                   <td class="text-right font-bold tabular-nums" [class.text-green-700]="pago.status === 'posted'" [class.dark:text-green-400]="pago.status === 'posted'">
-                    {{ pago.amount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                    {{ pago.amount | penCurrency }}
                   </td>
                   <td>
                     <p-tag [severity]="paymentSeverity(pago.status)" [value]="paymentStatusLabel(pago.status)" />
@@ -285,7 +285,7 @@
           </p>
           <p class="mt-1 mb-0 text-sm text-surface-600 dark:text-surface-400">
             Saldo pendiente: <strong class="tabular-nums text-red-600 dark:text-red-400">
-              {{ loan()?.balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              {{ loan()?.balance | penCurrency }}
             </strong>
           </p>
         </div>
@@ -299,7 +299,7 @@
                   class="min-h-10 rounded-lg border border-surface-300 bg-surface-50 px-3 text-sm font-semibold text-surface-700 transition-colors hover:border-primary-500 hover:bg-primary-50 hover:text-primary-700 focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-surface-600 dark:bg-surface-800 dark:text-surface-200"
                   [class.border-primary-600]="paymentModel().amount === amount" [class.bg-primary-50]="paymentModel().amount === amount"
                   [class.text-primary-700]="paymentModel().amount === amount" (click)="selectQuickAmount(amount)">
-                  {{ amount | currency: 'PEN' : 'symbol' : '1.0-2' : 'es-PE' }}
+                  {{ amount | penCurrency: '1.0-2' }}
                 </button>
               }
             </div>
@@ -341,7 +341,7 @@
         <div style="margin: 0; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--p-surface-200); display: flex; justify-content: space-between; align-items: center;">
           <span class="text-sm font-semibold">Saldo tras este pago:</span>
           <span class="text-base font-bold text-green-700 tabular-nums dark:text-green-400">
-            {{ paymentBalancePreview() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+            {{ paymentBalancePreview() | penCurrency }}
           </span>
         </div>
 
@@ -367,7 +367,7 @@
         </div>
         <div>
           <p class="m-0 text-3xl font-bold tabular-nums text-green-700 dark:text-green-400">
-            {{ paymentResult()?.allocatedAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+            {{ paymentResult()?.allocatedAmount | penCurrency }}
           </p>
           <p class="mt-1 mb-0 text-sm text-surface-500 dark:text-surface-400">
             registrado para {{ client()?.fullName }}
@@ -377,7 +377,7 @@
           <div class="flex items-center justify-between text-sm">
             <span class="text-surface-600 dark:text-surface-400">Nuevo saldo pendiente</span>
             <span class="font-bold tabular-nums" [class.text-green-700]="paymentResult()?.remainingBalance === 0" [class.dark:text-green-400]="paymentResult()?.remainingBalance === 0">
-              {{ paymentResult()?.remainingBalance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              {{ paymentResult()?.remainingBalance | penCurrency }}
             </span>
           </div>
           @if (paymentResult()?.resultingLoanStatus === 'paid') {
@@ -417,8 +417,8 @@
         </p-message>
 
         <dl class="grid grid-cols-2 gap-2 rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800">
-          <div><dt class="text-xs text-surface-500 dark:text-surface-400">Fecha</dt><dd class="m-0 font-semibold">{{ payment.paidAt | date: 'dd/MM/yyyy HH:mm' }}</dd></div>
-          <div><dt class="text-xs text-surface-500 dark:text-surface-400">Monto</dt><dd class="m-0 font-semibold">{{ payment.amount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd></div>
+          <div><dt class="text-xs text-surface-500 dark:text-surface-400">Fecha</dt><dd class="m-0 font-semibold">{{ payment.paidAt | esDate: 'short-datetime' }}</dd></div>
+          <div><dt class="text-xs text-surface-500 dark:text-surface-400">Monto</dt><dd class="m-0 font-semibold">{{ payment.amount | penCurrency }}</dd></div>
           <div><dt class="text-xs text-surface-500 dark:text-surface-400">Medio</dt><dd class="m-0 font-semibold">{{ payment.paymentMethod }}</dd></div>
           <div><dt class="text-xs text-surface-500 dark:text-surface-400">Estado</dt><dd class="m-0 font-semibold">{{ paymentStatusLabel(payment.status) }}</dd></div>
         </dl>
@@ -466,7 +466,7 @@
 
         @if (loan()!.balance > 0) {
           <p-message severity="info" styleClass="w-full">
-            Saldo pendiente del préstamo actual: <strong>{{ loan()!.balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</strong>.
+            Saldo pendiente del préstamo actual: <strong>{{ loan()!.balance | penCurrency }}</strong>.
             El capital del nuevo préstamo debe cubrir, como mínimo, ese saldo.
           </p-message>
         }
@@ -514,15 +514,15 @@
         <section class="grid grid-cols-2 gap-3 rounded-xl border border-surface-200 bg-surface-50 p-4 text-sm dark:border-surface-700 dark:bg-surface-800 sm:grid-cols-3" aria-label="Resumen de la renovación">
           <div>
             <p class="m-0 text-surface-500 dark:text-surface-400">Entregado al cliente</p>
-            <p class="mt-1 mb-0 font-semibold">{{ renewDisbursedPreview() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+            <p class="mt-1 mb-0 font-semibold">{{ renewDisbursedPreview() | penCurrency }}</p>
           </div>
           <div>
             <p class="m-0 text-surface-500 dark:text-surface-400">Total a pagar</p>
-            <p class="mt-1 mb-0 font-semibold">{{ renewSummary().totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+            <p class="mt-1 mb-0 font-semibold">{{ renewSummary().totalAmount | penCurrency }}</p>
           </div>
           <div class="col-span-2 sm:col-span-1">
             <p class="m-0 text-surface-500 dark:text-surface-400">Cuota base</p>
-            <p class="mt-1 mb-0 font-semibold text-primary-600 dark:text-primary-400">{{ renewSummary().baseInstallmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+            <p class="mt-1 mb-0 font-semibold text-primary-600 dark:text-primary-400">{{ renewSummary().baseInstallmentAmount | penCurrency }}</p>
           </div>
         </section>
 
@@ -548,7 +548,7 @@
         <div>
           <p class="m-0 text-xl font-bold text-surface-950 dark:text-surface-0">Préstamo renovado</p>
           <p class="mt-1 mb-0 text-sm text-surface-500 dark:text-surface-400">
-            Nuevo total a pagar: {{ renewResult()?.totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+            Nuevo total a pagar: {{ renewResult()?.totalAmount | penCurrency }}
           </p>
         </div>
         <button pButton type="button" severity="success" class="w-full" (click)="closeRenewDialog()">
@@ -628,15 +628,15 @@
         <section class="grid grid-cols-2 gap-3 rounded-xl border border-surface-200 bg-surface-50 p-4 text-sm dark:border-surface-700 dark:bg-surface-800 sm:grid-cols-3" aria-label="Resumen del préstamo">
           <div>
             <p class="m-0 text-surface-500 dark:text-surface-400">Total a pagar</p>
-            <p class="mt-1 mb-0 font-semibold">{{ createLoanSummary().totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+            <p class="mt-1 mb-0 font-semibold">{{ createLoanSummary().totalAmount | penCurrency }}</p>
           </div>
           <div>
             <p class="m-0 text-surface-500 dark:text-surface-400">Cuota base</p>
-            <p class="mt-1 mb-0 font-semibold text-primary-600 dark:text-primary-400">{{ createLoanSummary().baseInstallmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+            <p class="mt-1 mb-0 font-semibold text-primary-600 dark:text-primary-400">{{ createLoanSummary().baseInstallmentAmount | penCurrency }}</p>
           </div>
           <div class="col-span-2 sm:col-span-1">
             <p class="m-0 text-surface-500 dark:text-surface-400">Primer pago</p>
-            <p class="mt-1 mb-0 font-semibold">{{ createLoanFirstDueDate() | date: 'dd/MM/yyyy' }}</p>
+            <p class="mt-1 mb-0 font-semibold">{{ createLoanFirstDueDate() | esDate: 'short' }}</p>
           </div>
         </section>
 
@@ -662,7 +662,7 @@
         <div>
           <p class="m-0 text-xl font-bold text-surface-950 dark:text-surface-0">Préstamo creado</p>
           <p class="mt-1 mb-0 text-sm text-surface-500 dark:text-surface-400">
-            Total a pagar: {{ createLoanResult()?.totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+            Total a pagar: {{ createLoanResult()?.totalAmount | penCurrency }}
           </p>
         </div>
         <button pButton type="button" severity="success" class="w-full" (click)="closeCreateLoanDialog()">

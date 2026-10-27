@@ -8,6 +8,8 @@ import { MessageModule } from 'primeng/message';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
 import { Collector } from '../../../core/models/collector.model';
+import { DigitsOnly } from '../../../shared/directives/digits-only';
+import { EsDate } from '../../../shared/pipes/es-date';
 import { AuthService } from '../../auth/auth.service';
 import { CollectorsStore } from './collectors.store';
 
@@ -20,6 +22,8 @@ const EMPTY_EDIT_MODEL = { fullName: '', phone: '', reason: '' };
   imports: [
     ButtonModule,
     DialogModule,
+    DigitsOnly,
+    EsDate,
     FormField,
     InputTextModule,
     MessageModule,
@@ -205,9 +209,5 @@ export default class Collectors {
         });
       }
     });
-  }
-
-  protected formatDate(value: string): string {
-    return new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium' }).format(new Date(value));
   }
 }

@@ -1,4 +1,3 @@
-import { CurrencyPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { form, FormField, max, maxLength, min, required, submit, validate } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -20,6 +19,8 @@ import {
   RegisterLoanPaymentResult,
   RenewLoanResult,
 } from '../../../core/models/loan.model';
+import { EsDate } from '../../../shared/pipes/es-date';
+import { PenCurrency } from '../../../shared/pipes/pen-currency';
 import {
   calculateLoanPaymentSummary,
   calculateLoanSummary,
@@ -87,11 +88,12 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
   selector: 'app-admin-loan-detail',
   imports: [
     ButtonModule,
-    CurrencyPipe,
     DialogModule,
+    EsDate,
     FormField,
     InputNumberModule,
     MessageModule,
+    PenCurrency,
     RouterLink,
     SelectModule,
     SkeletonModule,
@@ -204,17 +206,17 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
             <div class="border-b border-surface p-4 sm:p-5">
               <div class="flex flex-col items-start justify-between gap-1 sm:flex-row sm:items-center sm:gap-3">
                 <h2 id="loan-summary-title" class="text-lg font-semibold text-color">Resumen del préstamo</h2>
-                <span class="text-sm text-muted-color">{{ formatDate(detail.loan.startedOn) }} — {{ formatDate(detail.loan.endDate) }}</span>
+                <span class="text-sm text-muted-color">{{ detail.loan.startedOn | esDate }} — {{ detail.loan.endDate | esDate }}</span>
               </div>
 
               <div class="mt-5 flex flex-col gap-1">
                 <span class="text-sm text-muted-color">Saldo pendiente</span>
                 <span class="text-3xl font-bold tracking-tight text-color sm:text-4xl">
-                  {{ remainingBalance() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                  {{ remainingBalance() | penCurrency }}
                 </span>
                 <span class="text-sm text-muted-color">
-                  Pagado {{ totalPaid() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }} de
-                  {{ detail.loan.totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                  Pagado {{ totalPaid() | penCurrency }} de
+                  {{ detail.loan.totalAmount | penCurrency }}
                 </span>
               </div>
 
@@ -226,27 +228,27 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
             <dl class="grid grid-cols-2 divide-x divide-y divide-surface-200 text-sm dark:divide-surface-700 sm:grid-cols-3">
               <div class="p-4">
                 <dt class="text-muted-color">Monto prestado</dt>
-                <dd class="mt-1 font-semibold text-color">{{ detail.loan.principal | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                <dd class="mt-1 font-semibold text-color">{{ detail.loan.principal | penCurrency }}</dd>
               </div>
               <div class="p-4">
                 <dt class="text-muted-color">Interés ({{ detail.loan.interestRate }}%)</dt>
-                <dd class="mt-1 font-semibold text-color">{{ interestAmount() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                <dd class="mt-1 font-semibold text-color">{{ interestAmount() | penCurrency }}</dd>
               </div>
               <div class="p-4">
                 <dt class="text-muted-color">Total a pagar</dt>
-                <dd class="mt-1 font-semibold text-color">{{ detail.loan.totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                <dd class="mt-1 font-semibold text-color">{{ detail.loan.totalAmount | penCurrency }}</dd>
               </div>
               <div class="p-4">
                 <dt class="text-muted-color">Valor de cuota</dt>
-                <dd class="mt-1 font-semibold text-primary">{{ detail.loan.installmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                <dd class="mt-1 font-semibold text-primary">{{ detail.loan.installmentAmount | penCurrency }}</dd>
               </div>
               <div class="p-4">
                 <dt class="text-muted-color">Fecha de inicio</dt>
-                <dd class="mt-1 font-semibold text-color">{{ formatDate(detail.loan.startedOn) }}</dd>
+                <dd class="mt-1 font-semibold text-color">{{ detail.loan.startedOn | esDate }}</dd>
               </div>
               <div class="p-4">
                 <dt class="text-muted-color">Fecha de fin</dt>
-                <dd class="mt-1 font-semibold text-color">{{ formatDate(detail.loan.endDate) }}</dd>
+                <dd class="mt-1 font-semibold text-color">{{ detail.loan.endDate | esDate }}</dd>
               </div>
             </dl>
           </section>
@@ -371,15 +373,15 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
               <section class="grid grid-cols-2 gap-3 rounded-xl bg-surface-50 p-4 text-sm dark:bg-surface-800 sm:grid-cols-3" aria-label="Nuevo resumen del préstamo">
                 <div>
                   <p class="text-muted-color">Nuevo total</p>
-                  <p class="mt-1 font-semibold text-color">{{ editSummary().totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+                  <p class="mt-1 font-semibold text-color">{{ editSummary().totalAmount | penCurrency }}</p>
                 </div>
                 <div>
                   <p class="text-muted-color">Nueva cuota</p>
-                  <p class="mt-1 font-semibold text-primary">{{ editSummary().baseInstallmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+                  <p class="mt-1 font-semibold text-primary">{{ editSummary().baseInstallmentAmount | penCurrency }}</p>
                 </div>
                 <div class="col-span-2 sm:col-span-1">
                   <p class="text-muted-color">Primer pago</p>
-                  <p class="mt-1 font-semibold text-color">{{ formatDate(editFirstDueDate()) }}</p>
+                  <p class="mt-1 font-semibold text-color">{{ editFirstDueDate() | esDate }}</p>
                 </div>
               </section>
 
@@ -406,7 +408,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
               <h2 id="schedule-title" class="text-xl font-semibold text-color">Cronograma de pagos</h2>
               <p class="mt-1 text-sm text-muted-color">{{ detail.installments.length }} cuotas programadas</p>
             </div>
-            <span class="text-sm font-medium text-muted-color">Fin: {{ formatDate(detail.loan.endDate) }}</span>
+            <span class="text-sm font-medium text-muted-color">Fin: {{ detail.loan.endDate | esDate }}</span>
           </div>
 
           <div class="space-y-3 md:hidden">
@@ -415,7 +417,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
                 <div class="flex items-center justify-between gap-3">
                   <div>
                     <p class="font-semibold text-color">Cuota {{ installment.installmentNumber }}</p>
-                    <p class="text-sm text-muted-color">Vence {{ formatDate(installment.dueDate) }}</p>
+                    <p class="text-sm text-muted-color">Vence {{ installment.dueDate | esDate }}</p>
                   </div>
                   <p-tag
                     [severity]="installmentSeverity(installment.status)"
@@ -425,15 +427,15 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
                 <dl class="mt-3 grid grid-cols-3 gap-2 border-t border-surface-200 pt-3 text-sm dark:border-surface-700">
                   <div>
                     <dt class="text-muted-color">Esperado</dt>
-                    <dd class="mt-1 font-semibold text-color">{{ installment.scheduledAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                    <dd class="mt-1 font-semibold text-color">{{ installment.scheduledAmount | penCurrency }}</dd>
                   </div>
                   <div>
                     <dt class="text-muted-color">Pagado</dt>
-                    <dd class="mt-1 font-semibold text-green-600">{{ installment.paidAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                    <dd class="mt-1 font-semibold text-green-600">{{ installment.paidAmount | penCurrency }}</dd>
                   </div>
                   <div>
                     <dt class="text-muted-color">Saldo</dt>
-                    <dd class="mt-1 font-semibold text-color">{{ installment.outstandingAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                    <dd class="mt-1 font-semibold text-color">{{ installment.outstandingAmount | penCurrency }}</dd>
                   </div>
                 </dl>
                 @if (installment.overdueDays > 0) {
@@ -458,10 +460,10 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
               <ng-template #body let-installment>
                 <tr>
                   <td class="font-semibold">{{ installment.installmentNumber }}</td>
-                  <td>{{ formatDate(installment.dueDate) }}</td>
-                  <td class="text-right">{{ installment.scheduledAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-                  <td class="text-right text-green-600">{{ installment.paidAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-                  <td class="text-right font-semibold">{{ installment.outstandingAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+                  <td>{{ installment.dueDate | esDate }}</td>
+                  <td class="text-right">{{ installment.scheduledAmount | penCurrency }}</td>
+                  <td class="text-right text-green-600">{{ installment.paidAmount | penCurrency }}</td>
+                  <td class="text-right font-semibold">{{ installment.outstandingAmount | penCurrency }}</td>
                   <td>
                     <p-tag
                       [severity]="installmentSeverity(installment.status)"
@@ -496,9 +498,9 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
                   <div class="flex items-start justify-between gap-3">
                     <div>
                       <p class="text-xl font-bold" [class.line-through]="payment.status === 'voided'" [class.text-green-600]="payment.status === 'posted'">
-                        {{ payment.amount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                        {{ payment.amount | penCurrency }}
                       </p>
-                      <p class="mt-0.5 text-sm text-muted-color">{{ formatDateTime(payment.paidAt) }}</p>
+                      <p class="mt-0.5 text-sm text-muted-color">{{ payment.paidAt | esDate:'datetime' }}</p>
                     </div>
                     <p-tag [severity]="paymentSeverity(payment.status)" [value]="paymentStatusLabel(payment.status)" />
                   </div>
@@ -542,9 +544,9 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
                 </ng-template>
                 <ng-template #body let-payment>
                   <tr [class.opacity-60]="payment.status === 'voided'">
-                    <td>{{ formatDateTime(payment.paidAt) }}</td>
+                    <td>{{ payment.paidAt | esDate:'datetime' }}</td>
                     <td class="text-right font-semibold" [class.line-through]="payment.status === 'voided'" [class.text-green-600]="payment.status === 'posted'">
-                      {{ payment.amount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                      {{ payment.amount | penCurrency }}
                     </td>
                     <td>{{ paymentMethodLabel(payment.paymentMethod) }}</td>
                     <td>{{ payment.collectorName }}</td>
@@ -587,7 +589,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
           </div>
           <div>
             <p class="text-3xl font-bold tabular-nums text-green-700 dark:text-green-400">
-              {{ result.allocatedAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              {{ result.allocatedAmount | penCurrency }}
             </p>
             <p class="mt-1 text-sm text-muted-color">registrado para {{ detail()?.client?.fullName }}</p>
           </div>
@@ -597,7 +599,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
                 Nuevo saldo del préstamo #{{ selectedLoanReference() }}
               </dt>
               <dd class="font-bold tabular-nums text-color">
-                {{ confirmedPaymentBalance() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                {{ confirmedPaymentBalance() | penCurrency }}
               </dd>
             </div>
             @if (result.resultingLoanStatus === 'paid') {
@@ -631,7 +633,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
                 <div class="text-right">
                   <p class="text-muted-color">Saldo de este préstamo</p>
                   <p class="mt-1 text-lg font-bold tabular-nums text-color">
-                    {{ remainingBalance() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                    {{ remainingBalance() | penCurrency }}
                   </p>
                 </div>
               </div>
@@ -673,7 +675,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
                     [class.text-primary]="paymentModel().amount === amount"
                     (click)="selectPaymentAmount(amount)"
                   >
-                    {{ amount | currency: 'PEN' : 'symbol' : '1.0-2' : 'es-PE' }}
+                    {{ amount | penCurrency:'1.0-2' }}
                   </button>
                 }
               </div>
@@ -710,7 +712,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
           <div class="flex items-center justify-between gap-3 rounded-lg border border-surface p-4 text-sm">
             <span class="text-muted-color">Saldo de este préstamo después del pago</span>
             <strong class="text-lg tabular-nums text-color">
-              {{ paymentBalancePreview() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              {{ paymentBalancePreview() | penCurrency }}
             </strong>
           </div>
 
@@ -752,7 +754,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
           <div>
             <p class="text-lg font-semibold text-color">Préstamo renovado</p>
             <p class="mt-1 text-sm text-muted-color">
-              Nuevo total a pagar: {{ result.totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              Nuevo total a pagar: {{ result.totalAmount | penCurrency }}
             </p>
           </div>
         </div>
@@ -775,7 +777,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
 
           @if (remainingBalance() > 0) {
             <p-message severity="info" styleClass="w-full">
-              Saldo pendiente del préstamo actual: <strong>{{ remainingBalance() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</strong>.
+              Saldo pendiente del préstamo actual: <strong>{{ remainingBalance() | penCurrency }}</strong>.
               El nuevo capital debe cubrir, como mínimo, ese saldo.
             </p-message>
           }
@@ -822,15 +824,15 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
           <section class="grid grid-cols-2 gap-3 rounded-xl bg-surface-50 p-4 text-sm dark:bg-surface-800 sm:grid-cols-3" aria-label="Resumen de la renovación">
             <div>
               <p class="text-muted-color">Entregado al cliente</p>
-              <p class="mt-1 font-semibold text-color">{{ renewDisbursedPreview() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+              <p class="mt-1 font-semibold text-color">{{ renewDisbursedPreview() | penCurrency }}</p>
             </div>
             <div>
               <p class="text-muted-color">Total a pagar</p>
-              <p class="mt-1 font-semibold text-color">{{ renewSummary().totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+              <p class="mt-1 font-semibold text-color">{{ renewSummary().totalAmount | penCurrency }}</p>
             </div>
             <div class="col-span-2 sm:col-span-1">
               <p class="text-muted-color">Cuota base</p>
-              <p class="mt-1 font-semibold text-primary">{{ renewSummary().baseInstallmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+              <p class="mt-1 font-semibold text-primary">{{ renewSummary().baseInstallmentAmount | penCurrency }}</p>
             </div>
           </section>
 
@@ -1239,18 +1241,5 @@ export default class LoanDetailPage {
       transfer: 'Transferencia',
     };
     return labels[method.toLowerCase()] ?? method;
-  }
-
-  protected formatDate(value: string): string {
-    if (!value) return '—';
-    return new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium' }).format(new Date(`${value}T00:00:00`));
-  }
-
-  protected formatDateTime(value: string): string {
-    return new Intl.DateTimeFormat('es-PE', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-      timeZone: 'America/Lima',
-    }).format(new Date(value));
   }
 }

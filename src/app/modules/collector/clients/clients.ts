@@ -1,4 +1,3 @@
-import { CurrencyPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import {
   form,
@@ -25,6 +24,9 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
 import { calculateLoanSummary, firstDueOn, toDateInput } from '../../../core/calculations/loan-calculations';
 import { LoanFrequency } from '../../../core/models/loan.model';
+import { EsDate } from '../../../shared/pipes/es-date';
+import { PenCurrency } from '../../../shared/pipes/pen-currency';
+import { DigitsOnly } from '../../../shared/directives/digits-only';
 import { CollectionClientCard } from '../../../shared/ui/collection-client-card/collection-client-card';
 import { CollectionDashboardStore } from '../collection-dashboard.store';
 
@@ -58,15 +60,17 @@ const emptyModel = (): NewClientFormModel => ({
   selector: 'app-collector-clients',
   imports: [
     ButtonModule,
+    DigitsOnly,
     CollectionClientCard,
-    CurrencyPipe,
     DialogModule,
+    EsDate,
     FormField,
     IconFieldModule,
     InputIconModule,
     InputNumberModule,
     InputTextModule,
     MessageModule,
+    PenCurrency,
     SelectModule,
     SkeletonModule,
     TagModule,
@@ -159,7 +163,7 @@ const emptyModel = (): NewClientFormModel => ({
           <div class="grid gap-4 sm:grid-cols-2">
             <div>
               <label for="new-client-dni" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">DNI</label>
-              <input pInputText id="new-client-dni" [formField]="clientForm.dni" class="w-full" inputmode="numeric" />
+              <input pInputText appDigitsOnly id="new-client-dni" [formField]="clientForm.dni" class="w-full" inputmode="numeric" />
               @if (clientForm.dni().touched() && clientForm.dni().invalid()) {
                 <small class="mt-1 block text-red-600">{{ clientForm.dni().errors()[0]?.message }}</small>
               }
@@ -175,7 +179,7 @@ const emptyModel = (): NewClientFormModel => ({
 
           <div>
             <label for="new-client-phone" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Teléfono</label>
-            <input pInputText id="new-client-phone" [formField]="clientForm.phone" class="w-full" inputmode="tel" />
+            <input pInputText appDigitsOnly id="new-client-phone" [formField]="clientForm.phone" class="w-full" inputmode="tel" />
             @if (clientForm.phone().touched() && clientForm.phone().invalid()) {
               <small class="mt-1 block text-red-600">{{ clientForm.phone().errors()[0]?.message }}</small>
             }
@@ -247,15 +251,15 @@ const emptyModel = (): NewClientFormModel => ({
           <section class="grid grid-cols-2 gap-3 rounded-xl border border-surface-200 bg-surface-50 p-4 text-sm dark:border-surface-700 dark:bg-surface-800 sm:grid-cols-3" aria-label="Resumen del préstamo">
             <div>
               <p class="m-0 text-surface-500 dark:text-surface-400">Total a pagar</p>
-              <p class="mt-1 mb-0 font-semibold">{{ summary().totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+              <p class="mt-1 mb-0 font-semibold">{{ summary().totalAmount | penCurrency }}</p>
             </div>
             <div>
               <p class="m-0 text-surface-500 dark:text-surface-400">Cuota base</p>
-              <p class="mt-1 mb-0 font-semibold text-primary-600 dark:text-primary-400">{{ summary().baseInstallmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+              <p class="mt-1 mb-0 font-semibold text-primary-600 dark:text-primary-400">{{ summary().baseInstallmentAmount | penCurrency }}</p>
             </div>
             <div class="col-span-2 sm:col-span-1">
               <p class="m-0 text-surface-500 dark:text-surface-400">Primer pago</p>
-              <p class="mt-1 mb-0 font-semibold">{{ formatDate(firstDueDate()) }}</p>
+              <p class="mt-1 mb-0 font-semibold">{{ firstDueDate() | esDate }}</p>
             </div>
           </section>
 
@@ -375,10 +379,5 @@ export default class CollectorClients {
         });
       }
     });
-  }
-
-  protected formatDate(value: string): string {
-    if (!value) return '—';
-    return new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium' }).format(new Date(`${value}T00:00:00`));
   }
 }

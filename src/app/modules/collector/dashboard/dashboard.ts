@@ -1,4 +1,3 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -12,6 +11,9 @@ import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { CollectionClientCard } from '../../../shared/ui/collection-client-card/collection-client-card';
 import { CollectionMetric } from '../../../shared/ui/collection-metric/collection-metric';
+import { currentLimaDate } from '../../../core/calculations/date-time';
+import { EsDate } from '../../../shared/pipes/es-date';
+import { PenCurrency } from '../../../shared/pipes/pen-currency';
 import { AuthService } from '../../auth/auth.service';
 import { CollectionDashboardStore } from '../collection-dashboard.store';
 import {
@@ -30,13 +32,13 @@ interface FilterOption {
   imports: [
     CollectionClientCard,
     CollectionMetric,
-    CurrencyPipe,
-    DatePipe,
+    EsDate,
     FormsModule,
     IconFieldModule,
     InputIconModule,
     InputTextModule,
     MessageModule,
+    PenCurrency,
     ProgressBarModule,
     SelectModule,
     SkeletonModule,
@@ -47,7 +49,7 @@ export default class CollectorDashboard {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   readonly store = inject(CollectionDashboardStore);
-  readonly today = new Date();
+  readonly today = currentLimaDate();
   protected readonly loadingRows = [1, 2, 3];
   protected readonly collectorFirstName = computed(
     () => this.authService.currentUser()?.fullName?.split(' ')[0] ?? '',
