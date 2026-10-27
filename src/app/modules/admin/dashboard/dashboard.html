@@ -14,6 +14,18 @@
     </span>
   </header>
 
+  @if (store.error()) {
+    <p-message severity="error" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
+  }
+
+  @if (store.loading() && !store.summary()) {
+    <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Cargando indicadores">
+      @for (row of loadingRows; track row) {
+        <p-skeleton height="8rem" borderRadius="1rem" />
+      }
+    </section>
+  } @else {
+
   <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicadores principales">
     <p-card class="metric-card metric-card--blue">
       <div class="flex items-center gap-3">
@@ -87,6 +99,8 @@
       <p class="metric-caption">Personal activo en campo</p>
     </p-card>
   </section>
+
+  }
 
   <section class="grid grid-cols-1 gap-4 lg:grid-cols-2" aria-label="Análisis de cartera">
     <p-card class="insight-card h-full" header="Recuperación de cartera">

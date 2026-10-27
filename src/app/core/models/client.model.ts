@@ -4,8 +4,6 @@ export interface Client {
   fullName: string;
   phone: string;
   address: string;
-  /** Only used by the temporary local MVP data. It is not persisted in Supabase. */
-  addressReference?: string;
   collectorId: string;
   notes: string;
   active: boolean;
