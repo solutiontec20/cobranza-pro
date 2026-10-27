@@ -1,0 +1,54 @@
+name: Deploy DEV
+
+on:
+  push:
+    branches:
+      - dev
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy DEV Preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    environment:
+      name: Development
+
+    env:
+      NG_APP_PRIMENG_UI_KEY: ${{ secrets.NG_APP_PRIMENG_UI_KEY }}
+      NG_APP_SUPABASE_URL: ${{ vars.NG_APP_SUPABASE_URL }}
+      NG_APP_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NG_APP_SUPABASE_PUBLISHABLE_KEY }}
+
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm and Node
+        uses: pnpm/setup@v3
+        with:
+          runtime: node@24.15.0
+          cache: true
+          install: false
+
+      - name: Install dependencies
+        run: pnpm ci
+
+      - name: Build Angular DEV
+        run: pnpm build
+
+      - name: Deploy DEV Preview
+        run: pnpm wrangler preview --name dev

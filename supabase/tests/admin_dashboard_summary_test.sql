@@ -22,6 +22,11 @@ select plan(10);
 --                                  capital_prestado/total_esperado/
 --                                  total_cobrado, but DOES count
 --                                  toward prestamos_pagados
+--
+-- IMPORTANT: the local/CI database may already contain seed data.
+-- This test records the dashboard baseline before adding its own
+-- business fixtures and then asserts only the delta contributed by
+-- those fixtures. That keeps the test independent from seed.sql.
 -- ============================================================
 
 insert into auth.users (id, email)
@@ -31,9 +36,36 @@ values
   ('e1000000-0000-0000-0000-000000000003', 'db.collector.a@test.local'),
   ('e1000000-0000-0000-0000-000000000004', 'db.collector.b@test.local');
 
+-- Insert only the test admin first so we can authorize the dashboard
+-- RPC and capture the state that existed before this test's business
+-- fixtures are added. Admin profiles do not affect dashboard KPIs.
 insert into public.profiles (id, dni, full_name, role, active)
 values
-  ('e1000000-0000-0000-0000-000000000001', '91000001', 'DB Admin', 'admin', true),
+  ('e1000000-0000-0000-0000-000000000001', '91000001', 'DB Admin', 'admin', true);
+
+set local role authenticated;
+set local request.jwt.claim.sub = 'e1000000-0000-0000-0000-000000000001';
+
+select
+  set_config('cobranzapro_test.dashboard_baseline_capital_prestado', capital_prestado::text, false),
+  set_config('cobranzapro_test.dashboard_baseline_total_esperado', total_esperado::text, false),
+  set_config('cobranzapro_test.dashboard_baseline_total_cobrado', total_cobrado::text, false),
+  set_config('cobranzapro_test.dashboard_baseline_saldo_pendiente', saldo_pendiente::text, false),
+  set_config('cobranzapro_test.dashboard_baseline_total_clientes', total_clientes::text, false),
+  set_config('cobranzapro_test.dashboard_baseline_prestamos_pagados', prestamos_pagados::text, false),
+  set_config('cobranzapro_test.dashboard_baseline_cobradores', cobradores::text, false),
+  set_config('cobranzapro_test.dashboard_baseline_risk_green', risk_green::text, false),
+  set_config('cobranzapro_test.dashboard_baseline_risk_yellow', risk_yellow::text, false),
+  set_config('cobranzapro_test.dashboard_baseline_risk_orange', risk_orange::text, false),
+  set_config('cobranzapro_test.dashboard_baseline_risk_red', risk_red::text, false)
+from public.admin_dashboard_summary();
+
+reset role;
+
+-- Remaining test roles. Only Collector A is active; Collector B is
+-- intentionally inactive and must not count as an active collector.
+insert into public.profiles (id, dni, full_name, role, active)
+values
   ('e1000000-0000-0000-0000-000000000002', '91000002', 'DB Supervisor', 'supervisor', true),
   ('e1000000-0000-0000-0000-000000000003', '91000003', 'DB Collector A', 'collector', true),
   ('e1000000-0000-0000-0000-000000000004', '91000004', 'DB Collector B', 'collector', false);
@@ -109,8 +141,12 @@ select throws_ok(
 );
 
 -- ============================================================
--- TEST 4: Every KPI and risk bucket matches the hand-computed
--- expectation above, in a single row.
+-- TEST 4: Every KPI and risk bucket contributed by THIS test's
+-- fixtures matches the hand-computed expectation above.
+--
+-- We subtract the dashboard baseline captured before inserting the
+-- collector/customer/loan/payment fixtures, so seed.sql can contain
+-- arbitrary demo data without changing this test's expected result.
 -- ============================================================
 
 set local request.jwt.claim.sub = 'e1000000-0000-0000-0000-000000000001';
@@ -118,9 +154,17 @@ set local request.jwt.claim.sub = 'e1000000-0000-0000-0000-000000000001';
 select results_eq(
   $$
     select
-      capital_prestado, total_esperado, total_cobrado, saldo_pendiente,
-      total_clientes, prestamos_pagados, cobradores,
-      risk_green, risk_yellow, risk_orange, risk_red
+      capital_prestado - current_setting('cobranzapro_test.dashboard_baseline_capital_prestado')::numeric,
+      total_esperado - current_setting('cobranzapro_test.dashboard_baseline_total_esperado')::numeric,
+      total_cobrado - current_setting('cobranzapro_test.dashboard_baseline_total_cobrado')::numeric,
+      saldo_pendiente - current_setting('cobranzapro_test.dashboard_baseline_saldo_pendiente')::numeric,
+      total_clientes - current_setting('cobranzapro_test.dashboard_baseline_total_clientes')::bigint,
+      prestamos_pagados - current_setting('cobranzapro_test.dashboard_baseline_prestamos_pagados')::bigint,
+      cobradores - current_setting('cobranzapro_test.dashboard_baseline_cobradores')::bigint,
+      risk_green - current_setting('cobranzapro_test.dashboard_baseline_risk_green')::bigint,
+      risk_yellow - current_setting('cobranzapro_test.dashboard_baseline_risk_yellow')::bigint,
+      risk_orange - current_setting('cobranzapro_test.dashboard_baseline_risk_orange')::bigint,
+      risk_red - current_setting('cobranzapro_test.dashboard_baseline_risk_red')::bigint
     from public.admin_dashboard_summary()
   $$,
   $$ values (
@@ -156,6 +200,8 @@ select throws_ok(
 
 -- ============================================================
 -- TEST 8: Collector A's row matches every hand-computed figure.
+-- This query is scoped by collector_id, so unrelated seed collectors
+-- cannot affect it.
 -- ============================================================
 
 set local request.jwt.claim.sub = 'e1000000-0000-0000-0000-000000000001';
