@@ -1,104 +1,3 @@
-import { CurrencyPipe } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
-import { form, FormField, max, maxLength, min, required, submit, validate } from '@angular/forms/signals';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { MessageService } from 'primeng/api';
-import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
-import { InputNumberModule } from 'primeng/inputnumber';
-import { MessageModule } from 'primeng/message';
-import { SelectModule } from 'primeng/select';
-import { SkeletonModule } from 'primeng/skeleton';
-import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import {
-  LoanFrequency,
-  LoanInstallmentStatus,
-  LoanPaymentMethod,
-  LoanPaymentRecord,
-  LoanStatus,
-  RegisterLoanPaymentResult,
-  RenewLoanResult,
-} from '../../../core/models/loan.model';
-import {
-  calculateLoanPaymentSummary,
-  calculateLoanSummary,
-  firstDueOn,
-  toDateInput,
-} from './loan-calculations';
-import {
-  LoanEditReasonCode,
-  LOAN_EDIT_REASON_OPTIONS,
-  resolveLoanEditReason,
-} from './loan-edit-reasons';
-import { LoansStore } from './loans.store';
-
-interface LoanEditModel {
-  principal: number;
-  interestRate: number;
-  frequency: LoanFrequency;
-  installmentCount: number;
-  startedOn: string;
-  reasonCode: LoanEditReasonCode | '';
-  customReason: string;
-}
-
-interface PaymentFormModel {
-  amount: number;
-  paymentMethod: LoanPaymentMethod;
-  notes: string;
-}
-
-interface RenewFormModel {
-  principal: number;
-  interestRate: number;
-  frequency: LoanFrequency;
-  installmentCount: number;
-  startedOn: string;
-}
-
-type TagSeverity = 'success' | 'warn' | 'danger' | 'secondary' | 'info';
-
-const emptyEditModel = (): LoanEditModel => ({
-  principal: 0,
-  interestRate: 0,
-  frequency: 'daily',
-  installmentCount: 1,
-  startedOn: '',
-  reasonCode: '',
-  customReason: '',
-});
-
-const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
-  amount,
-  paymentMethod: 'cash',
-  notes: '',
-});
-
-const emptyRenewModel = (principal = 100): RenewFormModel => ({
-  principal,
-  interestRate: 20,
-  frequency: 'daily',
-  installmentCount: 24,
-  startedOn: toDateInput(new Date()),
-});
-
-@Component({
-  selector: 'app-admin-loan-detail',
-  imports: [
-    ButtonModule,
-    CurrencyPipe,
-    DialogModule,
-    FormField,
-    InputNumberModule,
-    MessageModule,
-    RouterLink,
-    SelectModule,
-    SkeletonModule,
-    TableModule,
-    TagModule,
-  ],
-  template: `
     <main class="mx-auto flex w-full max-w-6xl flex-col gap-4 p-3 pb-10 sm:gap-6 sm:p-6" aria-labelledby="loan-detail-title">
       <nav aria-label="Navegación del préstamo">
         <a
@@ -204,17 +103,17 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
             <div class="border-b border-surface p-4 sm:p-5">
               <div class="flex flex-col items-start justify-between gap-1 sm:flex-row sm:items-center sm:gap-3">
                 <h2 id="loan-summary-title" class="text-lg font-semibold text-color">Resumen del préstamo</h2>
-                <span class="text-sm text-muted-color">{{ formatDate(detail.loan.startedOn) }} — {{ formatDate(detail.loan.endDate) }}</span>
+                <span class="text-sm text-muted-color">{{ detail.loan.startedOn | esDate }} — {{ detail.loan.endDate | esDate }}</span>
               </div>
 
               <div class="mt-5 flex flex-col gap-1">
                 <span class="text-sm text-muted-color">Saldo pendiente</span>
                 <span class="text-3xl font-bold tracking-tight text-color sm:text-4xl">
-                  {{ remainingBalance() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                  {{ remainingBalance() | penCurrency }}
                 </span>
                 <span class="text-sm text-muted-color">
-                  Pagado {{ totalPaid() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }} de
-                  {{ detail.loan.totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                  Pagado {{ totalPaid() | penCurrency }} de
+                  {{ detail.loan.totalAmount | penCurrency }}
                 </span>
               </div>
 
@@ -226,27 +125,27 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
             <dl class="grid grid-cols-2 divide-x divide-y divide-surface-200 text-sm dark:divide-surface-700 sm:grid-cols-3">
               <div class="p-4">
                 <dt class="text-muted-color">Monto prestado</dt>
-                <dd class="mt-1 font-semibold text-color">{{ detail.loan.principal | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                <dd class="mt-1 font-semibold text-color">{{ detail.loan.principal | penCurrency }}</dd>
               </div>
               <div class="p-4">
                 <dt class="text-muted-color">Interés ({{ detail.loan.interestRate }}%)</dt>
-                <dd class="mt-1 font-semibold text-color">{{ interestAmount() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                <dd class="mt-1 font-semibold text-color">{{ interestAmount() | penCurrency }}</dd>
               </div>
               <div class="p-4">
                 <dt class="text-muted-color">Total a pagar</dt>
-                <dd class="mt-1 font-semibold text-color">{{ detail.loan.totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                <dd class="mt-1 font-semibold text-color">{{ detail.loan.totalAmount | penCurrency }}</dd>
               </div>
               <div class="p-4">
                 <dt class="text-muted-color">Valor de cuota</dt>
-                <dd class="mt-1 font-semibold text-primary">{{ detail.loan.installmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                <dd class="mt-1 font-semibold text-primary">{{ detail.loan.installmentAmount | penCurrency }}</dd>
               </div>
               <div class="p-4">
                 <dt class="text-muted-color">Fecha de inicio</dt>
-                <dd class="mt-1 font-semibold text-color">{{ formatDate(detail.loan.startedOn) }}</dd>
+                <dd class="mt-1 font-semibold text-color">{{ detail.loan.startedOn | esDate }}</dd>
               </div>
               <div class="p-4">
                 <dt class="text-muted-color">Fecha de fin</dt>
-                <dd class="mt-1 font-semibold text-color">{{ formatDate(detail.loan.endDate) }}</dd>
+                <dd class="mt-1 font-semibold text-color">{{ detail.loan.endDate | esDate }}</dd>
               </div>
             </dl>
           </section>
@@ -371,15 +270,15 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
               <section class="grid grid-cols-2 gap-3 rounded-xl bg-surface-50 p-4 text-sm dark:bg-surface-800 sm:grid-cols-3" aria-label="Nuevo resumen del préstamo">
                 <div>
                   <p class="text-muted-color">Nuevo total</p>
-                  <p class="mt-1 font-semibold text-color">{{ editSummary().totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+                  <p class="mt-1 font-semibold text-color">{{ editSummary().totalAmount | penCurrency }}</p>
                 </div>
                 <div>
                   <p class="text-muted-color">Nueva cuota</p>
-                  <p class="mt-1 font-semibold text-primary">{{ editSummary().baseInstallmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+                  <p class="mt-1 font-semibold text-primary">{{ editSummary().baseInstallmentAmount | penCurrency }}</p>
                 </div>
                 <div class="col-span-2 sm:col-span-1">
                   <p class="text-muted-color">Primer pago</p>
-                  <p class="mt-1 font-semibold text-color">{{ formatDate(editFirstDueDate()) }}</p>
+                  <p class="mt-1 font-semibold text-color">{{ editFirstDueDate() | esDate }}</p>
                 </div>
               </section>
 
@@ -406,7 +305,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
               <h2 id="schedule-title" class="text-xl font-semibold text-color">Cronograma de pagos</h2>
               <p class="mt-1 text-sm text-muted-color">{{ detail.installments.length }} cuotas programadas</p>
             </div>
-            <span class="text-sm font-medium text-muted-color">Fin: {{ formatDate(detail.loan.endDate) }}</span>
+            <span class="text-sm font-medium text-muted-color">Fin: {{ detail.loan.endDate | esDate }}</span>
           </div>
 
           <div class="space-y-3 md:hidden">
@@ -415,7 +314,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
                 <div class="flex items-center justify-between gap-3">
                   <div>
                     <p class="font-semibold text-color">Cuota {{ installment.installmentNumber }}</p>
-                    <p class="text-sm text-muted-color">Vence {{ formatDate(installment.dueDate) }}</p>
+                    <p class="text-sm text-muted-color">Vence {{ installment.dueDate | esDate }}</p>
                   </div>
                   <p-tag
                     [severity]="installmentSeverity(installment.status)"
@@ -425,15 +324,15 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
                 <dl class="mt-3 grid grid-cols-3 gap-2 border-t border-surface-200 pt-3 text-sm dark:border-surface-700">
                   <div>
                     <dt class="text-muted-color">Esperado</dt>
-                    <dd class="mt-1 font-semibold text-color">{{ installment.scheduledAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                    <dd class="mt-1 font-semibold text-color">{{ installment.scheduledAmount | penCurrency }}</dd>
                   </div>
                   <div>
                     <dt class="text-muted-color">Pagado</dt>
-                    <dd class="mt-1 font-semibold text-green-600">{{ installment.paidAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                    <dd class="mt-1 font-semibold text-green-600">{{ installment.paidAmount | penCurrency }}</dd>
                   </div>
                   <div>
                     <dt class="text-muted-color">Saldo</dt>
-                    <dd class="mt-1 font-semibold text-color">{{ installment.outstandingAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+                    <dd class="mt-1 font-semibold text-color">{{ installment.outstandingAmount | penCurrency }}</dd>
                   </div>
                 </dl>
                 @if (installment.overdueDays > 0) {
@@ -458,10 +357,10 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
               <ng-template #body let-installment>
                 <tr>
                   <td class="font-semibold">{{ installment.installmentNumber }}</td>
-                  <td>{{ formatDate(installment.dueDate) }}</td>
-                  <td class="text-right">{{ installment.scheduledAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-                  <td class="text-right text-green-600">{{ installment.paidAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-                  <td class="text-right font-semibold">{{ installment.outstandingAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
+                  <td>{{ installment.dueDate | esDate }}</td>
+                  <td class="text-right">{{ installment.scheduledAmount | penCurrency }}</td>
+                  <td class="text-right text-green-600">{{ installment.paidAmount | penCurrency }}</td>
+                  <td class="text-right font-semibold">{{ installment.outstandingAmount | penCurrency }}</td>
                   <td>
                     <p-tag
                       [severity]="installmentSeverity(installment.status)"
@@ -496,9 +395,9 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
                   <div class="flex items-start justify-between gap-3">
                     <div>
                       <p class="text-xl font-bold" [class.line-through]="payment.status === 'voided'" [class.text-green-600]="payment.status === 'posted'">
-                        {{ payment.amount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                        {{ payment.amount | penCurrency }}
                       </p>
-                      <p class="mt-0.5 text-sm text-muted-color">{{ formatDateTime(payment.paidAt) }}</p>
+                      <p class="mt-0.5 text-sm text-muted-color">{{ payment.paidAt | esDate:'datetime' }}</p>
                     </div>
                     <p-tag [severity]="paymentSeverity(payment.status)" [value]="paymentStatusLabel(payment.status)" />
                   </div>
@@ -542,9 +441,9 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
                 </ng-template>
                 <ng-template #body let-payment>
                   <tr [class.opacity-60]="payment.status === 'voided'">
-                    <td>{{ formatDateTime(payment.paidAt) }}</td>
+                    <td>{{ payment.paidAt | esDate:'datetime' }}</td>
                     <td class="text-right font-semibold" [class.line-through]="payment.status === 'voided'" [class.text-green-600]="payment.status === 'posted'">
-                      {{ payment.amount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                      {{ payment.amount | penCurrency }}
                     </td>
                     <td>{{ paymentMethodLabel(payment.paymentMethod) }}</td>
                     <td>{{ payment.collectorName }}</td>
@@ -587,7 +486,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
           </div>
           <div>
             <p class="text-3xl font-bold tabular-nums text-green-700 dark:text-green-400">
-              {{ result.allocatedAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              {{ result.allocatedAmount | penCurrency }}
             </p>
             <p class="mt-1 text-sm text-muted-color">registrado para {{ detail()?.client?.fullName }}</p>
           </div>
@@ -597,7 +496,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
                 Nuevo saldo del préstamo #{{ selectedLoanReference() }}
               </dt>
               <dd class="font-bold tabular-nums text-color">
-                {{ confirmedPaymentBalance() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                {{ confirmedPaymentBalance() | penCurrency }}
               </dd>
             </div>
             @if (result.resultingLoanStatus === 'paid') {
@@ -631,7 +530,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
                 <div class="text-right">
                   <p class="text-muted-color">Saldo de este préstamo</p>
                   <p class="mt-1 text-lg font-bold tabular-nums text-color">
-                    {{ remainingBalance() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                    {{ remainingBalance() | penCurrency }}
                   </p>
                 </div>
               </div>
@@ -673,7 +572,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
                     [class.text-primary]="paymentModel().amount === amount"
                     (click)="selectPaymentAmount(amount)"
                   >
-                    {{ amount | currency: 'PEN' : 'symbol' : '1.0-2' : 'es-PE' }}
+                    {{ amount | penCurrency:'1.0-2' }}
                   </button>
                 }
               </div>
@@ -710,7 +609,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
           <div class="flex items-center justify-between gap-3 rounded-lg border border-surface p-4 text-sm">
             <span class="text-muted-color">Saldo de este préstamo después del pago</span>
             <strong class="text-lg tabular-nums text-color">
-              {{ paymentBalancePreview() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              {{ paymentBalancePreview() | penCurrency }}
             </strong>
           </div>
 
@@ -752,7 +651,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
           <div>
             <p class="text-lg font-semibold text-color">Préstamo renovado</p>
             <p class="mt-1 text-sm text-muted-color">
-              Nuevo total a pagar: {{ result.totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              Nuevo total a pagar: {{ result.totalAmount | penCurrency }}
             </p>
           </div>
         </div>
@@ -775,7 +674,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
 
           @if (remainingBalance() > 0) {
             <p-message severity="info" styleClass="w-full">
-              Saldo pendiente del préstamo actual: <strong>{{ remainingBalance() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</strong>.
+              Saldo pendiente del préstamo actual: <strong>{{ remainingBalance() | penCurrency }}</strong>.
               El nuevo capital debe cubrir, como mínimo, ese saldo.
             </p-message>
           }
@@ -822,15 +721,15 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
           <section class="grid grid-cols-2 gap-3 rounded-xl bg-surface-50 p-4 text-sm dark:bg-surface-800 sm:grid-cols-3" aria-label="Resumen de la renovación">
             <div>
               <p class="text-muted-color">Entregado al cliente</p>
-              <p class="mt-1 font-semibold text-color">{{ renewDisbursedPreview() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+              <p class="mt-1 font-semibold text-color">{{ renewDisbursedPreview() | penCurrency }}</p>
             </div>
             <div>
               <p class="text-muted-color">Total a pagar</p>
-              <p class="mt-1 font-semibold text-color">{{ renewSummary().totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+              <p class="mt-1 font-semibold text-color">{{ renewSummary().totalAmount | penCurrency }}</p>
             </div>
             <div class="col-span-2 sm:col-span-1">
               <p class="text-muted-color">Cuota base</p>
-              <p class="mt-1 font-semibold text-primary">{{ renewSummary().baseInstallmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+              <p class="mt-1 font-semibold text-primary">{{ renewSummary().baseInstallmentAmount | penCurrency }}</p>
             </div>
           </section>
 
@@ -852,405 +751,3 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
         </form>
       }
     </p-dialog>
-  `,
-})
-export default class LoanDetailPage {
-  protected readonly store = inject(LoansStore);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly messageService = inject(MessageService);
-
-  private readonly loanId = this.route.snapshot.paramMap.get('loanId') ?? '';
-  protected readonly editing = signal(false);
-  protected readonly frequencyOptions: Array<{ label: string; value: LoanFrequency }> = [
-    { label: 'Diario', value: 'daily' },
-    { label: 'Semanal', value: 'weekly' },
-    { label: 'Mensual', value: 'monthly' },
-  ];
-  protected readonly editReasonOptions = LOAN_EDIT_REASON_OPTIONS;
-  protected readonly paymentMethodOptions: Array<{ label: string; value: LoanPaymentMethod }> = [
-    { label: 'Efectivo', value: 'cash' },
-    { label: 'Yape', value: 'yape' },
-    { label: 'Plin', value: 'plin' },
-    { label: 'Transferencia', value: 'transfer' },
-  ];
-
-  protected readonly detail = this.store.selectedDetail;
-  protected readonly paymentDialogVisible = signal(false);
-  protected readonly paymentResult = signal<RegisterLoanPaymentResult | null>(null);
-  protected readonly paymentModel = signal<PaymentFormModel>(emptyPaymentModel());
-  protected readonly paymentForm = form(this.paymentModel, (path) => {
-    min(path.amount, 0.01, { message: 'El monto debe ser mayor que cero.' });
-    required(path.paymentMethod, { message: 'Selecciona el medio de pago.' });
-    maxLength(path.notes, 500, { message: 'La observación no puede superar 500 caracteres.' });
-  });
-  protected readonly editModel = signal<LoanEditModel>(emptyEditModel());
-  protected readonly editForm = form(this.editModel, (path) => {
-    min(path.principal, 0.01, { message: 'El capital debe ser mayor que cero.' });
-    min(path.interestRate, 0, { message: 'La tasa no puede ser negativa.' });
-    min(path.installmentCount, 1, { message: 'Debe existir al menos una cuota.' });
-    max(path.installmentCount, 32767, { message: 'La cantidad de cuotas es demasiado alta.' });
-    required(path.startedOn, { message: 'Selecciona la fecha de inicio.' });
-    required(path.reasonCode, { message: 'Selecciona el motivo de la edición.' });
-    maxLength(path.customReason, 500, { message: 'La justificación no puede superar 500 caracteres.' });
-    validate(path.customReason, ({ valueOf }) =>
-      valueOf(path.reasonCode) === 'other' && valueOf(path.customReason).trim().length === 0
-        ? { kind: 'required', message: 'Ingresa una justificación.' }
-        : undefined,
-    );
-    validate(path.installmentCount, ({ valueOf }) => {
-      const summary = calculateLoanSummary(
-        valueOf(path.principal),
-        valueOf(path.interestRate),
-        valueOf(path.installmentCount),
-      );
-      return summary.baseInstallmentAmount > 0 && summary.lastInstallmentAmount > 0
-        ? undefined
-        : { kind: 'invalidSchedule', message: 'La cantidad de cuotas genera importes inválidos.' };
-    });
-  });
-
-  protected readonly renewDialogVisible = signal(false);
-  protected readonly renewResult = signal<RenewLoanResult | null>(null);
-  protected readonly renewModel = signal<RenewFormModel>(emptyRenewModel());
-  protected readonly renewForm = form(this.renewModel, (path) => {
-    min(path.principal, 0.01, { message: 'El capital debe ser mayor que cero.' });
-    min(path.interestRate, 0, { message: 'La tasa no puede ser negativa.' });
-    min(path.installmentCount, 1, { message: 'Debe existir al menos una cuota.' });
-    max(path.installmentCount, 32767, { message: 'La cantidad de cuotas es demasiado alta.' });
-    required(path.startedOn, { message: 'Selecciona la fecha de inicio.' });
-    validate(path.principal, ({ valueOf }) => {
-      const minPrincipal = this.remainingBalance();
-      return valueOf(path.principal) >= minPrincipal
-        ? undefined
-        : { kind: 'belowOutstanding', message: `El capital debe ser al menos el saldo pendiente (S/ ${minPrincipal.toFixed(2)}).` };
-    });
-    validate(path.installmentCount, ({ valueOf }) => {
-      const summary = calculateLoanSummary(
-        valueOf(path.principal),
-        valueOf(path.interestRate),
-        valueOf(path.installmentCount),
-      );
-      return summary.baseInstallmentAmount > 0 && summary.lastInstallmentAmount > 0
-        ? undefined
-        : { kind: 'invalidSchedule', message: 'La cantidad de cuotas genera importes inválidos.' };
-    });
-  });
-
-  protected readonly paymentSummary = computed(() => {
-    const detail = this.detail();
-    return calculateLoanPaymentSummary(detail?.loan.totalAmount ?? 0, detail?.payments ?? []);
-  });
-  protected readonly totalPaid = computed(() => this.paymentSummary().paidAmount);
-  protected readonly remainingBalance = computed(() => this.paymentSummary().remainingBalance);
-  protected readonly paidPercentage = computed(() => {
-    const loan = this.detail()?.loan;
-    if (!loan || loan.totalAmount <= 0) return 0;
-    return Math.min(100, Math.max(0, (this.totalPaid() / loan.totalAmount) * 100));
-  });
-  protected readonly interestAmount = computed(() => {
-    const loan = this.detail()?.loan;
-    return loan ? loan.totalAmount - loan.principal : 0;
-  });
-  protected readonly canEdit = computed(() => {
-    const detail = this.detail();
-    return detail?.loan.status === 'active' && detail.payments.length === 0;
-  });
-  /**
-   * Mirrors `renew_loan`'s server-side rule: a loan can only be renewed while active or fully
-   * paid off, and only when the client isn't blacklisted (more than 5 accumulated overdue days).
-   */
-  protected readonly canRenew = computed(() => {
-    const detail = this.detail();
-    if (!detail || (detail.loan.status !== 'active' && detail.loan.status !== 'paid')) return false;
-    const maxOverdueDays = detail.installments.reduce(
-      (max, installment) => Math.max(max, installment.overdueDays),
-      0,
-    );
-    return maxOverdueDays <= 5;
-  });
-  protected readonly renewSummary = computed(() => {
-    const model = this.renewModel();
-    return calculateLoanSummary(model.principal, model.interestRate, model.installmentCount);
-  });
-  protected readonly renewDisbursedPreview = computed(() =>
-    Math.max(0, Math.round((this.renewModel().principal - this.remainingBalance()) * 100) / 100),
-  );
-  protected readonly clientInitials = computed(() =>
-    (this.detail()?.client.fullName ?? '')
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0])
-      .join('')
-      .toUpperCase(),
-  );
-  protected readonly editSummary = computed(() => {
-    const model = this.editModel();
-    return calculateLoanSummary(model.principal, model.interestRate, model.installmentCount);
-  });
-  protected readonly editFirstDueDate = computed(() => {
-    const model = this.editModel();
-    return firstDueOn(model.startedOn, model.frequency);
-  });
-  protected readonly quickPaymentAmounts = computed(() => {
-    const detail = this.detail();
-    const balance = this.remainingBalance();
-    if (!detail || balance <= 0) return [];
-
-    const nextInstallment =
-      detail.installments.find((installment) => installment.outstandingAmount > 0)?.outstandingAmount ??
-      detail.loan.installmentAmount;
-
-    return [...new Set([5, 10, 15, nextInstallment, balance])]
-      .filter((amount) => amount > 0 && amount <= balance)
-      .map((amount) => Math.round(amount * 100) / 100);
-  });
-  protected readonly paymentAmountIsValid = computed(() => {
-    const balance = this.remainingBalance();
-    const amount = this.paymentModel().amount;
-    return Number.isFinite(amount) && amount > 0 && amount <= balance;
-  });
-  protected readonly paymentBalancePreview = computed(() => {
-    const balance = this.remainingBalance();
-    const amount = this.paymentModel().amount;
-    return Math.max(0, Math.round((balance - (Number.isFinite(amount) ? amount : 0)) * 100) / 100);
-  });
-  protected readonly selectedLoanReference = computed(() =>
-    (this.detail()?.loan.id ?? '').slice(0, 8).toUpperCase(),
-  );
-  protected readonly confirmedPaymentBalance = computed(() => {
-    const result = this.paymentResult();
-    if (!result) return 0;
-
-    return this.detail()?.payments.some((payment) => payment.id === result.paymentId)
-      ? this.remainingBalance()
-      : result.remainingBalance;
-  });
-
-  constructor() {
-    void this.store.loadDetail(this.loanId);
-  }
-
-  protected startEditing(): void {
-    const loan = this.detail()?.loan;
-    if (!loan || !this.canEdit()) return;
-
-    this.store.clearError();
-    this.editModel.set({
-      principal: loan.principal,
-      interestRate: loan.interestRate,
-      frequency: loan.frequency,
-      installmentCount: loan.installmentCount,
-      startedOn: loan.startedOn,
-      reasonCode: '',
-      customReason: '',
-    });
-    this.editForm().reset();
-    this.editing.set(true);
-  }
-
-  protected cancelEditing(): void {
-    this.editing.set(false);
-    this.store.clearError();
-  }
-
-  protected openPaymentDialog(): void {
-    const detail = this.detail();
-    const balance = this.remainingBalance();
-    if (!detail || detail.loan.status !== 'active' || balance <= 0) return;
-
-    const suggestedAmount =
-      detail.installments.find((installment) => installment.outstandingAmount > 0)?.outstandingAmount ??
-      detail.loan.installmentAmount;
-
-    this.editing.set(false);
-    this.store.clearError();
-    this.paymentResult.set(null);
-    this.paymentModel.set(emptyPaymentModel(Math.min(suggestedAmount, balance)));
-    this.paymentForm().reset();
-    this.paymentDialogVisible.set(true);
-  }
-
-  protected closePaymentDialog(): void {
-    if (this.store.paying()) return;
-    this.paymentDialogVisible.set(false);
-    this.paymentResult.set(null);
-    this.store.clearError();
-  }
-
-  protected onPaymentDialogVisibleChange(visible: boolean): void {
-    if (visible) {
-      this.paymentDialogVisible.set(true);
-      return;
-    }
-    this.closePaymentDialog();
-  }
-
-  protected selectPaymentAmount(amount: number): void {
-    this.paymentModel.update((model) => ({ ...model, amount }));
-  }
-
-  protected submitPayment(): void {
-    if (!this.paymentAmountIsValid()) return;
-
-    void submit(this.paymentForm, async () => {
-      const model = this.paymentModel();
-      const result = await this.store.registerPayment({
-        loanId: this.loanId,
-        amount: model.amount,
-        paymentMethod: model.paymentMethod,
-        notes: model.notes.trim(),
-      });
-
-      if (result) {
-        this.paymentResult.set(result);
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Pago registrado',
-          detail: 'El saldo y el cronograma fueron actualizados.',
-        });
-      }
-    });
-  }
-
-  protected saveChanges(): void {
-    void submit(this.editForm, async () => {
-      const model = this.editModel();
-      const reason = resolveLoanEditReason(model.reasonCode, model.customReason);
-      if (!reason) return;
-
-      const updated = await this.store.update({
-        loanId: this.loanId,
-        principal: model.principal,
-        interestRate: model.interestRate,
-        frequency: model.frequency,
-        installmentCount: model.installmentCount,
-        startedOn: model.startedOn,
-        reason,
-      });
-
-      if (updated) {
-        this.editing.set(false);
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Préstamo actualizado',
-          detail: 'Las condiciones y el cronograma fueron recalculados correctamente.',
-        });
-      }
-    });
-  }
-
-  protected openRenewDialog(): void {
-    const detail = this.detail();
-    if (!detail || !this.canRenew()) return;
-
-    this.editing.set(false);
-    this.store.clearError();
-    this.renewResult.set(null);
-    this.renewModel.set(
-      emptyRenewModel(
-        detail.loan.status === 'paid'
-          ? detail.loan.principal
-          : Math.max(this.remainingBalance(), detail.loan.principal),
-      ),
-    );
-    this.renewForm().reset();
-    this.renewDialogVisible.set(true);
-  }
-
-  protected closeRenewDialog(): void {
-    if (this.store.renewing()) return;
-
-    const result = this.renewResult();
-    this.renewDialogVisible.set(false);
-    this.renewResult.set(null);
-    this.store.clearError();
-
-    if (result) {
-      this.router.navigate(['/admin/prestamos', result.loanId]);
-    }
-  }
-
-  protected onRenewDialogVisibleChange(visible: boolean): void {
-    if (visible) {
-      this.renewDialogVisible.set(true);
-      return;
-    }
-    this.closeRenewDialog();
-  }
-
-  protected submitRenewal(): void {
-    void submit(this.renewForm, async () => {
-      const model = this.renewModel();
-      const result = await this.store.renew({
-        loanId: this.loanId,
-        principal: model.principal,
-        interestRate: model.interestRate,
-        frequency: model.frequency,
-        installmentCount: model.installmentCount,
-        startedOn: model.startedOn,
-      });
-
-      if (result) {
-        this.renewResult.set(result);
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Préstamo renovado',
-          detail: 'El préstamo anterior se cerró y se generó un nuevo cronograma.',
-        });
-      }
-    });
-  }
-
-  protected frequencyLabel(frequency: LoanFrequency): string {
-    return this.frequencyOptions.find((option) => option.value === frequency)?.label ?? frequency;
-  }
-
-  protected loanStatusLabel(status: LoanStatus): string {
-    return { active: 'Activo', paid: 'Pagado', renewed: 'Renovado', voided: 'Anulado' }[status];
-  }
-
-  protected loanStatusSeverity(status: LoanStatus): TagSeverity {
-    return status === 'active' ? 'success' : status === 'voided' ? 'danger' : 'secondary';
-  }
-
-  protected installmentStatusLabel(status: LoanInstallmentStatus): string {
-    return { pending: 'Pendiente', partial: 'Pago parcial', overdue: 'Vencido', paid: 'Pagado' }[status];
-  }
-
-  protected installmentSeverity(status: LoanInstallmentStatus): TagSeverity {
-    return { pending: 'secondary', partial: 'warn', overdue: 'danger', paid: 'success' }[status] as TagSeverity;
-  }
-
-  protected paymentStatusLabel(status: LoanPaymentRecord['status']): string {
-    return status === 'posted' ? 'Registrado' : 'Anulado';
-  }
-
-  protected paymentSeverity(status: LoanPaymentRecord['status']): TagSeverity {
-    return status === 'posted' ? 'success' : 'danger';
-  }
-
-  protected paymentMethodLabel(method: string): string {
-    const labels: Record<string, string> = {
-      cash: 'Efectivo',
-      yape: 'Yape',
-      plin: 'Plin',
-      transfer: 'Transferencia',
-    };
-    return labels[method.toLowerCase()] ?? method;
-  }
-
-  protected formatDate(value: string): string {
-    if (!value) return '—';
-    return new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium' }).format(new Date(`${value}T00:00:00`));
-  }
-
-  protected formatDateTime(value: string): string {
-    return new Intl.DateTimeFormat('es-PE', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-      timeZone: 'America/Lima',
-    }).format(new Date(value));
-  }
-}

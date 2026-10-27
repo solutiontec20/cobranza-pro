@@ -4,10 +4,11 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { AuthService } from '../auth.service';
+import { DigitsOnly } from '../../../shared/directives/digits-only';
 
 @Component({
   selector: 'app-change-pin',
-  imports: [ButtonModule, FormField, InputTextModule, MessageModule],
+  imports: [ButtonModule, DigitsOnly, FormField, InputTextModule, MessageModule],
   template: `
     <main class="mx-auto flex w-full max-w-xl flex-col gap-6 p-4 sm:p-6" aria-labelledby="change-pin-title">
       <header>
@@ -35,6 +36,7 @@ import { AuthService } from '../auth.service';
             <input
               id="current-pin"
               pInputText
+              appDigitsOnly
               type="password"
               inputmode="numeric"
               autocomplete="current-password"
@@ -51,6 +53,7 @@ import { AuthService } from '../auth.service';
             <input
               id="new-pin"
               pInputText
+              appDigitsOnly
               type="password"
               inputmode="numeric"
               autocomplete="new-password"
@@ -70,6 +73,7 @@ import { AuthService } from '../auth.service';
             <input
               id="confirm-pin"
               pInputText
+              appDigitsOnly
               type="password"
               inputmode="numeric"
               autocomplete="new-password"

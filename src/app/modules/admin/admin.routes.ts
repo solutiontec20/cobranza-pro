@@ -52,7 +52,7 @@ export const ADMIN_ROUTES: Routes = [
       {
         path: ':loanId',
         title: 'Detalle del préstamo | CobranzaPro',
-        loadComponent: () => import('./loans/loan-detail'),
+        loadComponent: () => import('./loans/loan-detail/loan-detail'),
       },
     ],
   },

@@ -1,4 +1,3 @@
-import { CurrencyPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { form, FormField, max, maxLength, min, required, submit, validate } from '@angular/forms/signals';
 import { FormsModule } from '@angular/forms';
@@ -13,7 +12,10 @@ import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
 import { calculateExpectedCash, calculateTotalCollected } from '../../../core/calculations/cash-closure-calculations';
+import { parseDateValue, toIsoDateLima } from '../../../core/calculations/date-time';
 import { CashExpense, CashExpenseCategory, CollectorCashDay } from '../../../core/models/cash-closure.model';
+import { EsDate } from '../../../shared/pipes/es-date';
+import { PenCurrency } from '../../../shared/pipes/pen-currency';
 import { CashClosureStore } from './cash-closure.store';
 
 interface OpeningFormModel {
@@ -53,14 +55,15 @@ const CATEGORY_OPTIONS: Array<{ label: string; value: CashExpenseCategory }> = [
   selector: 'app-admin-cash-closure',
   imports: [
     ButtonModule,
-    CurrencyPipe,
     DatePickerModule,
     DialogModule,
+    EsDate,
     FormField,
     FormsModule,
     InputNumberModule,
     InputTextModule,
     MessageModule,
+    PenCurrency,
     SelectModule,
     SkeletonModule,
     TagModule,
@@ -74,7 +77,7 @@ export default class AdminCashClosure {
 
   protected readonly loadingRows = [1, 2, 3];
   protected readonly categoryOptions = CATEGORY_OPTIONS;
-  protected readonly selectedDate = signal(dateFromIso(this.store.businessDate()));
+  protected readonly selectedDate = signal(parseDateValue(this.store.businessDate()));
 
   // Opening / allowance dialogs share the same form shape.
   protected readonly openingDialogVisible = signal(false);
@@ -132,7 +135,7 @@ export default class AdminCashClosure {
   protected async changeDate(value: Date | null): Promise<void> {
     if (!value) return;
     this.selectedDate.set(value);
-    this.store.setBusinessDate(toIsoDate(value));
+    this.store.setBusinessDate(toIsoDateLima(value));
   }
 
   protected selectCollector(day: CollectorCashDay): void {
@@ -309,28 +312,4 @@ export default class AdminCashClosure {
   protected closureStatusSeverity(status: 'draft' | 'submitted' | 'validated'): 'secondary' | 'warn' | 'success' {
     return { draft: 'secondary' as const, submitted: 'warn' as const, validated: 'success' as const }[status];
   }
-
-  protected formatDateTime(value: string | null): string {
-    if (!value) return '—';
-    return new Intl.DateTimeFormat('es-PE', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-      timeZone: 'America/Lima',
-    }).format(new Date(value));
-  }
-}
-
-function dateFromIso(value: string): Date {
-  return new Date(`${value}T12:00:00`);
-}
-
-function toIsoDate(value: Date): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Lima',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(value);
-  const record = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${record['year']}-${record['month']}-${record['day']}`;
 }

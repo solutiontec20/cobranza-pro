@@ -72,6 +72,33 @@ describe('CollectorLoanStore', () => {
     expect(repository.getDetail).toHaveBeenCalledWith('loan-1');
   });
 
+  it('keeps the latest routed detail when requests resolve out of order', async () => {
+    const secondDetail: LoanDetail = {
+      ...detail,
+      loan: { ...detail.loan, id: 'loan-2', clientId: 'customer-2' },
+      client: { ...detail.client, id: 'customer-2' },
+    };
+    let resolveFirst!: (value: LoanDetail) => void;
+    let resolveSecond!: (value: LoanDetail) => void;
+    repository.getDetail
+      .mockImplementationOnce(
+        () => new Promise<LoanDetail>((resolve) => (resolveFirst = resolve)),
+      )
+      .mockImplementationOnce(
+        () => new Promise<LoanDetail>((resolve) => (resolveSecond = resolve)),
+      );
+
+    const firstRequest = store.loadDetail('loan-1');
+    const secondRequest = store.loadDetail('loan-2');
+    resolveSecond(secondDetail);
+    await secondRequest;
+    resolveFirst(detail);
+    await firstRequest;
+
+    expect(store.detail()).toEqual(secondDetail);
+    expect(store.loadingDetail()).toBe(false);
+  });
+
   it('sets an error message when loading detail fails', async () => {
     repository.getDetail.mockRejectedValue(new Error('boom'));
     await store.loadDetail('loan-1');

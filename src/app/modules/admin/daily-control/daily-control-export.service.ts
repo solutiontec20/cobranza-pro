@@ -1,4 +1,6 @@
-import { Injectable, Service } from '@angular/core';
+import { Service } from '@angular/core';
+import { formatEsDate, parseDateValue } from '../../../core/calculations/date-time';
+import { formatPen } from '../../../shared/pipes/pen-currency';
 import {
   DailyControlExportContext,
   DailyControlExportFormat,
@@ -54,7 +56,7 @@ export class DailyControlExportService {
     worksheet.getCell('A1').value = 'CobranzaPro - Control diario';
     worksheet.getCell('A1').font = { bold: true, size: 18, color: { argb: 'FF1D4ED8' } };
     worksheet.getCell('A2').value = 'Fecha de corte';
-    worksheet.getCell('B2').value = parseIsoDate(report.filters.businessDate);
+    worksheet.getCell('B2').value = parseDateValue(report.filters.businessDate);
     worksheet.getCell('B2').numFmt = 'dd/mm/yyyy';
     worksheet.getCell('D2').value = 'Cobrador';
     worksheet.getCell('E2').value = context.collectorLabel;
@@ -112,9 +114,9 @@ export class DailyControlExportService {
     for (const row of report.rows) {
       worksheet.addRow({
         ...row,
-        startedOn: parseIsoDate(row.startedOn),
-        endDate: parseIsoDate(row.endDate),
-        oldestUnpaidDueDate: row.oldestUnpaidDueDate ? parseIsoDate(row.oldestUnpaidDueDate) : null,
+        startedOn: parseDateValue(row.startedOn),
+        endDate: parseDateValue(row.endDate),
+        oldestUnpaidDueDate: row.oldestUnpaidDueDate ? parseDateValue(row.oldestUnpaidDueDate) : null,
         status: statusLabel(row.status),
       });
     }
@@ -161,7 +163,7 @@ export class DailyControlExportService {
     document.text('CobranzaPro - Control diario', 40, 38);
     document.setTextColor(71, 85, 105);
     document.setFontSize(9);
-    document.text(`Fecha de corte: ${formatDate(report.filters.businessDate)}`, 40, 56);
+    document.text(`Fecha de corte: ${formatEsDate(report.filters.businessDate, 'long')}`, 40, 56);
     document.text(`Cobrador: ${context.collectorLabel}`, 205, 56);
     document.text(`Generado por: ${context.generatedBy}`, 430, 56);
     document.text(`Registros: ${report.rows.length}`, 700, 56);
@@ -184,22 +186,22 @@ export class DailyControlExportService {
         row.clientName,
         row.clientDni,
         row.collectorName,
-        shortDate(row.startedOn),
-        shortDate(row.endDate),
-        money(row.principalAmount),
-        money(row.totalAmount),
-        money(row.installmentAmount),
-        money(row.scheduledOnDate),
-        money(row.collectedOnDate),
-        money(row.paidToDate),
-        money(row.balanceAsOf),
-        row.oldestUnpaidDueDate ? shortDate(row.oldestUnpaidDueDate) : '-',
+        formatEsDate(row.startedOn, 'short'),
+        formatEsDate(row.endDate, 'short'),
+        formatPen(row.principalAmount),
+        formatPen(row.totalAmount),
+        formatPen(row.installmentAmount),
+        formatPen(row.scheduledOnDate),
+        formatPen(row.collectedOnDate),
+        formatPen(row.paidToDate),
+        formatPen(row.balanceAsOf),
+        row.oldestUnpaidDueDate ? formatEsDate(row.oldestUnpaidDueDate, 'short') : '-',
         `${row.overdueDays} d`,
         statusLabel(row.status),
       ]),
       foot: [[
-        'Totales', '', '', '', '', '', '', '', money(report.summary.scheduledAmount),
-        money(report.summary.collectedAmount), '', money(report.rows.reduce((total, row) => total + row.balanceAsOf, 0)),
+        'Totales', '', '', '', '', '', '', '', formatPen(report.summary.scheduledAmount),
+        formatPen(report.summary.collectedAmount), '', formatPen(report.rows.reduce((total, row) => total + row.balanceAsOf, 0)),
         '', '', `${report.summary.overdueClients} con atraso`,
       ]],
       footStyles: { fillColor: [226, 232, 240], textColor: [15, 23, 42], fontStyle: 'bold' },
@@ -263,20 +265,4 @@ function csvCell(value: string): string {
 
 function statusLabel(status: DailyControlStatus): string {
   return { on_track: 'Al día', overdue: 'Con atraso', paid: 'Pagado' }[status];
-}
-
-function parseIsoDate(value: string): Date {
-  return new Date(`${value}T12:00:00`);
-}
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat('es-PE', { dateStyle: 'long', timeZone: 'America/Lima' }).format(parseIsoDate(value));
-}
-
-function shortDate(value: string): string {
-  return new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(parseIsoDate(value));
-}
-
-function money(value: number): string {
-  return `S/ ${value.toFixed(2)}`;
 }

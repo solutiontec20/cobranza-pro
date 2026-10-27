@@ -1,5 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { AppError } from '../../../core/errors/app-error';
+import { normalizeSearchText } from '../../../core/calculations/text';
 import {
   CreateLoanInput,
   LoanClientOption,
@@ -22,6 +23,7 @@ export type LoanFrequencyFilter = 'all' | LoanFrequency;
 @Injectable()
 export class LoansStore {
   private readonly repository = inject(LOAN_REPOSITORY);
+  private detailRequestSequence = 0;
 
   readonly loans = signal<LoanListItem[]>([]);
   readonly availableClients = signal<LoanClientOption[]>([]);
@@ -53,7 +55,7 @@ export class LoansStore {
   });
 
   readonly filteredLoans = computed(() => {
-    const query = this.normalize(this.query());
+    const query = normalizeSearchText(this.query());
     const status = this.statusFilter();
     const collectorId = this.collectorFilter();
     const frequency = this.frequencyFilter();
@@ -65,7 +67,7 @@ export class LoansStore {
       if (!query) return true;
 
       return [loan.clientName, loan.clientDni, loan.collectorName]
-        .map((value) => this.normalize(value))
+        .map(normalizeSearchText)
         .some((value) => value.includes(query));
     });
   });
@@ -120,16 +122,24 @@ export class LoansStore {
   }
 
   async loadDetail(loanId: string): Promise<void> {
+    const sequence = ++this.detailRequestSequence;
     this.loadingDetail.set(true);
     this.error.set(null);
 
     try {
-      this.selectedDetail.set(await this.repository.getDetail(loanId));
+      const detail = await this.repository.getDetail(loanId);
+      if (sequence === this.detailRequestSequence) {
+        this.selectedDetail.set(detail);
+      }
     } catch (error) {
-      this.selectedDetail.set(null);
-      this.error.set(this.messageFrom(error, 'No se pudo cargar el detalle del préstamo.'));
+      if (sequence === this.detailRequestSequence) {
+        this.selectedDetail.set(null);
+        this.error.set(this.messageFrom(error, 'No se pudo cargar el detalle del préstamo.'));
+      }
     } finally {
-      this.loadingDetail.set(false);
+      if (sequence === this.detailRequestSequence) {
+        this.loadingDetail.set(false);
+      }
     }
   }
 
@@ -239,13 +249,5 @@ export class LoansStore {
 
   private messageFrom(error: unknown, fallback: string): string {
     return AppError.from(error).message || fallback;
-  }
-
-  private normalize(value: string): string {
-    return value
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLocaleLowerCase('es-PE')
-      .trim();
   }
 }

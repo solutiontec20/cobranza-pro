@@ -26,6 +26,7 @@
         </p-inputicon>
         <input
           pInputText
+          appDigitsOnly
           id="dni"
           type="text"
           inputmode="numeric"
@@ -34,7 +35,6 @@
           placeholder="DNI (8 dígitos)"
           [fluid]="true"
           [formField]="loginForm.dni"
-          (beforeinput)="blockNonNumericInput($event)"
         />
       </p-iconfield>
       @if (loginForm.dni().touched() && loginForm.dni().invalid()) {
@@ -52,6 +52,7 @@
           </p-inputicon>
           <input
             pInputText
+            appDigitsOnly
             id="pin"
             [type]="showPin() ? 'text' : 'password'"
             inputmode="numeric"
@@ -61,7 +62,6 @@
             [fluid]="true"
             class="pr-10"
             [formField]="loginForm.pin"
-            (beforeinput)="blockNonNumericInput($event)"
           />
         </p-iconfield>
         <button

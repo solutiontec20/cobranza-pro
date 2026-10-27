@@ -160,6 +160,33 @@ describe('LoansStore', () => {
     expect(store.loadingDetail()).toBe(false);
   });
 
+  it('keeps the latest routed detail when requests resolve out of order', async () => {
+    const secondDetail: LoanDetail = {
+      ...detail,
+      loan: otherLoan,
+      client: { ...detail.client, id: otherLoan.clientId, fullName: otherLoan.clientName },
+    };
+    let resolveFirst!: (value: LoanDetail) => void;
+    let resolveSecond!: (value: LoanDetail) => void;
+    repository.getDetail
+      .mockImplementationOnce(
+        () => new Promise<LoanDetail>((resolve) => (resolveFirst = resolve)),
+      )
+      .mockImplementationOnce(
+        () => new Promise<LoanDetail>((resolve) => (resolveSecond = resolve)),
+      );
+
+    const firstRequest = store.loadDetail(loan.id);
+    const secondRequest = store.loadDetail(otherLoan.id);
+    resolveSecond(secondDetail);
+    await secondRequest;
+    resolveFirst(detail);
+    await firstRequest;
+
+    expect(store.selectedDetail()).toEqual(secondDetail);
+    expect(store.loadingDetail()).toBe(false);
+  });
+
   it('updates a loan and reloads its list and selected schedule', async () => {
     repository.update.mockResolvedValue({
       id: loan.id,

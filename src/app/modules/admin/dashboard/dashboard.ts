@@ -1,4 +1,3 @@
-import { CurrencyPipe } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
@@ -8,6 +7,8 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { MessageModule } from 'primeng/message';
 import { AdminDashboardStore } from './admin-dashboard.store';
 import { RecoveryChart } from './recovery-chart';
+import { currentLimaDate, formatEsDate } from '../../../core/calculations/date-time';
+import { PenCurrency } from '../../../shared/pipes/pen-currency';
 
 const EMPTY_BUCKET = { count: 0, percent: 0 };
 
@@ -20,7 +21,7 @@ const EMPTY_BUCKET = { count: 0, percent: 0 };
     ProgressBarModule,
     SkeletonModule,
     MessageModule,
-    CurrencyPipe,
+    PenCurrency,
     RecoveryChart,
   ],
   templateUrl: './dashboard.html',
@@ -28,10 +29,7 @@ const EMPTY_BUCKET = { count: 0, percent: 0 };
 export default class Dashboard {
   protected readonly store = inject(AdminDashboardStore);
 
-  protected readonly today = new Intl.DateTimeFormat('es-PE', {
-    dateStyle: 'long',
-    timeZone: 'America/Lima',
-  }).format(new Date());
+  protected readonly today = formatEsDate(currentLimaDate(), 'long');
 
   protected readonly loadingRows = [1, 2, 3, 4, 5];
 

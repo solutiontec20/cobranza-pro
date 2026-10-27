@@ -6,6 +6,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
+import { DigitsOnly } from '../../../shared/directives/digits-only';
 
 interface LoginModel {
   dni: string;
@@ -14,7 +15,7 @@ interface LoginModel {
 
 @Component({
   selector: 'login-form',
-  imports: [FormField, ButtonModule, InputTextModule, IconField, InputIcon],
+  imports: [FormField, ButtonModule, DigitsOnly, InputTextModule, IconField, InputIcon],
   templateUrl: './login.html',
 })
 export default class Login {
@@ -58,19 +59,6 @@ export default class Login {
         this.loading.set(false);
       }
     });
-  }
-
-  /**
-   * Blocks any keystroke, paste or autofill that would insert a non-digit
-   * character into the DNI/PIN fields, so letters and symbols can never be
-   * typed in the first place (the `pattern`/`maxLength` validators above
-   * still run as a safety net, e.g. for browsers without `beforeinput`).
-   */
-  protected blockNonNumericInput(event: InputEvent): void {
-    const incomingText = event.data;
-    if (incomingText !== null && !/^\d*$/.test(incomingText)) {
-      event.preventDefault();
-    }
   }
 
   private navigateBasedOnRole() {

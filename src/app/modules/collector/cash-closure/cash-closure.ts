@@ -1,4 +1,3 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { form, FormField, maxLength, min, required, submit, validate } from '@angular/forms/signals';
 import { MessageService } from 'primeng/api';
@@ -13,6 +12,8 @@ import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { calculateTotalCollected } from '../../../core/calculations/cash-closure-calculations';
 import { CashExpense, CashExpenseCategory } from '../../../core/models/cash-closure.model';
+import { EsDate } from '../../../shared/pipes/es-date';
+import { PenCurrency } from '../../../shared/pipes/pen-currency';
 import { CollectorCashClosureStore } from './collector-cash-closure.store';
 
 interface ExpenseFormModel {
@@ -41,13 +42,13 @@ const CATEGORY_OPTIONS: Array<{ label: string; value: CashExpenseCategory }> = [
   selector: 'app-collector-cash-closure',
   imports: [
     ButtonModule,
-    CurrencyPipe,
-    DatePipe,
     DialogModule,
+    EsDate,
     FormField,
     InputNumberModule,
     InputTextModule,
     MessageModule,
+    PenCurrency,
     SelectModule,
     SkeletonModule,
     TagModule,
@@ -189,14 +190,5 @@ export default class CollectorCashClosure {
 
   protected closureStatusSeverity(status: 'draft' | 'submitted' | 'validated'): 'secondary' | 'warn' | 'success' {
     return { draft: 'secondary' as const, submitted: 'warn' as const, validated: 'success' as const }[status];
-  }
-
-  protected formatDateTime(value: string | null): string {
-    if (!value) return '—';
-    return new Intl.DateTimeFormat('es-PE', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-      timeZone: 'America/Lima',
-    }).format(new Date(value));
   }
 }

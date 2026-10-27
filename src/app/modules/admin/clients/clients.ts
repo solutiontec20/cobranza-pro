@@ -1,4 +1,3 @@
-import { CurrencyPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import {
   form,
@@ -18,6 +17,9 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ClientListItem } from '../../../core/models/client.model';
+import { normalizeSearchText } from '../../../core/calculations/text';
+import { DigitsOnly } from '../../../shared/directives/digits-only';
+import { PenCurrency } from '../../../shared/pipes/pen-currency';
 import { ClientsStore } from './clients.store';
 
 interface ClientFormModel {
@@ -44,11 +46,12 @@ const emptyModel = (): ClientFormModel => ({
   selector: 'app-admin-clients',
   imports: [
     ButtonModule,
-    CurrencyPipe,
+    DigitsOnly,
     DialogModule,
     FormField,
     InputTextModule,
     MessageModule,
+    PenCurrency,
     SelectModule,
     SkeletonModule,
     TableModule,
@@ -81,13 +84,13 @@ export default class Clients {
   });
 
   protected readonly filteredClients = computed(() => {
-    const query = this.normalize(this.searchQuery());
+    const query = normalizeSearchText(this.searchQuery());
     const collectorId = this.selectedCollector();
 
     return this.store.clients().filter((client) => {
       const matchesQuery =
         !query ||
-        this.normalize(client.fullName).includes(query) ||
+        normalizeSearchText(client.fullName).includes(query) ||
         client.dni.includes(query);
       const matchesCollector = !collectorId || client.collectorId === collectorId;
       return matchesQuery && matchesCollector;
@@ -171,13 +174,5 @@ export default class Clients {
     if (client.overdueDays > 0) return 'warn';
     if (client.outstandingAmount > 0) return 'success';
     return 'secondary';
-  }
-
-  private normalize(value: string): string {
-    return value
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLocaleLowerCase('es-PE')
-      .trim();
   }
 }

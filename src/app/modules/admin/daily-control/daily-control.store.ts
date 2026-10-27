@@ -1,4 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
+import { currentLimaDate } from '../../../core/calculations/date-time';
+import { roundMoney } from '../../../core/calculations/money';
+import { normalizeSearchText } from '../../../core/calculations/text';
 import { AppError } from '../../../core/errors/app-error';
 import {
   DailyControlFilters,
@@ -29,12 +32,12 @@ export class DailyControlStore {
     const report = this.report();
     if (!report) return null;
 
-    const query = normalize(this.query());
+    const query = normalizeSearchText(this.query());
     if (!query) return report;
 
     const rows = report.rows.filter((row) =>
       [row.clientName, row.clientDni, row.collectorName]
-        .map(normalize)
+        .map(normalizeSearchText)
         .some((value) => value.includes(query)),
     );
 
@@ -114,27 +117,4 @@ function summarize(rows: DailyControlRow[]): DailyControlSummary {
     attendedClients: rows.filter((row) => row.collectedOnDate > 0).length,
     overdueClients: rows.filter((row) => row.status === 'overdue').length,
   };
-}
-
-function normalize(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('es-PE')
-    .trim();
-}
-
-function currentLimaDate(): string {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Lima',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${value['year']}-${value['month']}-${value['day']}`;
-}
-
-function roundMoney(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
 }

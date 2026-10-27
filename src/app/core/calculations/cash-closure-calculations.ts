@@ -1,4 +1,5 @@
 import { CashDayBreakdown } from '../models/cash-closure.model';
+import { roundMoney } from './money';
 
 export function emptyCashDayBreakdown(collectorId: string, businessDate: string): CashDayBreakdown {
   return {
@@ -43,8 +44,4 @@ export function calculateTotalCollected(breakdown: CashDayBreakdown): number {
       breakdown.plinCollectedAmount +
       breakdown.transferCollectedAmount,
   );
-}
-
-function roundMoney(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
 }

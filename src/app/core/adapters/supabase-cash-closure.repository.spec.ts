@@ -2,9 +2,16 @@ import { TestBed } from '@angular/core/testing';
 import { SUPABASE } from '../supabase/supabase-client';
 import { SupabaseCashClosureRepository } from './supabase-cash-closure.repository';
 
+// EN
 /** A query-builder stub that stays chainable through any number of .select()/.eq()/.order()
  * calls and resolves to `result` the moment it is awaited — avoids hard-coding how many
  * `.eq()` calls each query makes (that depends on whether a collectorId filter is present). */
+
+// ES
+/** Un componente auxiliar para la construcción de consultas que permite el encadenamiento de cualquier número de llamadas a `.select()`, `.eq()` u `.order()`,
+ *  y que se resuelve en `result` en el momento en que se utiliza `await`. Esto evita tener que definir de forma fija cuántas llamadas a `.eq()` realiza cada consulta (lo cual depende de si existe
+ *  o no un filtro `collectorId`). */
+
 function chain(result: { data: unknown; error: unknown }) {
   const node: Record<string, unknown> = {};
   node['select'] = vi.fn(() => node);

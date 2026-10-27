@@ -1,22 +1,12 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { calculateExpectedCash } from '../../../core/calculations/cash-closure-calculations';
+import { currentLimaDate } from '../../../core/calculations/date-time';
 import { AppError } from '../../../core/errors/app-error';
 import {
   CollectorCashDay,
   RequestCashExpenseInput,
 } from '../../../core/models/cash-closure.model';
 import { CASH_CLOSURE_REPOSITORY } from '../../../core/repositories/cash-closure.repository';
-
-function currentLimaDate(): string {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Lima',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${value['year']}-${value['month']}-${value['day']}`;
-}
 
 /**
  * The collector's own daily cash closure screen: view today's breakdown, request expenses,

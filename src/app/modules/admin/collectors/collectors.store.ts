@@ -1,5 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { AppError } from '../../../core/errors/app-error';
+import { normalizeSearchText } from '../../../core/calculations/text';
 import {
   Collector,
   CreateCollectorInput,
@@ -24,12 +25,12 @@ export class CollectorsStore {
   readonly resettingCollectorId = signal<string | null>(null);
 
   readonly filteredCollectors = computed(() => {
-    const query = this.normalize(this.query());
+    const query = normalizeSearchText(this.query());
     if (!query) return this.collectors();
 
     return this.collectors().filter((collector) =>
       [collector.fullName, collector.dni, collector.phone ?? '']
-        .map((value) => this.normalize(value))
+        .map(normalizeSearchText)
         .some((value) => value.includes(query)),
     );
   });
@@ -139,13 +140,5 @@ export class CollectorsStore {
   private messageFrom(error: unknown, fallback: string): string {
     const appError = AppError.from(error);
     return appError.message || fallback;
-  }
-
-  private normalize(value: string): string {
-    return value
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLocaleLowerCase('es-PE')
-      .trim();
   }
 }
