@@ -78,6 +78,7 @@ describe('SupabaseLoanRepository', () => {
                   customer: {
                     id: 'customer-1',
                     full_name: 'Ana Flores',
+                    document_number: '45678901',
                     collector_id: 'collector-1',
                     collector: { id: 'collector-1', full_name: 'Luis Ramos' },
                   },
@@ -127,6 +128,7 @@ describe('SupabaseLoanRepository', () => {
     expect(result.balance).toBe(90);
     expect(result.installmentAmount).toBe(4);
     expect(result.endDate).toBe('2026-11-04');
+    expect(result.clientDni).toBe('45678901');
   });
 
   it.each([
@@ -223,6 +225,108 @@ describe('SupabaseLoanRepository', () => {
     await expect(promise).rejects.toMatchObject({
       code: 'VALIDATION',
       message: expectedMessage,
+    });
+  });
+
+  it('renews a loan and maps the resulting row', async () => {
+    rpc.mockResolvedValue({
+      data: [
+        {
+          loan_id: 'loan-2',
+          customer_id: 'customer-1',
+          previous_loan_id: 'loan-1',
+          total_amount: 110,
+          disbursed_amount: 26.67,
+          base_installment_amount: 36.67,
+          last_installment_amount: 36.66,
+          first_due_on: '2026-10-24',
+        },
+      ],
+      error: null,
+    });
+
+    await expect(
+      repository.renew({
+        loanId: 'loan-1',
+        principal: 100,
+        interestRate: 10,
+        frequency: 'daily',
+        installmentCount: 3,
+        startedOn: '2026-10-24',
+      }),
+    ).resolves.toEqual({
+      loanId: 'loan-2',
+      clientId: 'customer-1',
+      previousLoanId: 'loan-1',
+      totalAmount: 110,
+      disbursedAmount: 26.67,
+      baseInstallmentAmount: 36.67,
+      lastInstallmentAmount: 36.66,
+      firstDueOn: '2026-10-24',
+    });
+
+    expect(rpc).toHaveBeenCalledWith('renew_loan', {
+      p_loan_id: 'loan-1',
+      p_principal: 100,
+      p_interest_rate: 10,
+      p_frequency: 'daily',
+      p_installment_count: 3,
+      p_started_on: '2026-10-24',
+    });
+  });
+
+  it.each([
+    [
+      'Blacklisted customers cannot renew their loan',
+      'El cliente es moroso (más de 5 días de atraso) y no puede renovar su préstamo.',
+    ],
+    [
+      'Only active or fully paid loans can be renewed',
+      'Solo se pueden renovar préstamos activos o totalmente pagados.',
+    ],
+    [
+      'Principal must be at least the outstanding balance of the previous loan',
+      'El nuevo capital debe ser al menos igual al saldo pendiente del préstamo anterior.',
+    ],
+  ])('translates the renewal error %s', async (databaseMessage, expectedMessage) => {
+    rpc.mockResolvedValue({
+      data: null,
+      error: { code: '22023', message: databaseMessage },
+    });
+
+    const promise = repository.renew({
+      loanId: 'loan-1',
+      principal: 100,
+      interestRate: 10,
+      frequency: 'daily',
+      installmentCount: 3,
+      startedOn: '2026-10-24',
+    });
+
+    await expect(promise).rejects.toMatchObject({
+      code: 'VALIDATION',
+      message: expectedMessage,
+    });
+  });
+
+  it('translates an authorization failure on renewal', async () => {
+    rpc.mockResolvedValue({
+      data: null,
+      error: { code: '42501', message: 'Collector cannot renew loans for another portfolio' },
+    });
+
+    const promise = repository.renew({
+      loanId: 'loan-1',
+      principal: 100,
+      interestRate: 10,
+      frequency: 'daily',
+      installmentCount: 3,
+      startedOn: '2026-10-24',
+    });
+
+    await expect(promise).rejects.toMatchObject({
+      code: 'AUTH_UNAUTHORIZED',
+      message: 'No tenés permisos para renovar este préstamo.',
     });
   });
 });

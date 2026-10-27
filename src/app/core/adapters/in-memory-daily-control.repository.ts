@@ -1,18 +1,14 @@
 import { Injectable } from '@angular/core';
-import { AppError } from '../errors/app-error';
 import {
-  DailyCashClosure,
-  DailyCashMovement,
-  DailyPaymentMethod,
   DailyControlCollectorOption,
   DailyControlFilters,
   DailyControlReport,
   DailyControlRow,
   DailyControlSummary,
-  SubmitDailyCashClosureInput,
-  ValidateDailyCashClosureInput,
 } from '../models/daily-control.model';
 import { DailyControlRepository } from '../repositories/daily-control.repository';
+
+type PaymentMethod = 'cash' | 'yape';
 
 interface FixtureInstallment {
   dueDate: string;
@@ -22,7 +18,7 @@ interface FixtureInstallment {
 interface FixturePayment {
   businessDate: string;
   amount: number;
-  method: DailyPaymentMethod;
+  method: PaymentMethod;
   status?: 'posted' | 'voided';
 }
 
@@ -78,8 +74,6 @@ const FIXTURE_LOANS: FixtureLoan[] = [
 
 @Injectable()
 export class InMemoryDailyControlRepository implements DailyControlRepository {
-  private readonly closures = new Map<string, DailyCashClosure>();
-
   async listCollectors(): Promise<DailyControlCollectorOption[]> {
     return COLLECTORS.map((collector) => ({ ...collector }));
   }
@@ -100,133 +94,6 @@ export class InMemoryDailyControlRepository implements DailyControlRepository {
       rows,
       summary: summarize(rows),
       generatedAt: new Date().toISOString(),
-    };
-  }
-
-  async listClosures(businessDate: string): Promise<DailyCashClosure[]> {
-    this.ensureClosures(businessDate);
-
-    return COLLECTORS.map((collector) =>
-      this.cloneClosure(this.closures.get(closureKey(businessDate, collector.id))!),
-    );
-  }
-
-  async submitClosure(input: SubmitDailyCashClosureInput): Promise<DailyCashClosure> {
-    const closure = this.findClosure(input.closureId);
-    if (closure.status === 'validated') {
-      throw new AppError('VALIDATION', 'Un cierre validado no puede volver a enviarse.');
-    }
-    if (input.deliveredAmount < 0) {
-      throw new AppError('VALIDATION', 'El efectivo entregado no puede ser negativo.');
-    }
-
-    const updated: DailyCashClosure = {
-      ...closure,
-      status: 'submitted',
-      deliveredAmount: roundMoney(input.deliveredAmount),
-      difference: roundMoney(input.deliveredAmount - closure.expectedAmount),
-      observation: cleanObservation(input.observation),
-      submittedAt: new Date().toISOString(),
-    };
-    this.closures.set(closureKey(updated.businessDate, updated.collectorId), updated);
-    return this.cloneClosure(updated);
-  }
-
-  async validateClosure(input: ValidateDailyCashClosureInput): Promise<DailyCashClosure> {
-    const closure = this.findClosure(input.closureId);
-    if (closure.status !== 'submitted') {
-      throw new AppError('VALIDATION', 'Solo se puede validar un cierre enviado por el cobrador.');
-    }
-
-    const updated: DailyCashClosure = {
-      ...closure,
-      status: 'validated',
-      observation: cleanObservation(input.observation) ?? closure.observation,
-      validatedAt: new Date().toISOString(),
-      validatedBy: input.validatedBy.trim() || 'Administrador',
-    };
-    this.closures.set(closureKey(updated.businessDate, updated.collectorId), updated);
-    return this.cloneClosure(updated);
-  }
-
-  private ensureClosures(businessDate: string): void {
-    for (const collector of COLLECTORS) {
-      const key = closureKey(businessDate, collector.id);
-      if (this.closures.has(key)) continue;
-
-      const loans = FIXTURE_LOANS.filter((loan) => loan.collectorId === collector.id);
-      const payments = loans.flatMap((loan) =>
-        loan.payments
-          .filter(
-            (item) => item.status !== 'voided' && item.businessDate === businessDate,
-          )
-          .map((item) => ({ loan, payment: item })),
-      );
-      const movements: DailyCashMovement[] = payments.map(({ loan, payment: item }, index) => ({
-        id: `${key}-movement-${index + 1}`,
-        happenedAt: `${businessDate}T${String(9 + index).padStart(2, '0')}:15:00-05:00`,
-        direction: 'inflow',
-        type: 'collection',
-        method: item.method,
-        amount: item.amount,
-        description: `Cobro a ${loan.clientName}`,
-      }));
-      const operationalOutflow = fixtureOperationalOutflow(businessDate, collector.id, key);
-      if (operationalOutflow) movements.push(operationalOutflow);
-      const cash = roundMoney(
-        payments
-          .filter(({ payment: item }) => item.method === 'cash')
-          .reduce((total, { payment: item }) => total + item.amount, 0),
-      );
-      const yape = roundMoney(
-        payments
-          .filter(({ payment: item }) => item.method === 'yape')
-          .reduce((total, { payment: item }) => total + item.amount, 0),
-      );
-      const scheduledAmount = roundMoney(
-        loans
-          .flatMap((loan) => loan.installments)
-          .filter((installment) => installment.dueDate === businessDate)
-          .reduce((total, installment) => total + installment.amount, 0),
-      );
-      const registeredAmount = roundMoney(cash + yape);
-      const expectedAmount = roundMoney(
-        movements.reduce(
-          (total, movement) =>
-            total + (movement.direction === 'inflow' ? movement.amount : -movement.amount),
-          0,
-        ),
-      );
-      const fixtureState = fixtureClosureState(businessDate, collector.id, expectedAmount);
-
-      this.closures.set(key, {
-        id: key,
-        businessDate,
-        collectorId: collector.id,
-        collectorName: collector.fullName,
-        scheduledAmount,
-        registeredAmount,
-        methodSummary: { cash, yape, total: registeredAmount },
-        expectedAmount,
-        movements,
-        ...fixtureState,
-      });
-    }
-  }
-
-  private findClosure(closureId: string): DailyCashClosure {
-    const closure = [...this.closures.values()].find((item) => item.id === closureId);
-    if (!closure) {
-      throw new AppError('VALIDATION', 'No se encontró el cierre diario solicitado.');
-    }
-    return closure;
-  }
-
-  private cloneClosure(closure: DailyCashClosure): DailyCashClosure {
-    return {
-      ...closure,
-      methodSummary: { ...closure.methodSummary },
-      movements: closure.movements.map((movement) => ({ ...movement })),
     };
   }
 
@@ -307,11 +174,7 @@ function fixtureLoan(
   };
 }
 
-function payment(
-  businessDate: string,
-  amount: number,
-  method: DailyPaymentMethod = 'cash',
-): FixturePayment {
+function payment(businessDate: string, amount: number, method: PaymentMethod = 'cash'): FixturePayment {
   return { businessDate, amount, method, status: 'posted' };
 }
 
@@ -377,78 +240,4 @@ function toIsoDate(value: Date): string {
 
 function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
-}
-
-function closureKey(businessDate: string, collectorId: string): string {
-  return `${businessDate}:${collectorId}`;
-}
-
-function fixtureClosureState(
-  businessDate: string,
-  collectorId: string,
-  expectedAmount: number,
-): Pick<
-  DailyCashClosure,
-  | 'status'
-  | 'deliveredAmount'
-  | 'difference'
-  | 'observation'
-  | 'submittedAt'
-  | 'validatedAt'
-  | 'validatedBy'
-> {
-  if (businessDate === '2026-10-21' && collectorId === 'collector-1') {
-    return {
-      status: 'submitted',
-      deliveredAmount: expectedAmount,
-      difference: 0,
-      observation: 'Ruta completada sin incidencias.',
-      submittedAt: '2026-10-21T18:05:00-05:00',
-      validatedAt: null,
-      validatedBy: null,
-    };
-  }
-  if (businessDate === '2026-10-21' && collectorId === 'collector-2') {
-    return {
-      status: 'validated',
-      deliveredAmount: expectedAmount,
-      difference: 0,
-      observation: 'Efectivo verificado en oficina.',
-      submittedAt: '2026-10-21T17:48:00-05:00',
-      validatedAt: '2026-10-21T18:20:00-05:00',
-      validatedBy: 'Administrador Demo',
-    };
-  }
-  return {
-    status: 'draft',
-    deliveredAmount: null,
-    difference: null,
-    observation: null,
-    submittedAt: null,
-    validatedAt: null,
-    validatedBy: null,
-  };
-}
-
-function fixtureOperationalOutflow(
-  businessDate: string,
-  collectorId: string,
-  closureId: string,
-): DailyCashMovement | null {
-  if (businessDate !== '2026-10-21' || collectorId !== 'collector-3') return null;
-
-  return {
-    id: `${closureId}-movement-outflow`,
-    happenedAt: `${businessDate}T13:30:00-05:00`,
-    direction: 'outflow',
-    type: 'loan_disbursement',
-    method: 'cash',
-    amount: 5,
-    description: 'Desembolso operativo registrado',
-  };
-}
-
-function cleanObservation(value: string | null): string | null {
-  const observation = value?.trim();
-  return observation ? observation : null;
 }

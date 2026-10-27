@@ -49,65 +49,6 @@ export interface DailyControlReport {
   generatedAt: string;
 }
 
-export type DailyCashClosureStatus = 'draft' | 'submitted' | 'validated';
-
-export type DailyPaymentMethod = 'cash' | 'yape';
-
-export type DailyCashMovementDirection = 'inflow' | 'outflow';
-
-export type DailyCashMovementType =
-  | 'collection'
-  | 'loan_disbursement'
-  | 'payment_void'
-  | 'adjustment';
-
-export interface DailyCashMethodSummary {
-  cash: number;
-  yape: number;
-  total: number;
-}
-
-export interface DailyCashMovement {
-  id: string;
-  happenedAt: string;
-  direction: DailyCashMovementDirection;
-  type: DailyCashMovementType;
-  method: DailyPaymentMethod | null;
-  amount: number;
-  description: string;
-}
-
-export interface DailyCashClosure {
-  id: string;
-  businessDate: string;
-  collectorId: string;
-  collectorName: string;
-  status: DailyCashClosureStatus;
-  scheduledAmount: number;
-  registeredAmount: number;
-  methodSummary: DailyCashMethodSummary;
-  expectedAmount: number;
-  deliveredAmount: number | null;
-  difference: number | null;
-  observation: string | null;
-  submittedAt: string | null;
-  validatedAt: string | null;
-  validatedBy: string | null;
-  movements: DailyCashMovement[];
-}
-
-export interface SubmitDailyCashClosureInput {
-  closureId: string;
-  deliveredAmount: number;
-  observation: string | null;
-}
-
-export interface ValidateDailyCashClosureInput {
-  closureId: string;
-  validatedBy: string;
-  observation: string | null;
-}
-
 export type DailyControlExportFormat = 'csv' | 'xlsx' | 'pdf';
 
 export interface DailyControlExportContext {

@@ -1,0 +1,237 @@
+<p-toast />
+
+<div class="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 sm:p-6">
+  <header>
+    <p class="m-0 text-sm font-medium text-primary-700 dark:text-primary-300">
+      {{ today | date: 'EEEE, d MMMM' : undefined : 'es-PE' }}
+    </p>
+    <h1 class="mt-1 mb-0 text-2xl font-semibold tracking-tight text-surface-950 sm:text-3xl dark:text-surface-0">
+      Cierre de caja
+    </h1>
+    <p class="mt-1 mb-0 text-sm text-surface-500 dark:text-surface-400">
+      Revisá tu efectivo esperado del día y envía tu cierre al terminar la ruta.
+    </p>
+  </header>
+
+  @if (store.error()) {
+    <p-message severity="error" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
+  }
+
+  @if (store.loading()) {
+    <div class="space-y-3" aria-label="Cargando cierre de caja" aria-live="polite">
+      @for (row of loadingRows; track row) {
+        <p-skeleton height="6rem" borderRadius="0.75rem" />
+      }
+    </div>
+  } @else if (store.day(); as day) {
+    <!-- Expected cash highlight -->
+    <section class="overflow-hidden rounded-2xl bg-primary-950 p-5 text-white shadow-sm sm:p-6 dark:bg-surface-900 dark:ring-1 dark:ring-surface-700">
+      <p class="m-0 text-sm text-primary-200">Efectivo que debés entregar hoy</p>
+      <p class="mt-2 mb-0 text-3xl font-semibold tabular-nums sm:text-4xl">
+        {{ store.expectedCash() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+      </p>
+      @if (day.closure) {
+        <p class="mt-3 mb-0 text-sm text-primary-200">
+          <p-tag [severity]="closureStatusSeverity(day.closure.status)" [value]="closureStatusLabel(day.closure.status)" />
+        </p>
+      } @else {
+        <button pButton severity="success" class="mt-4 w-full justify-center text-lg font-bold sm:w-auto" (click)="openSubmitDialog()">
+          <i class="pi pi-send"></i> Enviar mi cierre
+        </button>
+      }
+    </section>
+
+    <!-- Breakdown -->
+    <section class="rounded-xl border border-surface-200 bg-surface-0 p-4 shadow-sm dark:border-surface-700 dark:bg-surface-900">
+      <h2 class="m-0 mb-3 text-lg font-semibold text-surface-950 dark:text-surface-0">Detalle del día</h2>
+      <dl class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+        <div>
+          <dt class="text-xs text-surface-500 dark:text-surface-400">Apertura</dt>
+          <dd class="mt-1 font-semibold text-surface-950 dark:text-surface-0">{{ day.breakdown.openingAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-surface-500 dark:text-surface-400">Viáticos entregados</dt>
+          <dd class="mt-1 font-semibold text-surface-950 dark:text-surface-0">{{ day.breakdown.allowanceAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-surface-500 dark:text-surface-400">Cobrado en efectivo</dt>
+          <dd class="mt-1 font-semibold text-green-600 dark:text-green-400">{{ day.breakdown.cashCollectedAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-surface-500 dark:text-surface-400">Cobrado por Yape/Plin/Transf.</dt>
+          <dd class="mt-1 font-semibold text-surface-950 dark:text-surface-0">{{ digitalCollected() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-surface-500 dark:text-surface-400">Préstamos entregados</dt>
+          <dd class="mt-1 font-semibold text-red-600 dark:text-red-400">− {{ day.breakdown.loanDisbursementAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-surface-500 dark:text-surface-400">Gastos aprobados</dt>
+          <dd class="mt-1 font-semibold text-red-600 dark:text-red-400">− {{ day.breakdown.operatingExpenseAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+        </div>
+      </dl>
+      <p class="mt-4 rounded-lg bg-surface-50 p-3 text-xs text-surface-500 dark:bg-surface-800 dark:text-surface-400">
+        <i class="pi pi-info-circle mr-1" aria-hidden="true"></i>
+        Total cobrado hoy (todo medio de pago): {{ totalCollected() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+      </p>
+    </section>
+
+    @if (day.closure) {
+      <section class="rounded-xl border border-surface-200 bg-surface-0 p-4 shadow-sm dark:border-surface-700 dark:bg-surface-900">
+        <h2 class="m-0 mb-3 text-lg font-semibold text-surface-950 dark:text-surface-0">Mi cierre</h2>
+        <dl class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+          <div>
+            <dt class="text-xs text-surface-500 dark:text-surface-400">Entregado</dt>
+            <dd class="mt-1 font-semibold text-surface-950 dark:text-surface-0">{{ day.closure.deliveredAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-surface-500 dark:text-surface-400">Diferencia</dt>
+            <dd class="mt-1 font-bold" [class.text-red-600]="day.closure.differenceAmount < 0" [class.text-green-600]="day.closure.differenceAmount > 0">
+              {{ day.closure.differenceAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+            </dd>
+          </div>
+          <div class="col-span-2 sm:col-span-1">
+            <dt class="text-xs text-surface-500 dark:text-surface-400">Observación</dt>
+            <dd class="mt-1 text-surface-950 dark:text-surface-0">{{ day.closure.observation || '—' }}</dd>
+          </div>
+        </dl>
+        @if (day.closure.status === 'validated') {
+          <p class="mt-3 text-xs text-surface-500 dark:text-surface-400">
+            Validado el {{ formatDateTime(day.closure.validatedAt) }}
+          </p>
+        }
+      </section>
+    }
+
+    <!-- Expenses -->
+    <section class="rounded-xl border border-surface-200 bg-surface-0 p-4 shadow-sm dark:border-surface-700 dark:bg-surface-900">
+      <div class="flex items-center justify-between gap-2">
+        <h2 class="m-0 text-lg font-semibold text-surface-950 dark:text-surface-0">Mis gastos</h2>
+        @if (!day.closure) {
+          <button pButton size="small" severity="secondary" variant="outlined" (click)="openExpenseDialog()">
+            <i class="pi pi-receipt"></i> Solicitar gasto
+          </button>
+        }
+      </div>
+      @if (day.expenses.length === 0) {
+        <p class="mt-3 text-sm text-surface-500 dark:text-surface-400">Todavía no solicitaste ningún gasto hoy.</p>
+      } @else {
+        <ul class="mt-3 divide-y divide-surface-200 dark:divide-surface-700">
+          @for (expense of day.expenses; track expense.id) {
+            <li class="flex flex-wrap items-center justify-between gap-2 py-3">
+              <div class="min-w-0">
+                <p class="m-0 font-medium text-surface-950 dark:text-surface-0">
+                  {{ categoryLabel(expense.category) }} — {{ expense.amount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+                </p>
+                <p class="mt-0.5 mb-0 text-xs text-surface-500 dark:text-surface-400">{{ expense.description || 'Sin descripción' }}</p>
+                @if (expense.status === 'rejected') {
+                  <p class="mt-1 mb-0 text-xs text-red-600 dark:text-red-400">Motivo: {{ expense.rejectionReason }}</p>
+                }
+              </div>
+              <p-tag [severity]="expenseStatusSeverity(expense.status)" [value]="expenseStatusLabel(expense.status)" />
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</div>
+
+<!-- Request expense dialog -->
+@defer (when expenseDialogVisible()) {
+  <p-dialog
+    header="Solicitar gasto"
+    [modal]="true"
+    [draggable]="false"
+    [visible]="expenseDialogVisible()"
+    (visibleChange)="expenseDialogVisible.set($event)"
+    [breakpoints]="{ '640px': '100vw' }"
+    styleClass="w-[calc(100vw-1.5rem)] max-w-md"
+  >
+    <form class="flex flex-col gap-4" (submit)="submitExpense(); $event.preventDefault()">
+      <p class="m-0 text-sm text-surface-600 dark:text-surface-400">
+        Solo se descuenta de tu caja cuando el administrador lo aprueba.
+      </p>
+      <div>
+        <label for="expense-category" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Categoría</label>
+        <p-select inputId="expense-category" [formField]="expenseForm.category" [options]="categoryOptions" optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full" />
+      </div>
+      <div>
+        <label for="expense-amount" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Monto</label>
+        <p-inputnumber inputId="expense-amount" [formField]="expenseForm.amount" mode="currency" currency="PEN" locale="es-PE" styleClass="w-full" />
+        @if (expenseForm.amount().touched() && expenseForm.amount().invalid()) {
+          <small class="mt-1 block text-red-600">{{ expenseForm.amount().errors()[0]?.message }}</small>
+        }
+      </div>
+      <div>
+        <label for="expense-description" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Descripción</label>
+        <input id="expense-description" pInputText [formField]="expenseForm.description" class="w-full" />
+      </div>
+      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button pButton type="button" severity="secondary" variant="outlined" class="min-h-11 w-full sm:w-auto" (click)="expenseDialogVisible.set(false)">Cancelar</button>
+        <button pButton type="submit" class="min-h-11 w-full sm:w-auto" [disabled]="store.saving() || expenseForm().invalid()">
+          @if (store.saving()) { <i class="pi pi-spin pi-spinner"></i> } @else { <i class="pi pi-check"></i> }
+          Solicitar
+        </button>
+      </div>
+    </form>
+  </p-dialog>
+}
+
+<!-- Submit closure dialog -->
+@defer (when submitDialogVisible()) {
+  <p-dialog
+    header="Enviar mi cierre de caja"
+    [modal]="true"
+    [draggable]="false"
+    [visible]="submitDialogVisible()"
+    (visibleChange)="submitDialogVisible.set($event)"
+    [breakpoints]="{ '640px': '100vw' }"
+    styleClass="w-[calc(100vw-1.5rem)] max-w-md"
+  >
+    <form class="flex flex-col gap-4" (submit)="submitClosure(); $event.preventDefault()">
+      @if (store.error()) {
+        <p-message severity="error" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
+      }
+      <div class="rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800">
+        <div class="flex items-center justify-between">
+          <span class="text-surface-600 dark:text-surface-400">Efectivo esperado</span>
+          <strong class="tabular-nums text-surface-950 dark:text-surface-0">{{ store.expectedCash() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</strong>
+        </div>
+      </div>
+      <div>
+        <label for="delivered-amount" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">¿Cuánto efectivo entregás?</label>
+        <p-inputnumber inputId="delivered-amount" [formField]="submitForm.deliveredAmount" mode="currency" currency="PEN" locale="es-PE" styleClass="w-full" inputStyleClass="w-full text-xl font-bold tabular-nums" />
+        @if (submitForm.deliveredAmount().touched() && submitForm.deliveredAmount().invalid()) {
+          <small class="mt-1 block text-red-600">{{ submitForm.deliveredAmount().errors()[0]?.message }}</small>
+        }
+      </div>
+      @if (submitDifference() !== 0) {
+        <div class="flex items-center justify-between rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700">
+          <span class="text-surface-600 dark:text-surface-400">{{ submitDifference() > 0 ? 'Sobrante' : 'Faltante' }}</span>
+          <strong class="tabular-nums" [class.text-green-600]="submitDifference() > 0" [class.text-red-600]="submitDifference() < 0">
+            {{ submitDifference() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+          </strong>
+        </div>
+      }
+      <div>
+        <label for="submit-observation" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">
+          Observación @if (submitDifference() !== 0) { <span class="text-red-500" aria-hidden="true">*</span> }
+        </label>
+        <textarea id="submit-observation" rows="3" [formField]="submitForm.observation"
+          class="w-full resize-none rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-surface-950 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-surface-600 dark:bg-surface-950 dark:text-surface-0"
+          placeholder="Ej: Me faltaron 5 soles, cliente pagó con billete roto…"></textarea>
+        @if (submitForm.observation().touched() && submitForm.observation().invalid()) {
+          <small class="mt-1 block text-red-600">{{ submitForm.observation().errors()[0]?.message }}</small>
+        }
+      </div>
+      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button pButton type="button" severity="secondary" variant="outlined" class="min-h-11 w-full sm:w-auto" (click)="submitDialogVisible.set(false)">Cancelar</button>
+        <button pButton type="submit" severity="success" class="min-h-11 w-full sm:w-auto" [disabled]="store.saving() || submitForm().invalid()">
+          @if (store.saving()) { <i class="pi pi-spin pi-spinner"></i> } @else { <i class="pi pi-send"></i> }
+          Enviar cierre
+        </button>
+      </div>
+    </form>
+  </p-dialog>
+}

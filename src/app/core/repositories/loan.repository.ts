@@ -8,6 +8,8 @@ import {
   LoanListItem,
   RegisterLoanPaymentInput,
   RegisterLoanPaymentResult,
+  RenewLoanInput,
+  RenewLoanResult,
   UpdateLoanInput,
 } from '../models/loan.model';
 
@@ -25,6 +27,8 @@ export interface LoanRepository {
   update(input: UpdateLoanInput): Promise<Loan>;
 
   registerPayment(input: RegisterLoanPaymentInput): Promise<RegisterLoanPaymentResult>;
+
+  renew(input: RenewLoanInput): Promise<RenewLoanResult>;
 }
 
 export const LOAN_REPOSITORY = new InjectionToken<LoanRepository>(

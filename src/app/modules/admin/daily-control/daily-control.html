@@ -34,33 +34,33 @@
   </header>
 
   <section class="rounded-2xl border border-surface bg-surface-0 p-4 shadow-sm dark:bg-surface-900" aria-label="Filtros del control diario">
-    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-[13rem_18rem_14rem_minmax(14rem,1fr)_auto] xl:items-end">
-      <label class="flex flex-col gap-2 text-sm font-medium text-color">
+    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,13rem)_minmax(0,16rem)_minmax(0,12rem)_minmax(0,1fr)_auto] xl:items-end">
+      <label class="flex min-w-0 flex-col gap-2 text-sm font-medium text-color">
         Fecha de corte
         <p-datepicker [ngModel]="selectedDate()" (ngModelChange)="changeDate($event)" dateFormat="dd/mm/yy"
-          [showIcon]="true" [showButtonBar]="true" inputId="daily-control-date" appendTo="body" />
+          [showIcon]="true" [showButtonBar]="true" inputId="daily-control-date" appendTo="body" styleClass="w-full" />
       </label>
-      <label class="flex flex-col gap-2 text-sm font-medium text-color">
+      <label class="flex min-w-0 flex-col gap-2 text-sm font-medium text-color">
         Cobrador
         <p-select [options]="collectorOptions()" optionLabel="label" optionValue="value"
           [ngModel]="store.filters().collectorId" (ngModelChange)="changeCollector($event)"
-          inputId="daily-control-collector" appendTo="body" />
+          inputId="daily-control-collector" appendTo="body" styleClass="w-full" />
       </label>
-      <label class="flex flex-col gap-2 text-sm font-medium text-color">
+      <label class="flex min-w-0 flex-col gap-2 text-sm font-medium text-color">
         Estado
         <p-select [options]="statusOptions" optionLabel="label" optionValue="value"
           [ngModel]="store.filters().status" (ngModelChange)="changeStatus($event)"
-          inputId="daily-control-status" appendTo="body" />
+          inputId="daily-control-status" appendTo="body" styleClass="w-full" />
       </label>
-      <label class="flex flex-col gap-2 text-sm font-medium text-color">
+      <label class="flex min-w-0 flex-col gap-2 text-sm font-medium text-color">
         Buscar
-        <span class="relative block">
+        <span class="relative block min-w-0">
           <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-muted-color" aria-hidden="true"></i>
           <input pInputText class="w-full pl-10" type="search" placeholder="Cliente, DNI o cobrador"
             [value]="store.query()" (input)="updateSearch($event)" />
         </span>
       </label>
-      <button pButton severity="secondary" variant="text" [disabled]="store.loading()" (click)="clearFilters()">
+      <button pButton severity="secondary" variant="text" class="shrink-0" [disabled]="store.loading()" (click)="clearFilters()">
         <i class="pi pi-filter-slash"></i> Limpiar
       </button>
     </div>
@@ -71,213 +71,6 @@
   }
   @if (exportError()) {
     <p-message severity="error" styleClass="w-full" role="alert">{{ exportError() }}</p-message>
-  }
-
-  @if (store.closures().length > 0) {
-    <section
-      class="overflow-hidden rounded-2xl border border-surface bg-surface-0 shadow-sm dark:bg-surface-900"
-      aria-labelledby="cash-closure-title"
-    >
-      <div class="border-b border-surface px-4 py-4 sm:px-5">
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 id="cash-closure-title" class="font-semibold text-color">Cierre operativo del día</h2>
-            <p class="mt-1 text-sm text-muted-color">
-              Seguimiento de movimientos, saldo esperado, entrega y validación por cobrador.
-            </p>
-          </div>
-          <p-tag value="Flujo de propuesta" severity="info" icon="pi pi-sparkles" />
-        </div>
-      </div>
-
-      <div class="grid xl:grid-cols-[21rem_minmax(0,1fr)]">
-        <nav class="border-b border-surface p-3 xl:border-b-0 xl:border-r" aria-label="Cierres por cobrador">
-          <div class="grid gap-2 sm:grid-cols-3 xl:grid-cols-1">
-            @for (closure of store.closures(); track closure.id) {
-              <button
-                type="button"
-                class="rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                [class.border-primary]="store.selectedClosureId() === closure.id"
-                [class.bg-primary-50]="store.selectedClosureId() === closure.id"
-                [class.dark:bg-primary-950]="store.selectedClosureId() === closure.id"
-                [class.border-surface]="store.selectedClosureId() !== closure.id"
-                [attr.aria-pressed]="store.selectedClosureId() === closure.id"
-                (click)="focusClosure(closure.id)"
-              >
-                <span class="flex items-start justify-between gap-2">
-                  <span class="min-w-0">
-                    <span class="block truncate font-semibold text-color">{{ closure.collectorName }}</span>
-                    <span class="mt-1 block text-xs text-muted-color">
-                      Registrado
-                      {{ closure.registeredAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
-                    </span>
-                  </span>
-                  <p-tag
-                    [value]="closureStatusLabel(closure.status)"
-                    [severity]="closureStatusSeverity(closure.status)"
-                  />
-                </span>
-              </button>
-            }
-          </div>
-        </nav>
-
-        @if (store.selectedClosure(); as closure) {
-          <div class="p-4 sm:p-5">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <h3 class="text-lg font-semibold text-color">{{ closure.collectorName }}</h3>
-                  <p-tag
-                    [value]="closureStatusLabel(closure.status)"
-                    [severity]="closureStatusSeverity(closure.status)"
-                  />
-                </div>
-                <p class="mt-1 text-sm text-muted-color">
-                  Jornada del {{ formatDate(closure.businessDate) }}
-                </p>
-              </div>
-              @if (closure.status === 'validated') {
-                <div class="text-left text-xs text-muted-color sm:text-right">
-                  <p>Validado por {{ closure.validatedBy }}</p>
-                  <p>{{ formatDateTime(closure.validatedAt) }}</p>
-                </div>
-              }
-            </div>
-
-            <dl class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-              <div class="rounded-xl bg-surface-50 p-3 dark:bg-surface-800">
-                <dt class="text-xs text-muted-color">Programado</dt>
-                <dd class="mt-1 text-lg font-bold text-color">
-                  {{ closure.scheduledAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
-                </dd>
-              </div>
-              <div class="rounded-xl bg-surface-50 p-3 dark:bg-surface-800">
-                <dt class="text-xs text-muted-color">Registrado</dt>
-                <dd class="mt-1 text-lg font-bold text-color">
-                  {{ closure.registeredAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
-                </dd>
-              </div>
-              <div class="rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/30">
-                <dt class="text-xs text-emerald-700 dark:text-emerald-300">Efectivo / Yape</dt>
-                <dd class="mt-1 font-bold text-emerald-700 dark:text-emerald-300">
-                  {{ closure.methodSummary.cash | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
-                  <span class="font-normal">/</span>
-                  {{ closure.methodSummary.yape | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
-                </dd>
-              </div>
-              <div class="rounded-xl bg-primary-50 p-3 dark:bg-primary-950/30">
-                <dt class="text-xs text-primary-700 dark:text-primary-300">Esperado en cierre</dt>
-                <dd class="mt-1 text-lg font-bold text-primary-700 dark:text-primary-300">
-                  {{ closure.expectedAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
-                </dd>
-              </div>
-              <div class="rounded-xl bg-surface-50 p-3 dark:bg-surface-800">
-                <dt class="text-xs text-muted-color">Entregado</dt>
-                <dd class="mt-1 text-lg font-bold text-color">
-                  @if (closure.deliveredAmount !== null) {
-                    {{ closure.deliveredAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
-                  } @else {
-                    Pendiente
-                  }
-                </dd>
-                @if (closure.difference !== null) {
-                  <p class="text-xs" [class.text-red-600]="closure.difference !== 0" [class.text-muted-color]="closure.difference === 0">
-                    Diferencia: {{ closure.difference | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
-                  </p>
-                }
-              </div>
-            </dl>
-
-            <div class="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
-              <div>
-                <h4 class="text-sm font-semibold text-color">Movimientos registrados</h4>
-                @if (closure.movements.length === 0) {
-                  <p class="mt-3 rounded-xl border border-dashed border-surface p-4 text-sm text-muted-color">
-                    Todavía no hay cobros registrados para esta jornada.
-                  </p>
-                } @else {
-                  <ul class="mt-2 divide-y divide-surface" aria-label="Movimientos del cierre">
-                    @for (movement of closure.movements; track movement.id) {
-                      <li class="flex items-center justify-between gap-3 py-3">
-                        <div class="min-w-0">
-                          <p class="truncate text-sm font-medium text-color">{{ movement.description }}</p>
-                          <p class="text-xs text-muted-color">
-                            {{ movementLabel(movement) }} · {{ formatDateTime(movement.happenedAt) }}
-                          </p>
-                        </div>
-                        <span
-                          class="whitespace-nowrap text-sm font-semibold"
-                          [class.text-emerald-600]="movement.direction === 'inflow'"
-                          [class.text-red-600]="movement.direction === 'outflow'"
-                        >
-                          {{ movement.direction === 'inflow' ? '+' : '−' }}
-                          {{ movement.amount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
-                        </span>
-                      </li>
-                    }
-                  </ul>
-                }
-              </div>
-
-              <aside class="rounded-xl border border-surface p-4" aria-label="Acciones del cierre">
-                @if (closure.status === 'submitted') {
-                  <h4 class="font-semibold text-color">Validar cierre</h4>
-                  <p class="mt-1 text-xs text-muted-color">
-                    Confirmá que lo entregado coincide con el saldo esperado de la jornada.
-                  </p>
-                  <label class="mt-4 flex flex-col gap-2 text-sm font-medium text-color">
-                    Observación opcional
-                    <textarea
-                      pTextarea
-                      rows="3"
-                      maxlength="300"
-                      class="w-full resize-none"
-                      [ngModel]="validationObservation()"
-                      (ngModelChange)="validationObservation.set($event)"
-                      placeholder="Detalle de la verificación"
-                    ></textarea>
-                  </label>
-                  <button pButton class="mt-3 w-full" [disabled]="store.saving()" (click)="validateClosure()">
-                    @if (store.saving()) {
-                      <i class="pi pi-spin pi-spinner"></i>
-                    } @else {
-                      <i class="pi pi-check-circle"></i>
-                    }
-                    Validar cierre
-                  </button>
-                } @else if (closure.status === 'draft') {
-                  <div class="flex gap-3">
-                    <i class="pi pi-clock mt-0.5 text-amber-500" aria-hidden="true"></i>
-                    <div>
-                      <h4 class="font-semibold text-color">Pendiente del cobrador</h4>
-                      <p class="mt-1 text-xs text-muted-color">
-                        El administrador puede revisar la jornada, pero el envío corresponde al cobrador.
-                      </p>
-                    </div>
-                  </div>
-                } @else {
-                  <div class="flex gap-3">
-                    <i class="pi pi-verified mt-0.5 text-emerald-600" aria-hidden="true"></i>
-                    <div>
-                      <h4 class="font-semibold text-color">Cierre conciliado</h4>
-                      <p class="mt-1 text-xs text-muted-color">
-                        Este cierre ya fue validado y queda bloqueado para la propuesta operativa.
-                      </p>
-                    </div>
-                  </div>
-                }
-                @if (closure.observation) {
-                  <p class="mt-4 border-t border-surface pt-3 text-xs text-muted-color">
-                    {{ closure.observation }}
-                  </p>
-                }
-              </aside>
-            </div>
-          </div>
-        }
-      </div>
-    </section>
   }
 
   @if (store.loading() && !store.report()) {

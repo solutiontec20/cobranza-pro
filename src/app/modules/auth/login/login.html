@@ -34,6 +34,7 @@
           placeholder="DNI (8 dígitos)"
           [fluid]="true"
           [formField]="loginForm.dni"
+          (beforeinput)="blockNonNumericInput($event)"
         />
       </p-iconfield>
       @if (loginForm.dni().touched() && loginForm.dni().invalid()) {
@@ -42,32 +43,35 @@
     </div>
 
     <!-- PIN con toggle mostrar/ocultar -->
-    <div class="relative">
+    <div>
       <label for="pin" class="sr-only">PIN</label>
-      <p-iconfield>
-        <p-inputicon>
-          <i class="pi pi-lock" aria-hidden="true"></i>
-        </p-inputicon>
-        <input
-          pInputText
-          id="pin"
-          [type]="showPin() ? 'text' : 'password'"
-          inputmode="numeric"
-          autocomplete="current-password"
-          spellcheck="false"
-          placeholder="PIN de 6 dígitos"
-          [fluid]="true"
-          class="pr-10"
-          [formField]="loginForm.pin"
-        />
-      </p-iconfield>
-      <button
-        type="button"
-        (click)="showPin.set(!showPin())"
-        class="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-surface-400 transition-colors hover:text-surface-600 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:hover:text-surface-200 dark:focus-visible:ring-offset-surface-800"
-        [attr.aria-label]="showPin() ? 'Ocultar PIN' : 'Mostrar PIN'">
-        <i [class]="showPin() ? 'pi pi-eye-slash' : 'pi pi-eye'" aria-hidden="true"></i>
-      </button>
+      <div class="relative">
+        <p-iconfield>
+          <p-inputicon>
+            <i class="pi pi-lock" aria-hidden="true"></i>
+          </p-inputicon>
+          <input
+            pInputText
+            id="pin"
+            [type]="showPin() ? 'text' : 'password'"
+            inputmode="numeric"
+            autocomplete="current-password"
+            spellcheck="false"
+            placeholder="PIN de 6 dígitos"
+            [fluid]="true"
+            class="pr-10"
+            [formField]="loginForm.pin"
+            (beforeinput)="blockNonNumericInput($event)"
+          />
+        </p-iconfield>
+        <button
+          type="button"
+          (click)="showPin.set(!showPin())"
+          class="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-surface-400 transition-colors hover:text-surface-600 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:hover:text-surface-200 dark:focus-visible:ring-offset-surface-800"
+          [attr.aria-label]="showPin() ? 'Ocultar PIN' : 'Mostrar PIN'">
+          <i [class]="showPin() ? 'pi pi-eye-slash' : 'pi pi-eye'" aria-hidden="true"></i>
+        </button>
+      </div>
       @if (loginForm.pin().touched() && loginForm.pin().invalid()) {
       <small class="mt-1 block text-red-600">{{ loginForm.pin().errors()[0]?.message }}</small>
       }

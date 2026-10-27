@@ -5,6 +5,7 @@ import {
   LoanInstallment,
   LoanListItem,
   RegisterLoanPaymentResult,
+  RenewLoanResult,
 } from '../../../core/models/loan.model';
 import { LOAN_REPOSITORY, LoanRepository } from '../../../core/repositories/loan.repository';
 import {
@@ -18,6 +19,7 @@ const loan: LoanListItem = {
   id: 'loan-1',
   clientId: 'customer-1',
   clientName: 'Ana Flores',
+  clientDni: '45678901',
   collectorId: 'collector-1',
   collectorName: 'María Quispe',
   principal: 100,
@@ -31,6 +33,18 @@ const loan: LoanListItem = {
   startedOn: '2026-10-19',
   endDate: '2026-10-21',
   createdAt: '2026-10-19T12:00:00Z',
+};
+
+const otherLoan: LoanListItem = {
+  ...loan,
+  id: 'loan-2',
+  clientId: 'customer-2',
+  clientName: 'Rosa Vega',
+  clientDni: '71234567',
+  collectorId: 'collector-2',
+  collectorName: 'Luis Ramos',
+  frequency: 'monthly',
+  status: 'paid',
 };
 
 const schedule: LoanInstallment[] = [
@@ -73,6 +87,7 @@ describe('LoansStore', () => {
     create: ReturnType<typeof vi.fn<LoanRepository['create']>>;
     update: ReturnType<typeof vi.fn<LoanRepository['update']>>;
     registerPayment: ReturnType<typeof vi.fn<LoanRepository['registerPayment']>>;
+    renew: ReturnType<typeof vi.fn<LoanRepository['renew']>>;
   };
 
   beforeEach(() => {
@@ -84,6 +99,7 @@ describe('LoansStore', () => {
       create: vi.fn<LoanRepository['create']>(),
       update: vi.fn<LoanRepository['update']>(),
       registerPayment: vi.fn<LoanRepository['registerPayment']>(),
+      renew: vi.fn<LoanRepository['renew']>(),
     };
     TestBed.configureTestingModule({
       providers: [LoansStore, { provide: LOAN_REPOSITORY, useValue: repository }],
@@ -250,6 +266,127 @@ describe('LoansStore', () => {
     ).resolves.toEqual(paymentResult);
 
     expect(store.error()).toContain('El pago se registró');
+  });
+
+  it('renews a loan and refreshes the complete server state with the new loan id', async () => {
+    const renewResult: RenewLoanResult = {
+      loanId: 'loan-2',
+      clientId: loan.clientId,
+      previousLoanId: loan.id,
+      totalAmount: 110,
+      disbursedAmount: 26.67,
+      baseInstallmentAmount: 36.67,
+      lastInstallmentAmount: 36.66,
+      firstDueOn: '2026-10-27',
+    };
+    repository.renew.mockResolvedValue(renewResult);
+
+    await expect(
+      store.renew({
+        loanId: loan.id,
+        principal: 100,
+        interestRate: 10,
+        frequency: 'daily',
+        installmentCount: 3,
+        startedOn: '2026-10-27',
+      }),
+    ).resolves.toEqual(renewResult);
+
+    expect(repository.list).toHaveBeenCalledOnce();
+    expect(repository.listAvailableClients).toHaveBeenCalledOnce();
+    expect(repository.getDetail).toHaveBeenCalledWith('loan-2');
+    expect(store.renewing()).toBe(false);
+  });
+
+  it('sets an error message when the renewal fails', async () => {
+    repository.renew.mockRejectedValue(
+      new AppError('VALIDATION', 'El cliente es moroso (más de 5 días de atraso) y no puede renovar su préstamo.'),
+    );
+
+    const result = await store.renew({
+      loanId: loan.id,
+      principal: 100,
+      interestRate: 10,
+      frequency: 'daily',
+      installmentCount: 3,
+      startedOn: '2026-10-27',
+    });
+
+    expect(result).toBeNull();
+    expect(store.error()).toBe(
+      'El cliente es moroso (más de 5 días de atraso) y no puede renovar su préstamo.',
+    );
+  });
+
+  describe('filtering', () => {
+    beforeEach(() => {
+      repository.list.mockResolvedValue([loan, otherLoan]);
+    });
+
+    it('filters by free-text search across client name, DNI and collector name, ignoring accents', async () => {
+      await store.load();
+
+      store.query.set('ana');
+      expect(store.filteredLoans()).toEqual([loan]);
+
+      store.query.set('71234567');
+      expect(store.filteredLoans()).toEqual([otherLoan]);
+
+      store.query.set('ramos');
+      expect(store.filteredLoans()).toEqual([otherLoan]);
+
+      store.query.set('ningún cliente');
+      expect(store.filteredLoans()).toEqual([]);
+    });
+
+    it('filters by status', async () => {
+      await store.load();
+      store.statusFilter.set('paid');
+      expect(store.filteredLoans()).toEqual([otherLoan]);
+    });
+
+    it('filters by collector', async () => {
+      await store.load();
+      store.collectorFilter.set('collector-1');
+      expect(store.filteredLoans()).toEqual([loan]);
+    });
+
+    it('filters by frequency', async () => {
+      await store.load();
+      store.frequencyFilter.set('monthly');
+      expect(store.filteredLoans()).toEqual([otherLoan]);
+    });
+
+    it('combines every active filter', async () => {
+      await store.load();
+      store.statusFilter.set('active');
+      store.collectorFilter.set('collector-2');
+      expect(store.filteredLoans()).toEqual([]);
+    });
+
+    it('exposes the distinct collectors present in the loaded loans, sorted by name', async () => {
+      await store.load();
+      expect(store.collectorOptions()).toEqual([
+        { id: 'collector-2', fullName: 'Luis Ramos' },
+        { id: 'collector-1', fullName: 'María Quispe' },
+      ]);
+    });
+
+    it('clears every filter back to its default', async () => {
+      await store.load();
+      store.query.set('ana');
+      store.statusFilter.set('paid');
+      store.collectorFilter.set('collector-2');
+      store.frequencyFilter.set('monthly');
+
+      store.clearFilters();
+
+      expect(store.query()).toBe('');
+      expect(store.statusFilter()).toBe('all');
+      expect(store.collectorFilter()).toBeNull();
+      expect(store.frequencyFilter()).toBe('all');
+      expect(store.filteredLoans()).toEqual([loan, otherLoan]);
+    });
   });
 });
 

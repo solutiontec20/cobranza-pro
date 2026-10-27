@@ -1,11 +1,13 @@
 import { CurrencyPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { form, FormField, max, min, required, submit, validate } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -13,7 +15,7 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { LoanFrequency, LoanStatus } from '../../../core/models/loan.model';
 import { calculateLoanSummary, firstDueOn, toDateInput } from './loan-calculations';
-import { LoansStore } from './loans.store';
+import { LoanFrequencyFilter, LoanStatusFilter, LoansStore } from './loans.store';
 
 interface LoanFormModel {
   clientId: string;
@@ -40,7 +42,9 @@ const emptyModel = (): LoanFormModel => ({
     CurrencyPipe,
     DialogModule,
     FormField,
+    FormsModule,
     InputNumberModule,
+    InputTextModule,
     MessageModule,
     RouterLink,
     SelectModule,
@@ -67,6 +71,45 @@ const emptyModel = (): LoanFormModel => ({
         <p-message severity="error" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
       }
 
+      @if (store.loans().length > 0) {
+        <section class="rounded-2xl border border-surface bg-surface-0 p-4 shadow-sm dark:bg-surface-900" aria-label="Filtros de préstamos">
+          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,12rem)_minmax(0,14rem)_minmax(0,10rem)_auto] xl:items-end">
+            <label class="flex min-w-0 flex-col gap-2 text-sm font-medium text-color">
+              Buscar
+              <span class="relative block min-w-0">
+                <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-muted-color" aria-hidden="true"></i>
+                <input pInputText class="w-full pl-10" type="search" placeholder="Cliente, DNI o cobrador"
+                  [value]="store.query()" (input)="updateSearch($event)" />
+              </span>
+            </label>
+            <label class="flex min-w-0 flex-col gap-2 text-sm font-medium text-color">
+              Estado
+              <p-select [options]="statusOptions" optionLabel="label" optionValue="value"
+                [ngModel]="store.statusFilter()" (ngModelChange)="store.statusFilter.set($event)"
+                appendTo="body" styleClass="w-full" />
+            </label>
+            <label class="flex min-w-0 flex-col gap-2 text-sm font-medium text-color">
+              Cobrador
+              <p-select [options]="collectorFilterOptions()" optionLabel="label" optionValue="value"
+                [ngModel]="store.collectorFilter()" (ngModelChange)="store.collectorFilter.set($event)"
+                appendTo="body" styleClass="w-full" />
+            </label>
+            <label class="flex min-w-0 flex-col gap-2 text-sm font-medium text-color">
+              Frecuencia
+              <p-select [options]="frequencyFilterOptions" optionLabel="label" optionValue="value"
+                [ngModel]="store.frequencyFilter()" (ngModelChange)="store.frequencyFilter.set($event)"
+                appendTo="body" styleClass="w-full" />
+            </label>
+            <button pButton severity="secondary" variant="text" class="shrink-0" (click)="store.clearFilters()">
+              <i class="pi pi-filter-slash"></i> Limpiar
+            </button>
+          </div>
+          <p class="mt-3 text-sm text-muted-color" aria-live="polite">
+            {{ store.filteredLoans().length }} resultado(s)
+          </p>
+        </section>
+      }
+
       @if (store.loading()) {
         <section class="space-y-3" aria-label="Cargando préstamos" aria-live="polite">
           @for (row of loadingRows; track row) {
@@ -79,15 +122,21 @@ const emptyModel = (): LoanFormModel => ({
           <h2 class="text-lg font-semibold text-color">Todavía no hay préstamos</h2>
           <p class="mt-1 text-sm text-muted-color">Crea el primero para un cliente activo sin crédito vigente.</p>
         </section>
+      } @else if (store.filteredLoans().length === 0) {
+        <section class="rounded-xl border border-dashed border-surface bg-surface-0 px-6 py-14 text-center dark:bg-surface-900">
+          <i class="pi pi-search mb-4 text-3xl text-muted-color" aria-hidden="true"></i>
+          <h2 class="text-lg font-semibold text-color">No encontramos coincidencias</h2>
+          <p class="mt-1 text-sm text-muted-color">Probá con otro cliente, DNI, cobrador o ajustá los filtros.</p>
+        </section>
       } @else {
         <section class="space-y-3 md:hidden" aria-label="Listado de préstamos">
-          @for (loan of store.loans(); track loan.id) {
+          @for (loan of store.filteredLoans(); track loan.id) {
             <article class="overflow-hidden rounded-xl border border-surface bg-surface-0 shadow-sm dark:bg-surface-900">
               <div class="border-l-4 border-primary p-4">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
                     <h2 class="truncate text-lg font-semibold text-color">{{ loan.clientName }}</h2>
-                    <p class="mt-0.5 text-sm text-muted-color">{{ loan.collectorName }}</p>
+                    <p class="mt-0.5 text-sm text-muted-color">DNI {{ loan.clientDni }} · {{ loan.collectorName }}</p>
                   </div>
                   <p-tag
                     [severity]="loan.status === 'active' ? 'success' : 'secondary'"
@@ -134,9 +183,9 @@ const emptyModel = (): LoanFormModel => ({
 
         <section class="hidden overflow-hidden rounded-xl border border-surface bg-surface-0 shadow-sm dark:bg-surface-900 md:block">
           <p-table
-            [value]="store.loans()"
+            [value]="store.filteredLoans()"
             [rows]="10"
-            [paginator]="store.loans().length > 10"
+            [paginator]="store.filteredLoans().length > 10"
             responsiveLayout="scroll"
             styleClass="p-datatable-sm"
           >
@@ -157,7 +206,7 @@ const emptyModel = (): LoanFormModel => ({
               <tr>
                 <td>
                   <span class="font-semibold">{{ loan.clientName }}</span><br />
-                  <small class="text-muted-color">Inicio: {{ formatDate(loan.startedOn) }}</small>
+                  <small class="text-muted-color">DNI {{ loan.clientDni }} · Inicio: {{ formatDate(loan.startedOn) }}</small>
                 </td>
                 <td>{{ loan.collectorName }}</td>
                 <td>{{ loan.principal | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
@@ -193,6 +242,7 @@ const emptyModel = (): LoanFormModel => ({
       [modal]="true"
       [visible]="createDialogVisible()"
       (visibleChange)="createDialogVisible.set($event)"
+      [breakpoints]="{ '640px': '100vw' }"
       styleClass="w-[calc(100vw-1.5rem)] max-w-2xl"
     >
       <form class="flex flex-col gap-5" (submit)="createLoan(); $event.preventDefault()">
@@ -338,6 +388,26 @@ export default class Loans {
     { label: 'Semanal', value: 'weekly' },
     { label: 'Mensual', value: 'monthly' },
   ];
+  protected readonly statusOptions: Array<{ label: string; value: LoanStatusFilter }> = [
+    { label: 'Todos los estados', value: 'all' },
+    { label: 'Activo', value: 'active' },
+    { label: 'Pagado', value: 'paid' },
+    { label: 'Renovado', value: 'renewed' },
+    { label: 'Anulado', value: 'voided' },
+  ];
+  protected readonly frequencyFilterOptions: Array<{ label: string; value: LoanFrequencyFilter }> = [
+    { label: 'Todas las frecuencias', value: 'all' },
+    { label: 'Diario', value: 'daily' },
+    { label: 'Semanal', value: 'weekly' },
+    { label: 'Mensual', value: 'monthly' },
+  ];
+  protected readonly collectorFilterOptions = computed(() => [
+    { label: 'Todos los cobradores', value: null },
+    ...this.store.collectorOptions().map((collector) => ({
+      label: collector.fullName,
+      value: collector.id,
+    })),
+  ]);
 
   protected readonly loanModel = signal<LoanFormModel>(emptyModel());
   protected readonly loanForm = form(this.loanModel, (path) => {
@@ -376,6 +446,10 @@ export default class Loans {
 
   constructor() {
     void this.store.load();
+  }
+
+  protected updateSearch(event: Event): void {
+    this.store.query.set((event.target as HTMLInputElement).value);
   }
 
   protected openCreateDialog(): void {

@@ -13,6 +13,8 @@ import {
   LoanListItem,
   RegisterLoanPaymentInput,
   RegisterLoanPaymentResult,
+  RenewLoanInput,
+  RenewLoanResult,
   UpdateLoanInput,
 } from '../models/loan.model';
 import { LoanRepository } from '../repositories/loan.repository';
@@ -25,6 +27,8 @@ type UpdateLoanRow =
   Database['public']['Functions']['admin_update_loan']['Returns'][number];
 type RegisterPaymentRow =
   Database['public']['Functions']['register_payment']['Returns'][number];
+type RenewLoanRow =
+  Database['public']['Functions']['renew_loan']['Returns'][number];
 
 @Service({ autoProvided: false })
 export class SupabaseLoanRepository implements LoanRepository {
@@ -49,6 +53,7 @@ export class SupabaseLoanRepository implements LoanRepository {
         customer:customers!loans_customer_id_fkey (
           id,
           full_name,
+          document_number,
           collector_id,
           collector:profiles!customers_collector_id_fkey (
             id,
@@ -180,6 +185,7 @@ export class SupabaseLoanRepository implements LoanRepository {
 
         clientId: customer.id,
         clientName: customer.full_name,
+        clientDni: customer.document_number,
 
         collectorId: collector.id,
         collectorName: collector.full_name,
@@ -460,6 +466,7 @@ export class SupabaseLoanRepository implements LoanRepository {
         id: row.id,
         clientId: customer.id,
         clientName: customer.full_name,
+        clientDni: customer.document_number,
         collectorId: collector.id,
         collectorName: collector.full_name,
         principal: Number(row.principal_amount),
@@ -594,6 +601,37 @@ export class SupabaseLoanRepository implements LoanRepository {
       allocatedAmount: Number(row.allocated_amount),
       remainingBalance: Number(row.remaining_balance),
       resultingLoanStatus: row.resulting_loan_status,
+    };
+  }
+
+  async renew(input: RenewLoanInput): Promise<RenewLoanResult> {
+    const { data, error } = await this.supabase.rpc('renew_loan', {
+      p_loan_id: input.loanId,
+      p_principal: input.principal,
+      p_interest_rate: input.interestRate,
+      p_frequency: input.frequency,
+      p_installment_count: input.installmentCount,
+      p_started_on: input.startedOn,
+    });
+
+    if (error) {
+      throw this.renewLoanError(error);
+    }
+
+    const row: RenewLoanRow | undefined = data?.[0];
+    if (!row) {
+      throw new AppError('SUPABASE_RPC', 'La renovación no devolvió el préstamo registrado.');
+    }
+
+    return {
+      loanId: row.loan_id,
+      clientId: row.customer_id,
+      previousLoanId: row.previous_loan_id,
+      totalAmount: Number(row.total_amount),
+      disbursedAmount: Number(row.disbursed_amount),
+      baseInstallmentAmount: Number(row.base_installment_amount),
+      lastInstallmentAmount: Number(row.last_installment_amount),
+      firstDueOn: row.first_due_on,
     };
   }
 
@@ -810,6 +848,71 @@ export class SupabaseLoanRepository implements LoanRepository {
     }
 
     return this.toAppError(error, 'No se pudo registrar el pago.');
+  }
+
+  private renewLoanError(error: unknown): AppError {
+    const message = this.errorMessage(error);
+
+    if (message.includes('Blacklisted customers cannot renew their loan')) {
+      return new AppError(
+        'VALIDATION',
+        'El cliente es moroso (más de 5 días de atraso) y no puede renovar su préstamo.',
+        error,
+      );
+    }
+
+    if (message.includes('Only active or fully paid loans can be renewed')) {
+      return new AppError(
+        'VALIDATION',
+        'Solo se pueden renovar préstamos activos o totalmente pagados.',
+        error,
+      );
+    }
+
+    if (message.includes('Principal must be at least the outstanding balance of the previous loan')) {
+      return new AppError(
+        'VALIDATION',
+        'El nuevo capital debe ser al menos igual al saldo pendiente del préstamo anterior.',
+        error,
+      );
+    }
+
+    if (message.includes('Cannot renew a loan for an inactive customer')) {
+      return new AppError(
+        'VALIDATION',
+        'No se puede renovar el préstamo de un cliente inactivo.',
+        error,
+      );
+    }
+
+    if (
+      message.includes('Collector cannot renew loans for another portfolio') ||
+      message.includes('Insufficient privileges')
+    ) {
+      return new AppError(
+        'AUTH_UNAUTHORIZED',
+        'No tenés permisos para renovar este préstamo.',
+        error,
+      );
+    }
+
+    if (message.includes('Loan not found') || message.includes('Customer not found')) {
+      return new AppError('VALIDATION', 'No se encontró el préstamo o el cliente.', error);
+    }
+
+    if (
+      message.includes('Principal must be greater than zero') ||
+      message.includes('Principal may contain at most two decimals') ||
+      message.includes('Interest rate cannot be negative') ||
+      message.includes('Interest rate may contain at most four decimals') ||
+      message.includes('Invalid installment count') ||
+      message.includes('Loan start date is required') ||
+      message.includes('Installment amounts must be greater than zero')
+    ) {
+      return new AppError('VALIDATION', 'Revisá los datos ingresados para la renovación.', error);
+    }
+
+    return this.toAppError(error, 'No se pudo renovar el préstamo.');
   }
 
   private toAppError(

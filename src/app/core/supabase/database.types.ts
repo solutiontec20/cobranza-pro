@@ -20,7 +20,6 @@ export type Database = {
           validated_at: string | null;
           validated_by: string | null;
         };
-        ComputedFields: never;
         Insert: {
           business_date: string;
           collector_id: string;
@@ -77,6 +76,86 @@ export type Database = {
           },
         ];
       };
+      cash_expenses: {
+        Row: {
+          amount: number;
+          business_date: string;
+          cash_movement_id: string | null;
+          category: Database['public']['Enums']['cash_expense_category'];
+          collector_id: string;
+          created_at: string;
+          description: string | null;
+          id: string;
+          rejection_reason: string | null;
+          requested_by: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: Database['public']['Enums']['cash_expense_status'];
+          updated_at: string;
+        };
+        Insert: {
+          amount: number;
+          business_date: string;
+          cash_movement_id?: string | null;
+          category: Database['public']['Enums']['cash_expense_category'];
+          collector_id: string;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          rejection_reason?: string | null;
+          requested_by: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database['public']['Enums']['cash_expense_status'];
+          updated_at?: string;
+        };
+        Update: {
+          amount?: number;
+          business_date?: string;
+          cash_movement_id?: string | null;
+          category?: Database['public']['Enums']['cash_expense_category'];
+          collector_id?: string;
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          rejection_reason?: string | null;
+          requested_by?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database['public']['Enums']['cash_expense_status'];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'cash_expenses_cash_movement_id_fkey';
+            columns: ['cash_movement_id'];
+            isOneToOne: false;
+            referencedRelation: 'cash_movements';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'cash_expenses_collector_id_fkey';
+            columns: ['collector_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'cash_expenses_requested_by_fkey';
+            columns: ['requested_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'cash_expenses_reviewed_by_fkey';
+            columns: ['reviewed_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       cash_movements: {
         Row: {
           amount: number;
@@ -96,7 +175,6 @@ export type Database = {
           reversal_of_id: string | null;
           updated_at: string;
         };
-        ComputedFields: never;
         Insert: {
           amount: number;
           business_date?: string;
@@ -199,7 +277,6 @@ export type Database = {
           phone: string | null;
           updated_at: string;
         };
-        ComputedFields: never;
         Insert: {
           active?: boolean;
           address?: string | null;
@@ -255,7 +332,6 @@ export type Database = {
           superseded_by: string | null;
           supersession_reason: string | null;
         };
-        ComputedFields: never;
         Insert: {
           created_at?: string;
           due_date: string;
@@ -315,7 +391,6 @@ export type Database = {
           total_amount: number;
           updated_at: string;
         };
-        ComputedFields: never;
         Insert: {
           close_reason?: string | null;
           closed_at?: string | null;
@@ -395,7 +470,6 @@ export type Database = {
           superseded_at: string | null;
           supersession_reason: string | null;
         };
-        ComputedFields: never;
         Insert: {
           amount: number;
           created_at?: string;
@@ -457,7 +531,6 @@ export type Database = {
           voided_at: string | null;
           voided_by: string | null;
         };
-        ComputedFields: never;
         Insert: {
           amount: number;
           business_date?: string;
@@ -546,7 +619,6 @@ export type Database = {
           role: Database['public']['Enums']['app_role'];
           updated_at: string;
         };
-        ComputedFields: never;
         Insert: {
           active?: boolean;
           created_at?: string;
@@ -577,6 +649,30 @@ export type Database = {
       };
     };
     Views: {
+      collector_cash_day_breakdown: {
+        Row: {
+          allowance_amount: number | null;
+          business_date: string | null;
+          cash_collected_amount: number | null;
+          collector_id: string | null;
+          loan_disbursement_amount: number | null;
+          opening_amount: number | null;
+          operating_expense_amount: number | null;
+          plin_collected_amount: number | null;
+          transfer_collected_amount: number | null;
+          voided_cash_amount: number | null;
+          yape_collected_amount: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'cash_movements_collector_id_fkey';
+            columns: ['collector_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       customer_financial_status: {
         Row: {
           customer_id: string | null;
@@ -584,7 +680,6 @@ export type Database = {
           max_overdue_days: number | null;
           outstanding_amount: number | null;
         };
-        ComputedFields: never;
         Relationships: [];
       };
       installment_balances: {
@@ -599,7 +694,6 @@ export type Database = {
           scheduled_amount: number | null;
           status: string | null;
         };
-        ComputedFields: never;
         Relationships: [
           {
             foreignKeyName: 'installments_loan_id_fkey';
@@ -681,6 +775,18 @@ export type Database = {
           phone: string;
         }[];
       };
+      admin_update_collector_profile: {
+        Args: { p_collector_id: string; p_full_name: string; p_phone?: string; p_reason: string };
+        Returns: {
+          active: boolean;
+          active_customer_count: number;
+          created_at: string;
+          dni: string;
+          full_name: string;
+          id: string;
+          phone: string;
+        }[];
+      };
       admin_update_loan: {
         Args: {
           p_frequency: Database['public']['Enums']['loan_frequency'];
@@ -728,6 +834,25 @@ export type Database = {
           total_amount: number;
         }[];
       };
+      collector_create_loan: {
+        Args: {
+          p_customer_id: string;
+          p_frequency: Database['public']['Enums']['loan_frequency'];
+          p_installment_count: number;
+          p_interest_rate: number;
+          p_principal: number;
+          p_started_on: string;
+        };
+        Returns: {
+          base_installment_amount: number;
+          customer_id: string;
+          disbursed_amount: number;
+          first_due_on: string;
+          last_installment_amount: number;
+          loan_id: string;
+          total_amount: number;
+        }[];
+      };
       collector_list_portfolio: {
         Args: { p_business_date?: string };
         Returns: {
@@ -754,6 +879,36 @@ export type Database = {
           total_amount: number;
         }[];
       };
+      register_cash_allowance: {
+        Args: {
+          p_amount: number;
+          p_business_date: string;
+          p_collector_id: string;
+          p_notes?: string;
+        };
+        Returns: {
+          amount: number;
+          business_date: string;
+          cash_movement_id: string;
+          collector_id: string;
+          expected_cash: number;
+        }[];
+      };
+      register_cash_opening: {
+        Args: {
+          p_amount: number;
+          p_business_date: string;
+          p_collector_id: string;
+          p_notes?: string;
+        };
+        Returns: {
+          amount: number;
+          business_date: string;
+          cash_movement_id: string;
+          collector_id: string;
+          expected_cash: number;
+        }[];
+      };
       register_payment: {
         Args: {
           p_amount: number;
@@ -767,6 +922,52 @@ export type Database = {
           payment_id: string;
           remaining_balance: number;
           resulting_loan_status: Database['public']['Enums']['loan_status'];
+        }[];
+      };
+      renew_loan: {
+        Args: {
+          p_frequency: Database['public']['Enums']['loan_frequency'];
+          p_installment_count: number;
+          p_interest_rate: number;
+          p_loan_id: string;
+          p_principal: number;
+          p_started_on: string;
+        };
+        Returns: {
+          base_installment_amount: number;
+          customer_id: string;
+          disbursed_amount: number;
+          first_due_on: string;
+          last_installment_amount: number;
+          loan_id: string;
+          previous_loan_id: string;
+          total_amount: number;
+        }[];
+      };
+      request_cash_expense: {
+        Args: {
+          p_amount: number;
+          p_business_date: string;
+          p_category: Database['public']['Enums']['cash_expense_category'];
+          p_collector_id?: string;
+          p_description?: string;
+        };
+        Returns: {
+          amount: number;
+          business_date: string;
+          category: Database['public']['Enums']['cash_expense_category'];
+          collector_id: string;
+          expense_id: string;
+          status: Database['public']['Enums']['cash_expense_status'];
+        }[];
+      };
+      review_cash_expense: {
+        Args: { p_approve: boolean; p_expense_id: string; p_reason?: string };
+        Returns: {
+          cash_movement_id: string;
+          expected_cash: number;
+          expense_id: string;
+          status: Database['public']['Enums']['cash_expense_status'];
         }[];
       };
       service_complete_collector_pin_change: { Args: { p_user_id: string }; Returns: undefined };
@@ -803,6 +1004,8 @@ export type Database = {
       app_role: 'admin' | 'supervisor' | 'collector';
       cash_closure_status: 'draft' | 'submitted' | 'validated';
       cash_direction: 'inflow' | 'outflow';
+      cash_expense_category: 'fuel' | 'tolls' | 'fares' | 'parking' | 'meals' | 'other';
+      cash_expense_status: 'pending' | 'approved' | 'rejected';
       loan_frequency: 'daily' | 'weekly' | 'monthly';
       loan_status: 'active' | 'paid' | 'renewed' | 'voided';
       payment_status: 'posted' | 'voided';
@@ -920,6 +1123,8 @@ export const Constants = {
       app_role: ['admin', 'supervisor', 'collector'],
       cash_closure_status: ['draft', 'submitted', 'validated'],
       cash_direction: ['inflow', 'outflow'],
+      cash_expense_category: ['fuel', 'tolls', 'fares', 'parking', 'meals', 'other'],
+      cash_expense_status: ['pending', 'approved', 'rejected'],
       loan_frequency: ['daily', 'weekly', 'monthly'],
       loan_status: ['active', 'paid', 'renewed', 'voided'],
       payment_status: ['posted', 'voided'],

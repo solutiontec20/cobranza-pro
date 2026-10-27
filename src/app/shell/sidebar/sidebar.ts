@@ -21,6 +21,11 @@ import { AuthService } from '../../modules/auth/auth.service';
           <span [class.hidden]="layoutService.sidebarCollapsed()">Mis Clientes</span>
         </a>
 
+        <a routerLink="/cobrador/cierre-caja" routerLinkActive="bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 font-bold" class="flex items-center gap-3 px-3 py-3 rounded-lg text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 font-medium transition-all group">
+          <i class="pi pi-calculator text-lg text-surface-400 group-hover:text-surface-700 dark:group-hover:text-surface-100 transition-colors"></i>
+          <span [class.hidden]="layoutService.sidebarCollapsed()">Cierre de Caja</span>
+        </a>
+
         <a routerLink="/perfil" routerLinkActive="bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 font-bold" class="flex items-center gap-3 px-3 py-3 rounded-lg text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 font-medium transition-all group">
           <i class="pi pi-user text-lg text-surface-400 group-hover:text-surface-700 dark:group-hover:text-surface-100 transition-colors"></i>
           <span [class.hidden]="layoutService.sidebarCollapsed()">Perfil</span>
@@ -47,6 +52,10 @@ import { AuthService } from '../../modules/auth/auth.service';
         <a routerLink="/admin/control-diario" routerLinkActive="bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 font-bold" class="flex items-center gap-3 px-3 py-3 rounded-lg text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 font-medium transition-all group">
           <i class="pi pi-file-excel text-lg text-surface-400 group-hover:text-surface-700 dark:group-hover:text-surface-100 transition-colors"></i>
           <span [class.hidden]="layoutService.sidebarCollapsed()">Control Diario</span>
+        </a>
+        <a routerLink="/admin/cierre-caja" routerLinkActive="bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 font-bold" class="flex items-center gap-3 px-3 py-3 rounded-lg text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 font-medium transition-all group">
+          <i class="pi pi-calculator text-lg text-surface-400 group-hover:text-surface-700 dark:group-hover:text-surface-100 transition-colors"></i>
+          <span [class.hidden]="layoutService.sidebarCollapsed()">Cierre de Caja</span>
         </a>
         <a routerLink="/admin/auditoria" routerLinkActive="bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 font-bold" class="flex items-center gap-3 px-3 py-3 rounded-lg text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 font-medium transition-all group">
           <i class="pi pi-shield text-lg text-surface-400 group-hover:text-surface-700 dark:group-hover:text-surface-100 transition-colors"></i>

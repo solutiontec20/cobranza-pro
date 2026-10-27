@@ -1,7 +1,7 @@
 import { CurrencyPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { form, FormField, max, maxLength, min, required, submit, validate } from '@angular/forms/signals';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -18,11 +18,13 @@ import {
   LoanPaymentRecord,
   LoanStatus,
   RegisterLoanPaymentResult,
+  RenewLoanResult,
 } from '../../../core/models/loan.model';
 import {
   calculateLoanPaymentSummary,
   calculateLoanSummary,
   firstDueOn,
+  toDateInput,
 } from './loan-calculations';
 import {
   LoanEditReasonCode,
@@ -47,6 +49,14 @@ interface PaymentFormModel {
   notes: string;
 }
 
+interface RenewFormModel {
+  principal: number;
+  interestRate: number;
+  frequency: LoanFrequency;
+  installmentCount: number;
+  startedOn: string;
+}
+
 type TagSeverity = 'success' | 'warn' | 'danger' | 'secondary' | 'info';
 
 const emptyEditModel = (): LoanEditModel => ({
@@ -63,6 +73,14 @@ const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
   amount,
   paymentMethod: 'cash',
   notes: '',
+});
+
+const emptyRenewModel = (principal = 100): RenewFormModel => ({
+  principal,
+  interestRate: 20,
+  frequency: 'daily',
+  installmentCount: 24,
+  startedOn: toDateInput(new Date()),
 });
 
 @Component({
@@ -121,6 +139,11 @@ const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
                 <i class="pi pi-money-bill"></i> Registrar pago
               </button>
             }
+            @if (canRenew()) {
+              <button pButton severity="info" variant="outlined" class="w-full sm:w-auto" (click)="openRenewDialog()">
+                <i class="pi pi-refresh"></i> Renovar préstamo
+              </button>
+            }
             @if (canEdit() && !editing()) {
               <button pButton severity="secondary" variant="outlined" class="w-full sm:w-auto" (click)="startEditing()">
                 <i class="pi pi-pencil"></i> Editar préstamo
@@ -128,6 +151,12 @@ const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
             }
           </div>
         </header>
+
+        @if (!canRenew() && (detail.loan.status === 'active' || detail.loan.status === 'paid')) {
+          <p-message severity="warn" styleClass="w-full">
+            Este cliente es moroso (más de 5 días de atraso) y no puede renovar su préstamo.
+          </p-message>
+        }
 
         <div class="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)]">
           <section class="rounded-xl border border-surface bg-surface-0 p-4 shadow-sm dark:bg-surface-900 sm:p-5" aria-labelledby="client-summary-title">
@@ -547,6 +576,7 @@ const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
       [draggable]="false"
       [closable]="!store.paying()"
       [closeOnEscape]="!store.paying()"
+      [breakpoints]="{ '640px': '100vw' }"
       [header]="paymentResult() ? 'Pago registrado' : 'Registrar pago'"
       styleClass="w-[calc(100vw-1.5rem)] max-w-lg"
     >
@@ -702,11 +732,132 @@ const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
         </form>
       }
     </p-dialog>
+
+    <p-dialog
+      [visible]="renewDialogVisible()"
+      (visibleChange)="onRenewDialogVisibleChange($event)"
+      [modal]="true"
+      [draggable]="false"
+      [closable]="!store.renewing()"
+      [closeOnEscape]="!store.renewing()"
+      [breakpoints]="{ '640px': '100vw' }"
+      [header]="renewResult() ? 'Préstamo renovado' : 'Renovar préstamo'"
+      styleClass="w-[calc(100vw-1.5rem)] max-w-xl"
+    >
+      @if (renewResult(); as result) {
+        <div class="flex flex-col items-center gap-4 py-3 text-center" aria-live="polite">
+          <div class="flex size-16 items-center justify-center rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+            <i class="pi pi-check-circle text-3xl" aria-hidden="true"></i>
+          </div>
+          <div>
+            <p class="text-lg font-semibold text-color">Préstamo renovado</p>
+            <p class="mt-1 text-sm text-muted-color">
+              Nuevo total a pagar: {{ result.totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+            </p>
+          </div>
+        </div>
+
+        <ng-template #footer>
+          <button pButton severity="success" class="w-full" (click)="closeRenewDialog()">
+            Listo
+          </button>
+        </ng-template>
+      } @else {
+        <form class="flex flex-col gap-5" (submit)="submitRenewal(); $event.preventDefault()">
+          <p class="text-sm text-muted-color">
+            Se cierra el préstamo actual de <strong>{{ detail()?.client?.fullName }}</strong> y se abre uno
+            nuevo vinculado al anterior, en vez de crear un cliente nuevo.
+          </p>
+
+          @if (store.error()) {
+            <p-message severity="error" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
+          }
+
+          @if (remainingBalance() > 0) {
+            <p-message severity="info" styleClass="w-full">
+              Saldo pendiente del préstamo actual: <strong>{{ remainingBalance() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</strong>.
+              El nuevo capital debe cubrir, como mínimo, ese saldo.
+            </p-message>
+          }
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label for="renew-principal" class="mb-2 block text-sm font-medium text-color">Nuevo capital</label>
+              <p-inputnumber inputId="renew-principal" [formField]="renewForm.principal" mode="currency" currency="PEN" locale="es-PE" styleClass="w-full" />
+              @if (renewForm.principal().touched() && renewForm.principal().invalid()) {
+                <small class="mt-1 block text-red-600">{{ renewForm.principal().errors()[0]?.message }}</small>
+              }
+            </div>
+            <div>
+              <label for="renew-interest" class="mb-2 block text-sm font-medium text-color">Tasa de interés</label>
+              <p-inputnumber inputId="renew-interest" [formField]="renewForm.interestRate" suffix="%" [maxFractionDigits]="4" styleClass="w-full" />
+              @if (renewForm.interestRate().touched() && renewForm.interestRate().invalid()) {
+                <small class="mt-1 block text-red-600">{{ renewForm.interestRate().errors()[0]?.message }}</small>
+              }
+            </div>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label for="renew-frequency" class="mb-2 block text-sm font-medium text-color">Frecuencia</label>
+              <p-select inputId="renew-frequency" [formField]="renewForm.frequency" [options]="frequencyOptions" optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full" />
+            </div>
+            <div>
+              <label for="renew-count" class="mb-2 block text-sm font-medium text-color">Cantidad de cuotas</label>
+              <p-inputnumber inputId="renew-count" [formField]="renewForm.installmentCount" [useGrouping]="false" styleClass="w-full" />
+              @if (renewForm.installmentCount().touched() && renewForm.installmentCount().invalid()) {
+                <small class="mt-1 block text-red-600">{{ renewForm.installmentCount().errors()[0]?.message }}</small>
+              }
+            </div>
+          </div>
+
+          <div>
+            <label for="renew-start" class="mb-2 block text-sm font-medium text-color">Fecha de inicio</label>
+            <input id="renew-start" type="date" class="w-full rounded-md border border-surface px-3 py-2.5 text-color outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-surface-950" [formField]="renewForm.startedOn" />
+            @if (renewForm.startedOn().touched() && renewForm.startedOn().invalid()) {
+              <small class="mt-1 block text-red-600">{{ renewForm.startedOn().errors()[0]?.message }}</small>
+            }
+          </div>
+
+          <section class="grid grid-cols-2 gap-3 rounded-xl bg-surface-50 p-4 text-sm dark:bg-surface-800 sm:grid-cols-3" aria-label="Resumen de la renovación">
+            <div>
+              <p class="text-muted-color">Entregado al cliente</p>
+              <p class="mt-1 font-semibold text-color">{{ renewDisbursedPreview() | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+            </div>
+            <div>
+              <p class="text-muted-color">Total a pagar</p>
+              <p class="mt-1 font-semibold text-color">{{ renewSummary().totalAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+            </div>
+            <div class="col-span-2 sm:col-span-1">
+              <p class="text-muted-color">Cuota base</p>
+              <p class="mt-1 font-semibold text-primary">{{ renewSummary().baseInstallmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</p>
+            </div>
+          </section>
+
+          <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button pButton type="button" severity="secondary" variant="text" class="w-full sm:w-auto"
+              [disabled]="store.renewing()" (click)="closeRenewDialog()">
+              Cancelar
+            </button>
+            <button pButton type="submit" class="w-full sm:w-auto"
+              [disabled]="store.renewing() || renewForm().invalid()">
+              @if (store.renewing()) {
+                <i class="pi pi-spin pi-spinner"></i>
+              } @else {
+                <i class="pi pi-check"></i>
+              }
+              Confirmar renovación
+            </button>
+          </div>
+        </form>
+      }
+    </p-dialog>
   `,
 })
 export default class LoanDetailPage {
   protected readonly store = inject(LoansStore);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
 
   private readonly loanId = this.route.snapshot.paramMap.get('loanId') ?? '';
@@ -759,6 +910,33 @@ export default class LoanDetailPage {
     });
   });
 
+  protected readonly renewDialogVisible = signal(false);
+  protected readonly renewResult = signal<RenewLoanResult | null>(null);
+  protected readonly renewModel = signal<RenewFormModel>(emptyRenewModel());
+  protected readonly renewForm = form(this.renewModel, (path) => {
+    min(path.principal, 0.01, { message: 'El capital debe ser mayor que cero.' });
+    min(path.interestRate, 0, { message: 'La tasa no puede ser negativa.' });
+    min(path.installmentCount, 1, { message: 'Debe existir al menos una cuota.' });
+    max(path.installmentCount, 32767, { message: 'La cantidad de cuotas es demasiado alta.' });
+    required(path.startedOn, { message: 'Selecciona la fecha de inicio.' });
+    validate(path.principal, ({ valueOf }) => {
+      const minPrincipal = this.remainingBalance();
+      return valueOf(path.principal) >= minPrincipal
+        ? undefined
+        : { kind: 'belowOutstanding', message: `El capital debe ser al menos el saldo pendiente (S/ ${minPrincipal.toFixed(2)}).` };
+    });
+    validate(path.installmentCount, ({ valueOf }) => {
+      const summary = calculateLoanSummary(
+        valueOf(path.principal),
+        valueOf(path.interestRate),
+        valueOf(path.installmentCount),
+      );
+      return summary.baseInstallmentAmount > 0 && summary.lastInstallmentAmount > 0
+        ? undefined
+        : { kind: 'invalidSchedule', message: 'La cantidad de cuotas genera importes inválidos.' };
+    });
+  });
+
   protected readonly paymentSummary = computed(() => {
     const detail = this.detail();
     return calculateLoanPaymentSummary(detail?.loan.totalAmount ?? 0, detail?.payments ?? []);
@@ -778,6 +956,26 @@ export default class LoanDetailPage {
     const detail = this.detail();
     return detail?.loan.status === 'active' && detail.payments.length === 0;
   });
+  /**
+   * Mirrors `renew_loan`'s server-side rule: a loan can only be renewed while active or fully
+   * paid off, and only when the client isn't blacklisted (more than 5 accumulated overdue days).
+   */
+  protected readonly canRenew = computed(() => {
+    const detail = this.detail();
+    if (!detail || (detail.loan.status !== 'active' && detail.loan.status !== 'paid')) return false;
+    const maxOverdueDays = detail.installments.reduce(
+      (max, installment) => Math.max(max, installment.overdueDays),
+      0,
+    );
+    return maxOverdueDays <= 5;
+  });
+  protected readonly renewSummary = computed(() => {
+    const model = this.renewModel();
+    return calculateLoanSummary(model.principal, model.interestRate, model.installmentCount);
+  });
+  protected readonly renewDisbursedPreview = computed(() =>
+    Math.max(0, Math.round((this.renewModel().principal - this.remainingBalance()) * 100) / 100),
+  );
   protected readonly clientInitials = computed(() =>
     (this.detail()?.client.fullName ?? '')
       .split(/\s+/)
@@ -938,6 +1136,68 @@ export default class LoanDetailPage {
           severity: 'success',
           summary: 'Préstamo actualizado',
           detail: 'Las condiciones y el cronograma fueron recalculados correctamente.',
+        });
+      }
+    });
+  }
+
+  protected openRenewDialog(): void {
+    const detail = this.detail();
+    if (!detail || !this.canRenew()) return;
+
+    this.editing.set(false);
+    this.store.clearError();
+    this.renewResult.set(null);
+    this.renewModel.set(
+      emptyRenewModel(
+        detail.loan.status === 'paid'
+          ? detail.loan.principal
+          : Math.max(this.remainingBalance(), detail.loan.principal),
+      ),
+    );
+    this.renewForm().reset();
+    this.renewDialogVisible.set(true);
+  }
+
+  protected closeRenewDialog(): void {
+    if (this.store.renewing()) return;
+
+    const result = this.renewResult();
+    this.renewDialogVisible.set(false);
+    this.renewResult.set(null);
+    this.store.clearError();
+
+    if (result) {
+      this.router.navigate(['/admin/prestamos', result.loanId]);
+    }
+  }
+
+  protected onRenewDialogVisibleChange(visible: boolean): void {
+    if (visible) {
+      this.renewDialogVisible.set(true);
+      return;
+    }
+    this.closeRenewDialog();
+  }
+
+  protected submitRenewal(): void {
+    void submit(this.renewForm, async () => {
+      const model = this.renewModel();
+      const result = await this.store.renew({
+        loanId: this.loanId,
+        principal: model.principal,
+        interestRate: model.interestRate,
+        frequency: model.frequency,
+        installmentCount: model.installmentCount,
+        startedOn: model.startedOn,
+      });
+
+      if (result) {
+        this.renewResult.set(result);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Préstamo renovado',
+          detail: 'El préstamo anterior se cerró y se generó un nuevo cronograma.',
         });
       }
     });
