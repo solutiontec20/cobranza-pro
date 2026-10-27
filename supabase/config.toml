@@ -435,3 +435,17 @@ entrypoint = "./functions/admin-reset-collector-pin/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/admin-reset-collector-pin/*.html" ]
+
+[functions.admin-create-collector]
+enabled = true
+verify_jwt = true
+import_map = "./functions/admin-create-collector/deno.json"
+
+[functions.login]
+enabled = true
+# No JWT exists yet before login succeeds -- this is the one function that
+# must accept unauthenticated requests. The lockout check and the real
+# GoTrue password verification happen inside the function itself.
+verify_jwt = false
+import_map = "./functions/login/deno.json"
+entrypoint = "./functions/login/index.ts"

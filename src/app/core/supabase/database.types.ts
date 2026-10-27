@@ -743,6 +743,57 @@ export type Database = {
           total_amount: number;
         }[];
       };
+      admin_daily_control_report: {
+        Args: { p_business_date: string; p_collector_id?: string };
+        Returns: {
+          balance_as_of: number;
+          client_dni: string;
+          client_name: string;
+          collected_on_date: number;
+          collector_id: string;
+          collector_name: string;
+          customer_id: string;
+          end_date: string;
+          installment_amount: number;
+          loan_id: string;
+          oldest_unpaid_due_date: string | null;
+          overdue_days: number;
+          paid_to_date: number;
+          principal_amount: number;
+          scheduled_on_date: number;
+          started_on: string;
+          total_amount: number;
+        }[];
+      };
+      admin_dashboard_collector_performance: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          clients_count: number;
+          collected_today: number;
+          collector_dni: string;
+          collector_id: string;
+          collector_name: string;
+          delayed_count: number;
+          expected_today: number;
+          pending_today: number;
+        }[];
+      };
+      admin_dashboard_summary: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          capital_prestado: number;
+          cobradores: number;
+          prestamos_pagados: number;
+          risk_green: number;
+          risk_orange: number;
+          risk_red: number;
+          risk_yellow: number;
+          saldo_pendiente: number;
+          total_clientes: number;
+          total_cobrado: number;
+          total_esperado: number;
+        }[];
+      };
       admin_list_collectors: {
         Args: Record<PropertyKey, never>;
         Returns: {

@@ -3,8 +3,13 @@ import { FunctionsHttpError, SupabaseClient } from '@supabase/supabase-js';
 import { AuthRepository } from '../repositories/auth.repository';
 import { SUPABASE } from '../supabase/supabase-client';
 import { ChangePinInput, Profile } from '../models/profile.model';
-import { AppError } from '../errors/app-error';
+import { AppError, AppErrorCode } from '../errors/app-error';
 import { Database } from '../supabase/database.types';
+
+interface LoginFunctionResponse {
+  user: { id: string };
+  session: { access_token: string; refresh_token: string };
+}
 
 @Service({
   autoProvided: false
@@ -13,16 +18,22 @@ export class SupabaseAuthRepository implements AuthRepository {
   private readonly supabase = inject(SUPABASE) as SupabaseClient<Database>;
 
   async login(dni: string, pin: string): Promise<Profile> {
+    const { data, error } = await this.supabase.functions.invoke<LoginFunctionResponse>(
+      'login',
+      { body: { dni, pin } },
+    );
 
-    const email = this.emailFromDni(dni)
+    if (error || !data?.session || !data.user) {
+      throw await this.functionError(error, 'DNI o PIN incorrecto.', 'AUTH_INVALID_CREDENTIALS');
+    }
 
-    const { data, error } = await this.supabase.auth.signInWithPassword({
-      email,
-      password: pin
-    })
+    const { error: sessionError } = await this.supabase.auth.setSession({
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+    });
 
-    if (error || !data.user) {
-      throw new AppError("AUTH_INVALID_CREDENTIALS", error?.message ?? 'Credenciales Invalidas', error)
+    if (sessionError) {
+      throw new AppError('AUTH_INVALID_CREDENTIALS', 'No se pudo iniciar sesión.', sessionError);
     }
 
     const profile = await this.fetchProfile(data.user.id);
@@ -91,11 +102,11 @@ export class SupabaseAuthRepository implements AuthRepository {
   }
 
 
-  private emailFromDni(dni: string): string {
-    return `${dni}@auth.cobranzapro.local`;
-  }
-
-  private async functionError(error: unknown, fallback: string): Promise<AppError> {
+  private async functionError(
+    error: unknown,
+    fallback: string,
+    code: AppErrorCode = 'SUPABASE_RPC',
+  ): Promise<AppError> {
     let message = fallback;
 
     if (error instanceof FunctionsHttpError) {
@@ -107,7 +118,7 @@ export class SupabaseAuthRepository implements AuthRepository {
       }
     }
 
-    return new AppError('SUPABASE_RPC', message, error);
+    return new AppError(code, message, error);
   }
 
 }
