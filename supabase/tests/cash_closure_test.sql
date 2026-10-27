@@ -34,16 +34,16 @@ values
 -- 20.00 disbursed -> expected net amount = 60.00.
 
 insert into public.cash_movements (
-  collector_id, direction, movement_type, amount, business_date, created_by
+  collector_id, direction, movement_type, amount, payment_method, business_date, created_by
 )
 values
   (
     '90000000-0000-0000-0000-000000000002', 'inflow', 'collection',
-    80.00, current_date, '90000000-0000-0000-0000-000000000001'
+    80.00, 'cash', current_date, '90000000-0000-0000-0000-000000000001'
   ),
   (
     '90000000-0000-0000-0000-000000000002', 'outflow', 'loan_disbursement',
-    20.00, current_date, '90000000-0000-0000-0000-000000000001'
+    20.00, 'cash', current_date, '90000000-0000-0000-0000-000000000001'
   );
 
 -- ============================================================
