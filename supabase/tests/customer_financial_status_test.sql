@@ -1,5 +1,7 @@
 begin;
 
+set local timezone to 'America/Lima';
+
 create extension if not exists pgtap with schema extensions;
 
 select plan(6);
@@ -20,7 +22,7 @@ select plan(6);
 -- 6 days IS) and the auto-exit once the overdue installment is
 -- caught up while the loan stays active.
 --
--- Due dates are relative to current_date rather than hardcoded,
+-- Due dates are relative to current_date in America/Lima rather than hardcoded,
 -- because overdue_days is computed live against
 -- (now() at time zone 'America/Lima')::date.
 -- ============================================================
