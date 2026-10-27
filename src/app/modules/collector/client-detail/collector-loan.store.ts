@@ -21,6 +21,7 @@ import { LOAN_REPOSITORY } from '../../../core/repositories/loan.repository';
 @Injectable()
 export class CollectorLoanStore {
   private readonly repository = inject(LOAN_REPOSITORY);
+  private detailRequestSequence = 0;
 
   readonly detail = signal<LoanDetail | null>(null);
   readonly loadingDetail = signal(false);
@@ -29,16 +30,24 @@ export class CollectorLoanStore {
   readonly error = signal<string | null>(null);
 
   async loadDetail(loanId: string): Promise<void> {
+    const sequence = ++this.detailRequestSequence;
     this.loadingDetail.set(true);
     this.error.set(null);
 
     try {
-      this.detail.set(await this.repository.getDetail(loanId));
+      const detail = await this.repository.getDetail(loanId);
+      if (sequence === this.detailRequestSequence) {
+        this.detail.set(detail);
+      }
     } catch (error) {
-      this.detail.set(null);
-      this.error.set(this.messageFrom(error, 'No se pudo cargar el detalle del préstamo.'));
+      if (sequence === this.detailRequestSequence) {
+        this.detail.set(null);
+        this.error.set(this.messageFrom(error, 'No se pudo cargar el detalle del préstamo.'));
+      }
     } finally {
-      this.loadingDetail.set(false);
+      if (sequence === this.detailRequestSequence) {
+        this.loadingDetail.set(false);
+      }
     }
   }
 

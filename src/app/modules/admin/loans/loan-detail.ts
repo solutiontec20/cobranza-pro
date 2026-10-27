@@ -1,6 +1,6 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { form, FormField, max, maxLength, min, required, submit, validate } from '@angular/forms/signals';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -858,11 +858,10 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
 })
 export default class LoanDetailPage {
   protected readonly store = inject(LoansStore);
-  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
 
-  private readonly loanId = this.route.snapshot.paramMap.get('loanId') ?? '';
+  readonly loanId = input.required<string>();
   protected readonly editing = signal(false);
   protected readonly frequencyOptions: Array<{ label: string; value: LoanFrequency }> = [
     { label: 'Diario', value: 'daily' },
@@ -877,7 +876,10 @@ export default class LoanDetailPage {
     { label: 'Transferencia', value: 'transfer' },
   ];
 
-  protected readonly detail = this.store.selectedDetail;
+  protected readonly detail = computed(() => {
+    const detail = this.store.selectedDetail();
+    return detail?.loan.id === this.loanId() ? detail : null;
+  });
   protected readonly paymentDialogVisible = signal(false);
   protected readonly paymentResult = signal<RegisterLoanPaymentResult | null>(null);
   protected readonly paymentModel = signal<PaymentFormModel>(emptyPaymentModel());
@@ -1031,7 +1033,10 @@ export default class LoanDetailPage {
   });
 
   constructor() {
-    void this.store.loadDetail(this.loanId);
+    effect(() => {
+      const loanId = this.loanId();
+      untracked(() => void this.store.loadDetail(loanId));
+    });
   }
 
   protected startEditing(): void {
@@ -1099,7 +1104,7 @@ export default class LoanDetailPage {
     void submit(this.paymentForm, async () => {
       const model = this.paymentModel();
       const result = await this.store.registerPayment({
-        loanId: this.loanId,
+        loanId: this.loanId(),
         amount: model.amount,
         paymentMethod: model.paymentMethod,
         notes: model.notes.trim(),
@@ -1123,7 +1128,7 @@ export default class LoanDetailPage {
       if (!reason) return;
 
       const updated = await this.store.update({
-        loanId: this.loanId,
+        loanId: this.loanId(),
         principal: model.principal,
         interestRate: model.interestRate,
         frequency: model.frequency,
@@ -1186,7 +1191,7 @@ export default class LoanDetailPage {
     void submit(this.renewForm, async () => {
       const model = this.renewModel();
       const result = await this.store.renew({
-        loanId: this.loanId,
+        loanId: this.loanId(),
         principal: model.principal,
         interestRate: model.interestRate,
         frequency: model.frequency,

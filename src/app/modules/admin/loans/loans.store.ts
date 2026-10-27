@@ -23,6 +23,7 @@ export type LoanFrequencyFilter = 'all' | LoanFrequency;
 @Injectable()
 export class LoansStore {
   private readonly repository = inject(LOAN_REPOSITORY);
+  private detailRequestSequence = 0;
 
   readonly loans = signal<LoanListItem[]>([]);
   readonly availableClients = signal<LoanClientOption[]>([]);
@@ -121,16 +122,24 @@ export class LoansStore {
   }
 
   async loadDetail(loanId: string): Promise<void> {
+    const sequence = ++this.detailRequestSequence;
     this.loadingDetail.set(true);
     this.error.set(null);
 
     try {
-      this.selectedDetail.set(await this.repository.getDetail(loanId));
+      const detail = await this.repository.getDetail(loanId);
+      if (sequence === this.detailRequestSequence) {
+        this.selectedDetail.set(detail);
+      }
     } catch (error) {
-      this.selectedDetail.set(null);
-      this.error.set(this.messageFrom(error, 'No se pudo cargar el detalle del préstamo.'));
+      if (sequence === this.detailRequestSequence) {
+        this.selectedDetail.set(null);
+        this.error.set(this.messageFrom(error, 'No se pudo cargar el detalle del préstamo.'));
+      }
     } finally {
-      this.loadingDetail.set(false);
+      if (sequence === this.detailRequestSequence) {
+        this.loadingDetail.set(false);
+      }
     }
   }
 

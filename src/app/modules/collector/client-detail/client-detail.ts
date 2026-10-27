@@ -1,6 +1,6 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { form, FormField, max, maxLength, min, required, submit, validate } from '@angular/forms/signals';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -97,7 +97,6 @@ type TagSeverity = 'success' | 'warn' | 'danger' | 'secondary' | 'info';
   templateUrl: './client-detail.html',
 })
 export default class ClientDetail {
-  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
   protected readonly store = inject(CollectionDashboardStore);
@@ -111,14 +110,18 @@ export default class ClientDetail {
     { label: 'Transferencia', value: 'transfer' },
   ];
 
-  private readonly customerId = signal(this.route.snapshot.paramMap.get('id') ?? '');
+  readonly id = input.required<string>();
   private readonly resolvingLoan = signal(false);
+  private initializationSequence = 0;
 
   readonly client = computed(() =>
-    this.store.clients().find((c) => c.id === this.customerId()),
+    this.store.clients().find((client) => client.id === this.id()),
   );
-  readonly entry = computed(() => this.store.entryFor(this.customerId()));
-  readonly detail = this.loanStore.detail;
+  readonly entry = computed(() => this.store.entryFor(this.id()));
+  readonly detail = computed(() => {
+    const detail = this.loanStore.detail();
+    return detail?.client.id === this.id() ? detail : null;
+  });
   readonly loan = computed(() => this.detail()?.loan ?? null);
 
   readonly loading = computed(() => this.store.loading() || this.resolvingLoan() || this.loanStore.loadingDetail());
@@ -263,20 +266,33 @@ export default class ClientDetail {
   });
 
   constructor() {
-    void this.initialize();
+    effect(() => {
+      const customerId = this.id();
+      untracked(() => void this.initialize(customerId));
+    });
   }
 
-  private async initialize(): Promise<void> {
-    if (this.store.clients().length === 0 && !this.store.loading()) {
-      await this.store.load();
-    }
-
+  private async initialize(customerId: string): Promise<void> {
+    const sequence = ++this.initializationSequence;
     this.resolvingLoan.set(true);
-    const loanId = await this.store.findLoanId(this.customerId());
-    this.resolvingLoan.set(false);
 
-    if (loanId) {
-      await this.loanStore.loadDetail(loanId);
+    try {
+      if (this.store.clients().length === 0 && !this.store.loading()) {
+        await this.store.load();
+      }
+
+      if (sequence !== this.initializationSequence) return;
+
+      const loanId = await this.store.findLoanId(customerId);
+      if (sequence !== this.initializationSequence) return;
+
+      if (loanId) {
+        await this.loanStore.loadDetail(loanId);
+      }
+    } finally {
+      if (sequence === this.initializationSequence) {
+        this.resolvingLoan.set(false);
+      }
     }
   }
 
@@ -449,7 +465,7 @@ export default class ClientDetail {
   }
 
   submitCreateLoan() {
-    const customerId = this.customerId();
+    const customerId = this.id();
     if (!customerId) return;
 
     void submit(this.createLoanForm, async () => {
