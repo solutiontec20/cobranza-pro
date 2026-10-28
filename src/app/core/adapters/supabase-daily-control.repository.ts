@@ -35,11 +35,20 @@ export class SupabaseDailyControlRepository implements DailyControlRepository {
     return (data ?? []).map((row) => ({ id: row.id, fullName: row.full_name }));
   }
 
-  async getReport(filters: DailyControlFilters): Promise<DailyControlReport> {
-    const { data, error } = await this.supabase.rpc('admin_daily_control_report', {
+  async getReport(
+    filters: DailyControlFilters,
+    abortSignal?: AbortSignal,
+  ): Promise<DailyControlReport> {
+    let request = this.supabase.rpc('admin_daily_control_report', {
       p_business_date: filters.businessDate,
       p_collector_id: filters.collectorId ?? undefined,
     });
+
+    if (abortSignal) {
+      request = request.abortSignal(abortSignal);
+    }
+
+    const { data, error } = await request;
 
     if (error) {
       throw this.reportError(error);

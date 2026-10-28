@@ -7,7 +7,10 @@ import {
 
 export interface DailyControlRepository {
   listCollectors(): Promise<DailyControlCollectorOption[]>;
-  getReport(filters: DailyControlFilters): Promise<DailyControlReport>;
+  getReport(
+    filters: DailyControlFilters,
+    abortSignal?: AbortSignal,
+  ): Promise<DailyControlReport>;
 }
 
 export const DAILY_CONTROL_REPOSITORY = new InjectionToken<DailyControlRepository>(
