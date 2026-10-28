@@ -1,5 +1,11 @@
 import { Routes } from '@angular/router';
-import { authGuard, operationalGuard, publicGuard } from './modules/auth/auth.guard';
+import {
+  adminCanMatch,
+  authGuard,
+  collectorCanMatch,
+  operationalGuard,
+  publicGuard,
+} from './modules/auth/auth.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -22,12 +28,14 @@ export const routes: Routes = [
       // Collector routes
       {
         path: 'cobrador',
+        canMatch: [collectorCanMatch],
         canActivate: [operationalGuard],
         loadChildren: () => import('./modules/collector/collector.routes').then(m => m.COLLECTOR_ROUTES),
       },
       // Admin routes
       {
         path: 'admin',
+        canMatch: [adminCanMatch],
         canActivate: [operationalGuard],
         loadChildren: () => import('./modules/admin/admin.routes').then(m => m.ADMIN_ROUTES),
       },

@@ -44,7 +44,7 @@ describe('CollectorsStore', () => {
 
   it('loads collectors and filters without accents', async () => {
     await store.load();
-    store.query.set('maria');
+    store.setQuery('maria');
 
     expect(store.filteredCollectors()).toEqual([collector]);
     expect(store.summary()).toEqual({ total: 1, active: 1, inactive: 0, assignedCustomers: 2 });

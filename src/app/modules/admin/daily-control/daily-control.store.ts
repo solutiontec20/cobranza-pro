@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, resource, signal } from '@angular/core';
 import { currentLimaDate } from '../../../core/calculations/date-time';
 import { roundMoney } from '../../../core/calculations/money';
 import { normalizeSearchText } from '../../../core/calculations/text';
@@ -14,7 +14,8 @@ import { DAILY_CONTROL_REPOSITORY } from '../../../core/repositories/daily-contr
 @Injectable()
 export class DailyControlStore {
   private readonly repository = inject(DAILY_CONTROL_REPOSITORY);
-  private requestSequence = 0;
+  private readonly collectorsLoading = signal(false);
+  private readonly collectorsError = signal<string | null>(null);
 
   readonly filters = signal<DailyControlFilters>({
     businessDate: currentLimaDate(),
@@ -23,10 +24,20 @@ export class DailyControlStore {
   });
   readonly query = signal('');
   readonly collectors = signal<Array<{ id: string; fullName: string }>>([]);
-  readonly report = signal<DailyControlReport | null>(null);
-  readonly loading = signal(false);
-  readonly saving = signal(false);
-  readonly error = signal<string | null>(null);
+  private readonly reportResource = resource({
+    params: () => this.filters(),
+    loader: ({ params, abortSignal }) => this.repository.getReport(params, abortSignal),
+  });
+
+  readonly report = computed<DailyControlReport | null>(
+    () => (this.reportResource.hasValue() ? this.reportResource.value() : null),
+  );
+  readonly loading = computed(() => this.collectorsLoading() || this.reportResource.isLoading());
+  readonly error = computed<string | null>(() => {
+    const reportError = this.reportResource.error();
+    if (reportError) return this.messageFrom(reportError);
+    return this.collectorsError();
+  });
 
   readonly visibleReport = computed<DailyControlReport | null>(() => {
     const report = this.report();
@@ -45,61 +56,38 @@ export class DailyControlStore {
   });
 
   async initialize(): Promise<void> {
-    this.loading.set(true);
-    this.error.set(null);
+    this.collectorsLoading.set(true);
+    this.collectorsError.set(null);
 
     try {
-      const [collectors, report] = await Promise.all([
-        this.repository.listCollectors(),
-        this.repository.getReport(this.filters()),
-      ]);
-      this.collectors.set(collectors);
-      this.report.set(report);
+      this.collectors.set(await this.repository.listCollectors());
     } catch (error) {
-      this.error.set(this.messageFrom(error));
+      this.collectorsError.set(this.messageFrom(error));
     } finally {
-      this.loading.set(false);
+      this.collectorsLoading.set(false);
     }
   }
 
-  async updateFilters(patch: Partial<DailyControlFilters>): Promise<void> {
+  updateFilters(patch: Partial<DailyControlFilters>): void {
     this.filters.update((filters) => ({ ...filters, ...patch }));
-    await this.loadWorkspace();
   }
 
-  async clearFilters(): Promise<void> {
+  clearFilters(): void {
     this.query.set('');
     this.filters.set({
       businessDate: currentLimaDate(),
       collectorId: null,
       status: 'all',
     });
-    await this.loadWorkspace();
   }
 
-  async reload(): Promise<void> {
-    await this.loadWorkspace();
+  reload(): void {
+    this.reportResource.reload();
   }
 
-  private async loadWorkspace(): Promise<void> {
-    const requestId = ++this.requestSequence;
-    this.loading.set(true);
-    this.error.set(null);
-
-    try {
-      const report = await this.repository.getReport(this.filters());
-      if (requestId === this.requestSequence) {
-        this.report.set(report);
-      }
-    } catch (error) {
-      if (requestId === this.requestSequence) {
-        this.error.set(this.messageFrom(error));
-      }
-    } finally {
-      if (requestId === this.requestSequence) {
-        this.loading.set(false);
-      }
-    }
+  async refresh(): Promise<void> {
+    this.reload();
+    await this.initialize();
   }
 
   private messageFrom(error: unknown): string {
