@@ -463,7 +463,7 @@
         Cancelar
       </button>
       <button pButton type="submit" class="w-full sm:w-auto"
-        [disabled]="editForm().invalid() || store.editingCollectorId() === collector.id">
+        [disabled]="editForm().invalid() || !hasEditChanges() || store.editingCollectorId() === collector.id">
         @if (store.editingCollectorId() === collector.id) {
         <i class="pi pi-spin pi-spinner"></i>
         } @else {

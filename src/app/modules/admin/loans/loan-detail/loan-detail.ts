@@ -135,6 +135,12 @@ export default class LoanDetailPage {
     maxLength(path.notes, 500, { message: 'La observación no puede superar 500 caracteres.' });
   });
   protected readonly editModel = signal<LoanEditModel>(emptyEditModel());
+  private readonly editBaseline = signal<
+    Pick<
+      LoanEditModel,
+      'principal' | 'interestRate' | 'frequency' | 'installmentCount' | 'startedOn'
+    > | null
+  >(null);
   protected readonly editForm = form(this.editModel, (path) => {
     min(path.principal, 0.01, { message: 'El capital debe ser mayor que cero.' });
     min(path.interestRate, 0, { message: 'La tasa no puede ser negativa.' });
@@ -239,6 +245,18 @@ export default class LoanDetailPage {
     const model = this.editModel();
     return calculateLoanSummary(model.principal, model.interestRate, model.installmentCount);
   });
+  protected readonly hasEditChanges = computed(() => {
+    const baseline = this.editBaseline();
+    if (!baseline) return false;
+    const value = this.editModel();
+    return (
+      baseline.principal !== value.principal ||
+      baseline.interestRate !== value.interestRate ||
+      baseline.frequency !== value.frequency ||
+      baseline.installmentCount !== value.installmentCount ||
+      baseline.startedOn !== value.startedOn
+    );
+  });
   protected readonly editFirstDueDate = computed(() => {
     const model = this.editModel();
     return firstDueOn(model.startedOn, model.frequency);
@@ -290,6 +308,13 @@ export default class LoanDetailPage {
     if (!loan || !this.canEdit()) return;
 
     this.store.clearError();
+    this.editBaseline.set({
+      principal: loan.principal,
+      interestRate: loan.interestRate,
+      frequency: loan.frequency,
+      installmentCount: loan.installmentCount,
+      startedOn: loan.startedOn,
+    });
     this.editModel.set({
       principal: loan.principal,
       interestRate: loan.interestRate,
@@ -368,6 +393,8 @@ export default class LoanDetailPage {
   }
 
   protected saveChanges(): void {
+    if (!this.hasEditChanges()) return;
+
     void submit(this.editForm, async () => {
       const model = this.editModel();
       const reason = resolveLoanEditReason(model.reasonCode, model.customReason);

@@ -286,7 +286,7 @@
                 <button pButton type="button" severity="secondary" variant="text" class="w-full sm:w-auto" (click)="cancelEditing()">
                   Cancelar
                 </button>
-                <button pButton type="submit" class="w-full sm:w-auto" [disabled]="store.saving() || editForm().invalid()">
+                <button pButton type="submit" class="w-full sm:w-auto" [disabled]="store.saving() || editForm().invalid() || !hasEditChanges()">
                   @if (store.saving()) {
                     <i class="pi pi-spin pi-spinner"></i>
                   } @else {

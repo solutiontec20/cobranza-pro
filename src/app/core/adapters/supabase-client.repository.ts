@@ -5,6 +5,8 @@ import {
   Client,
   ClientCollectorOption,
   ClientListItem,
+  ClientListQuery,
+  ClientPage,
   CreateClientInput,
   UpdateClientInput,
 } from '../models/client.model';
@@ -18,11 +20,16 @@ type CustomerRow = Database['public']['Tables']['customers']['Row'];
 export class SupabaseClientRepository implements ClientRepository {
   private readonly supabase = inject(SUPABASE) as SupabaseClient<Database>;
 
-  async list(): Promise<ClientListItem[]> {
-    const [customersResult, financialStatusResult] = await Promise.all([
-      this.supabase
-        .from('customers')
-        .select(`
+  async list(query: ClientListQuery, abortSignal?: AbortSignal): Promise<ClientPage> {
+    const pageIndex = Math.max(0, query.pageIndex);
+    const pageSize = Math.min(100, Math.max(1, query.pageSize));
+    const from = pageIndex * pageSize;
+    const search = query.search.trim();
+
+    let customersQuery = this.supabase
+      .from('customers')
+      .select(
+        `
           id,
           document_number,
           full_name,
@@ -35,31 +42,70 @@ export class SupabaseClientRepository implements ClientRepository {
           collector:profiles!customers_collector_id_fkey (
             full_name
           )
-        `)
-        .order('created_at', { ascending: false }),
-      this.supabase
-        .from('customer_financial_status')
-        .select('customer_id, max_overdue_days, is_blacklisted, outstanding_amount'),
-    ]);
+        `,
+        { count: 'exact' },
+      )
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(from, from + pageSize - 1);
+
+    if (query.collectorId) {
+      customersQuery = customersQuery.eq('collector_id', query.collectorId);
+    }
+
+    if (search) {
+      customersQuery = /^\d+$/.test(search)
+        ? customersQuery.ilike('document_number', `%${search}%`)
+        : customersQuery.ilike('full_name', `%${search}%`);
+    }
+
+    if (abortSignal) {
+      customersQuery = customersQuery.abortSignal(abortSignal);
+    }
+
+    const customersResult = await customersQuery;
 
     if (customersResult.error) {
       throw this.toAppError(customersResult.error, 'No se pudo cargar la lista de clientes.');
     }
 
-    if (financialStatusResult.error) {
-      throw this.toAppError(
-        financialStatusResult.error,
-        'No se pudo cargar el estado financiero de los clientes.',
-      );
+    const customerIds = (customersResult.data ?? []).map((row) => row.id);
+    let financialRows: Array<{
+      customer_id: string | null;
+      max_overdue_days: number | null;
+      is_blacklisted: boolean | null;
+      outstanding_amount: number | null;
+    }> = [];
+
+    if (customerIds.length > 0) {
+      let financialStatusQuery = this.supabase
+        .from('customer_financial_status')
+        .select('customer_id, max_overdue_days, is_blacklisted, outstanding_amount')
+        .in('customer_id', customerIds);
+
+      if (abortSignal) {
+        financialStatusQuery = financialStatusQuery.abortSignal(abortSignal);
+      }
+
+      const financialStatusResult = await financialStatusQuery;
+
+      if (financialStatusResult.error) {
+        throw this.toAppError(
+          financialStatusResult.error,
+          'No se pudo cargar el estado financiero de los clientes.',
+        );
+      }
+
+      financialRows = financialStatusResult.data ?? [];
     }
 
     const financialStatusByClient = new Map(
-      (financialStatusResult.data ?? [])
+      financialRows
         .filter((row) => row.customer_id !== null)
         .map((row) => [row.customer_id as string, row]),
     );
 
-    return (customersResult.data ?? []).map((row) => {
+    const items: ClientListItem[] = (customersResult.data ?? []).map((row) => {
       if (!row.collector) {
         throw new AppError(
           'SUPABASE_RPC',
@@ -85,6 +131,8 @@ export class SupabaseClientRepository implements ClientRepository {
         isBlacklisted: financialStatus?.is_blacklisted ?? false,
       };
     });
+
+    return { items, total: customersResult.count ?? items.length };
   }
 
   async listActiveCollectors(): Promise<ClientCollectorOption[]> {
@@ -186,7 +234,7 @@ export class SupabaseClientRepository implements ClientRepository {
     if (code === '23503' || message.includes('active collector')) {
       return new AppError(
         'VALIDATION',
-        'Seleccioná un cobrador activo válido.',
+        'Selecciona un cobrador activo válido.',
         error,
       );
     }
@@ -194,7 +242,7 @@ export class SupabaseClientRepository implements ClientRepository {
     if (code === '23514' && message.includes('CUSTOMER_HAS_ACTIVE_LOAN')) {
       return new AppError(
         'VALIDATION',
-        'No podés desactivar al cliente mientras tenga un préstamo activo.',
+        'No puedes desactivar al cliente mientras tenga un préstamo activo.',
         error,
       );
     }
@@ -208,7 +256,7 @@ export class SupabaseClientRepository implements ClientRepository {
     if (code === '42501') {
       return new AppError(
         'AUTH_UNAUTHORIZED',
-        'No tenés permisos para realizar esta acción.',
+        'No tienes permisos para realizar esta acción.',
         error,
       );
     }

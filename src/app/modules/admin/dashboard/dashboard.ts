@@ -5,6 +5,7 @@ import { TableModule } from 'primeng/table';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { SkeletonModule } from 'primeng/skeleton';
 import { MessageModule } from 'primeng/message';
+import { RouterLink } from '@angular/router';
 import { AdminDashboardStore } from './admin-dashboard.store';
 import { RecoveryChart } from './recovery-chart';
 import { currentLimaDate, formatEsDate } from '../../../core/calculations/date-time';
@@ -21,6 +22,7 @@ const EMPTY_BUCKET = { count: 0, percent: 0 };
     ProgressBarModule,
     SkeletonModule,
     MessageModule,
+    RouterLink,
     PenCurrency,
     RecoveryChart,
   ],

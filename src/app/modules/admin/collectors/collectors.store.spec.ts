@@ -117,6 +117,20 @@ describe('CollectorsStore', () => {
     expect(store.editingCollectorId()).toBeNull();
   });
 
+  it('does not call Supabase when the final collector values equal the originals', async () => {
+    await store.load();
+
+    const result = await store.update({
+      collectorId: collector.id,
+      fullName: ` ${collector.fullName} `,
+      phone: collector.phone,
+      reason: 'El usuario cambió y restauró los valores',
+    });
+
+    expect(result).toBe(false);
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
   it('surfaces the edit error without mutating state', async () => {
     await store.load();
     repository.update.mockRejectedValue(

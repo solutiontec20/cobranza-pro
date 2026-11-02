@@ -159,7 +159,7 @@
   </section>
 
   <p-card class="table-card">
-    <ng-template pTemplate="header">
+    <ng-template #header>
       <div class="flex items-center gap-3 border-b border-surface-200 px-5 py-4 dark:border-surface-700">
         <span class="grid size-9 place-items-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-950/40 dark:text-primary-300">
           <i class="pi pi-chart-line" aria-hidden="true"></i>
@@ -202,7 +202,14 @@
                 <dd class="mt-1 font-medium text-surface-500">{{ col.pendingToday | penCurrency }}</dd>
               </div>
             </dl>
-            <button pButton fluid variant="outlined" size="small"><i class="pi pi-eye mr-2"></i>Ver cartera</button>
+            <a
+              pButton
+              fluid
+              variant="outlined"
+              size="small"
+              [routerLink]="['/admin/clientes']"
+              [queryParams]="{ collectorId: col.id }"
+            ><i class="pi pi-eye mr-2" aria-hidden="true"></i>Ver cartera</a>
           </article>
         } @empty {
           <div class="p-8 text-center text-surface-500">No hay datos de cobradores.</div>
@@ -210,8 +217,12 @@
       </div>
 
       <div class="hidden overflow-x-auto lg:block">
-        <p-table [value]="collectorPerformance()" responsiveLayout="scroll" styleClass="p-datatable-sm">
-          <ng-template pTemplate="header">
+        <p-table
+          [value]="collectorPerformance()"
+          [tableStyle]="{ 'min-width': '58rem' }"
+          styleClass="p-datatable-sm"
+        >
+          <ng-template #header>
             <tr>
               <th>Cobrador</th>
               <th>Clientes</th>
@@ -222,7 +233,7 @@
               <th class="text-center">Acciones</th>
             </tr>
           </ng-template>
-          <ng-template pTemplate="body" let-col>
+          <ng-template #body let-col>
             <tr>
               <td>
                 <div class="font-bold text-surface-900 dark:text-surface-0">{{ col.name }}</div>
@@ -238,11 +249,17 @@
                 </span>
               </td>
               <td class="text-center">
-                <button pButton variant="outlined" size="small"><i class="pi pi-eye mr-2"></i>Ver cartera</button>
+                <a
+                  pButton
+                  variant="outlined"
+                  size="small"
+                  [routerLink]="['/admin/clientes']"
+                  [queryParams]="{ collectorId: col.id }"
+                ><i class="pi pi-eye mr-2" aria-hidden="true"></i>Ver cartera</a>
               </td>
             </tr>
           </ng-template>
-          <ng-template pTemplate="empty">
+          <ng-template #emptymessage>
             <tr>
               <td colspan="7" class="p-8 text-center text-surface-500">No hay datos de cobradores.</td>
             </tr>

@@ -22,6 +22,18 @@ export interface ClientCollectorOption {
   fullName: string;
 }
 
+export interface ClientListQuery {
+  pageIndex: number;
+  pageSize: number;
+  search: string;
+  collectorId: string | null;
+}
+
+export interface ClientPage {
+  items: ClientListItem[];
+  total: number;
+}
+
 export interface CreateClientInput {
   dni: string;
   fullName: string;
