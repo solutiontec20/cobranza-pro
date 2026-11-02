@@ -1,5 +1,15 @@
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { form, FormField, max, maxLength, min, required, submit, validate } from '@angular/forms/signals';
+import {
+  form,
+  FormField,
+  max,
+  maxLength,
+  min,
+  minLength,
+  required,
+  submit,
+  validate,
+} from '@angular/forms/signals';
 import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -17,6 +27,7 @@ import {
   toDateInput,
 } from '../../../core/calculations/loan-calculations';
 import { CreateCollectorLoanResult } from '../../../core/models/collector-portfolio.model';
+import { CorrectionRequestType } from '../../../core/models/correction-request.model';
 import {
   LoanFrequency,
   LoanInstallmentStatus,
@@ -25,16 +36,33 @@ import {
   RegisterLoanPaymentResult,
   RenewLoanResult,
 } from '../../../core/models/loan.model';
+import {
+  LOAN_VOID_REASON_OPTIONS,
+  PAYMENT_VOID_REASON_OPTIONS,
+  resolveVoidReason,
+  VoidReasonCode,
+} from '../../../core/models/void-reason.model';
 import { CollectionDashboardStore } from '../collection-dashboard.store';
 import { CollectionRisk } from '../collection.model';
 import { CollectorLoanStore } from './collector-loan.store';
 import { EsDate } from '../../../shared/pipes/es-date';
 import { PenCurrency } from '../../../shared/pipes/pen-currency';
+import { CorrectionRequestsStore } from '../../correction-requests/correction-requests.store';
 
 interface PaymentFormModel {
   amount: number;
   paymentMethod: LoanPaymentMethod;
   notes: string;
+}
+
+interface CorrectionRequestFormModel {
+  reasonCode: VoidReasonCode | '';
+  customReason: string;
+}
+
+interface CorrectionRequestTarget {
+  requestType: CorrectionRequestType;
+  payment: LoanPaymentRecord | null;
 }
 
 const emptyPaymentModel = (amount = 0): PaymentFormModel => ({
@@ -101,6 +129,7 @@ export default class ClientDetail {
   private readonly messageService = inject(MessageService);
   protected readonly store = inject(CollectionDashboardStore);
   protected readonly loanStore = inject(CollectorLoanStore);
+  protected readonly correctionRequestsStore = inject(CorrectionRequestsStore);
 
   protected readonly loadingRows = [1, 2, 3];
   protected readonly paymentMethodOptions: Array<{ label: string; value: LoanPaymentMethod }> = [
@@ -114,9 +143,7 @@ export default class ClientDetail {
   private readonly resolvingLoan = signal(false);
   private initializationSequence = 0;
 
-  readonly client = computed(() =>
-    this.store.clients().find((client) => client.id === this.id()),
-  );
+  readonly client = computed(() => this.store.clients().find((client) => client.id === this.id()));
   readonly entry = computed(() => this.store.entryFor(this.id()));
   readonly detail = computed(() => {
     const detail = this.loanStore.detail();
@@ -124,10 +151,13 @@ export default class ClientDetail {
   });
   readonly loan = computed(() => this.detail()?.loan ?? null);
 
-  readonly loading = computed(() => this.store.loading() || this.resolvingLoan() || this.loanStore.loadingDetail());
+  readonly loading = computed(
+    () => this.store.loading() || this.resolvingLoan() || this.loanStore.loadingDetail(),
+  );
   readonly notFound = computed(() => !this.loading() && !this.store.loading() && !this.client());
 
   readonly installments = computed(() => this.detail()?.installments ?? []);
+  readonly firstCollectionDate = computed(() => this.installments()[0]?.dueDate ?? null);
   readonly payments = computed(() => this.detail()?.payments ?? []);
 
   // Payment dialog state
@@ -155,17 +185,50 @@ export default class ClientDetail {
     if (!loan || balance <= 0) return [];
 
     const nextInstallment =
-      this.installments().find((installment) => installment.outstandingAmount > 0)?.outstandingAmount ??
-      loan.installmentAmount;
+      this.installments().find((installment) => installment.outstandingAmount > 0)
+        ?.outstandingAmount ?? loan.installmentAmount;
 
     return [...new Set([5, 10, 15, nextInstallment, balance])]
       .filter((amount) => amount > 0 && amount <= balance)
       .map((amount) => Math.round(amount * 100) / 100);
   });
 
-  // "Report a problem" dialog state (no edit/void — the collector can only notify the admin).
-  readonly reportDialogPayment = signal<LoanPaymentRecord | null>(null);
-  readonly reportNote = signal('');
+  readonly correctionDialogTarget = signal<CorrectionRequestTarget | null>(null);
+  readonly correctionRequestModel = signal<CorrectionRequestFormModel>({
+    reasonCode: 'other',
+    customReason: '',
+  });
+  readonly correctionRequestForm = form(this.correctionRequestModel, (path) => {
+    required(path.reasonCode, { message: 'Seleccioná un motivo.' });
+    maxLength(path.customReason, 500, { message: 'El motivo no puede superar 500 caracteres.' });
+    validate(path.customReason, ({ valueOf }) => {
+      if (valueOf(path.reasonCode) !== 'other') return undefined;
+      return valueOf(path.customReason).trim().length >= 10
+        ? undefined
+        : { kind: 'required', message: 'Detallá el motivo en al menos 10 caracteres.' };
+    });
+  });
+  readonly isVoidCorrectionRequest = computed(
+    () => this.correctionDialogTarget()?.requestType !== 'edit_loan',
+  );
+  readonly correctionReasonOptions = computed(() =>
+    this.correctionDialogTarget()?.requestType === 'void_payment'
+      ? PAYMENT_VOID_REASON_OPTIONS
+      : LOAN_VOID_REASON_OPTIONS,
+  );
+  readonly canRequestLoanEdit = computed(() => this.loan()?.status === 'active');
+  readonly canRequestLoanVoid = computed(() => this.loan()?.status === 'active');
+  readonly hasPostedPayments = computed(() =>
+    this.payments().some((payment) => payment.status === 'posted'),
+  );
+  readonly correctionDialogTitle = computed(() => {
+    const requestType = this.correctionDialogTarget()?.requestType;
+    return {
+      edit_loan: 'Solicitar edición del préstamo',
+      void_loan: 'Solicitar anulación del préstamo',
+      void_payment: 'Solicitar anulación del pago',
+    }[requestType ?? 'edit_loan'];
+  });
 
   // Renewal dialog state.
   // Business rule: blacklisted clients (>5 accumulated overdue days) cannot renew; clients who
@@ -180,12 +243,15 @@ export default class ClientDetail {
     min(path.interestRate, 0, { message: 'La tasa no puede ser negativa.' });
     min(path.installmentCount, 1, { message: 'Debe existir al menos una cuota.' });
     max(path.installmentCount, 32767, { message: 'La cantidad de cuotas es demasiado alta.' });
-    required(path.startedOn, { message: 'Seleccioná la fecha de inicio.' });
+    required(path.startedOn, { message: 'Seleccioná la fecha del préstamo.' });
     validate(path.principal, ({ valueOf }) => {
       const minPrincipal = this.loan()?.balance ?? 0;
       return valueOf(path.principal) >= minPrincipal
         ? undefined
-        : { kind: 'belowOutstanding', message: `El capital debe ser al menos el saldo pendiente (S/ ${minPrincipal.toFixed(2)}).` };
+        : {
+            kind: 'belowOutstanding',
+            message: `El capital debe ser al menos el saldo pendiente (S/ ${minPrincipal.toFixed(2)}).`,
+          };
     });
     validate(path.installmentCount, ({ valueOf }) => {
       const summary = calculateLoanSummary(
@@ -239,7 +305,7 @@ export default class ClientDetail {
     min(path.interestRate, 0, { message: 'La tasa no puede ser negativa.' });
     min(path.installmentCount, 1, { message: 'Debe existir al menos una cuota.' });
     max(path.installmentCount, 32767, { message: 'La cantidad de cuotas es demasiado alta.' });
-    required(path.startedOn, { message: 'Seleccioná la fecha de inicio.' });
+    required(path.startedOn, { message: 'Seleccioná la fecha del préstamo.' });
     validate(path.installmentCount, ({ valueOf }) => {
       const summary = calculateLoanSummary(
         valueOf(path.principal),
@@ -306,8 +372,8 @@ export default class ClientDetail {
     if (!loan || loan.status !== 'active' || balance <= 0) return;
 
     const suggestedAmount =
-      this.installments().find((installment) => installment.outstandingAmount > 0)?.outstandingAmount ??
-      loan.installmentAmount;
+      this.installments().find((installment) => installment.outstandingAmount > 0)
+        ?.outstandingAmount ?? loan.installmentAmount;
 
     this.loanStore.clearError();
     this.paymentResult.set(null);
@@ -378,7 +444,9 @@ export default class ClientDetail {
     this.loanStore.clearError();
     this.renewResult.set(null);
     this.renewModel.set(
-      emptyRenewModel(loan.status === 'paid' ? loan.principal : Math.max(loan.balance, loan.principal)),
+      emptyRenewModel(
+        loan.status === 'paid' ? loan.principal : Math.max(loan.balance, loan.principal),
+      ),
     );
     this.renewForm().reset();
     this.renewDialogVisible.set(true);
@@ -500,53 +568,70 @@ export default class ClientDetail {
   }
 
   // ----------------------------------------------------------------
-  // Read-only payment history + "notify the admin" (collectors cannot
-  // edit or void a payment — see AGENTS.md business rules).
+  // Persisted correction requests. Collectors never receive mutation privileges.
   // ----------------------------------------------------------------
 
-  openReportDialog(payment: LoanPaymentRecord) {
-    this.reportNote.set('');
-    this.reportDialogPayment.set(payment);
+  openLoanCorrectionRequest(requestType: 'edit_loan' | 'void_loan'): void {
+    if (requestType === 'edit_loan' && !this.canRequestLoanEdit()) return;
+    if (requestType === 'void_loan' && !this.canRequestLoanVoid()) return;
+    this.openCorrectionRequest({ requestType, payment: null });
   }
 
-  closeReportDialog() {
-    this.reportDialogPayment.set(null);
+  openPaymentCorrectionRequest(payment: LoanPaymentRecord): void {
+    if (payment.status !== 'posted') return;
+    this.openCorrectionRequest({ requestType: 'void_payment', payment });
   }
 
-  async copyReportDetails(): Promise<void> {
-    const payment = this.reportDialogPayment();
-    const client = this.client();
-    if (!payment) return;
+  closeCorrectionRequest(): void {
+    if (this.correctionRequestsStore.saving()) return;
+    this.correctionDialogTarget.set(null);
+    this.correctionRequestsStore.clearError();
+  }
 
-    const lines = [
-      'Reporte de pago — CobranzaPro',
-      `Cliente: ${client?.fullName ?? ''} (DNI ${client?.dni ?? ''})`,
-      `Pago: ${payment.id}`,
-      `Fecha: ${payment.paidAt}`,
-      `Monto registrado: S/ ${payment.amount.toFixed(2)}`,
-      `Medio de pago: ${payment.paymentMethod}`,
-      `Estado: ${this.paymentStatusLabel(payment.status)}`,
-      `Observación original: ${payment.notes || '—'}`,
-      `Detalle del problema: ${this.reportNote().trim() || '(sin detalle adicional)'}`,
-    ];
-    const text = lines.join('\n');
+  submitCorrectionRequest(): void {
+    const target = this.correctionDialogTarget();
+    const loan = this.loan();
+    if (!target || !loan) return;
 
-    try {
-      await navigator.clipboard.writeText(text);
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Datos copiados',
-        detail: 'Pegalos en tu mensaje al administrador (llamada o WhatsApp).',
-        life: 4000,
+    void submit(this.correctionRequestForm, async () => {
+      const model = this.correctionRequestModel();
+      const reason = resolveVoidReason(model.reasonCode, model.customReason);
+      if (!reason) return;
+
+      const receipt = await this.correctionRequestsStore.create({
+        requestType: target.requestType,
+        loanId: loan.id,
+        paymentId: target.payment?.id ?? null,
+        reason,
       });
-    } catch {
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'No se pudo copiar automáticamente',
-        detail: text,
-        life: 8000,
-      });
-    }
+
+      if (receipt) {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Solicitud enviada',
+          detail: 'El administrador recibirá la solicitud en sus notificaciones.',
+          life: 4000,
+        });
+        this.correctionDialogTarget.set(null);
+      } else if (this.correctionRequestsStore.error()) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'No se pudo enviar',
+          detail: this.correctionRequestsStore.error() ?? '',
+          life: 5000,
+        });
+      }
+    });
+  }
+
+  private openCorrectionRequest(target: CorrectionRequestTarget): void {
+    this.correctionRequestsStore.clearError();
+    this.correctionDialogTarget.set(target);
+    this.correctionRequestModel.set({
+      reasonCode: target.requestType === 'edit_loan' ? 'other' : '',
+      customReason: '',
+    });
+    this.correctionRequestForm().reset();
   }
 
   // ----------------------------------------------------------------
@@ -608,6 +693,8 @@ export default class ClientDetail {
   }
 
   loanStatusLabel(status: string): string {
-    return { active: 'Activo', paid: 'Pagado', renewed: 'Renovado', voided: 'Anulado' }[status] ?? status;
+    return (
+      { active: 'Activo', paid: 'Pagado', renewed: 'Renovado', voided: 'Anulado' }[status] ?? status
+    );
   }
 }

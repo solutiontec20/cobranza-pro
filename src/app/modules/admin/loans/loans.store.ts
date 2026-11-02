@@ -14,6 +14,7 @@ import {
   RenewLoanInput,
   RenewLoanResult,
   UpdateLoanInput,
+  VoidLoanPaymentInput,
 } from '../../../core/models/loan.model';
 import { LOAN_REPOSITORY } from '../../../core/repositories/loan.repository';
 
@@ -36,6 +37,7 @@ export class LoansStore {
   readonly creating = signal(false);
   readonly saving = signal(false);
   readonly paying = signal(false);
+  readonly voidingPayment = signal(false);
   readonly renewing = signal(false);
   readonly error = signal<string | null>(null);
 
@@ -202,6 +204,27 @@ export class LoansStore {
       return null;
     } finally {
       this.paying.set(false);
+    }
+  }
+
+  async voidPayment(input: VoidLoanPaymentInput): Promise<boolean> {
+    this.voidingPayment.set(true);
+    this.error.set(null);
+
+    try {
+      await this.repository.voidPayment(input);
+      const [loans, detail] = await Promise.all([
+        this.repository.list(),
+        this.repository.getDetail(input.loanId),
+      ]);
+      this.loans.set(loans);
+      this.selectedDetail.set(detail);
+      return true;
+    } catch (error) {
+      this.error.set(this.messageFrom(error, 'No se pudo anular el pago.'));
+      return false;
+    } finally {
+      this.voidingPayment.set(false);
     }
   }
 

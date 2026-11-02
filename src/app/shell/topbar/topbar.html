@@ -1,7 +1,6 @@
 <div class="flex h-full items-center justify-between px-1 sm:px-2">
   <!-- Left side (Mobile Logo) -->
   <div class="flex items-center gap-3">
-
     <div class="flex items-center gap-2 md:hidden">
       <div class="app-brand-mark size-8! rounded-lg! shadow-sm!">
         <i class="pi pi-wallet text-sm text-white" aria-hidden="true"></i>
@@ -13,32 +12,128 @@
   <!-- Right side Actions -->
   <div class="flex items-center gap-2 md:gap-3">
     <!-- Theme Toggle -->
-    <button 
-      pButton 
-      [rounded]="true" 
-      [text]="true" 
-      class="app-icon-button flex h-10 w-10 items-center justify-center p-0" 
+    <button
+      pButton
+      [rounded]="true"
+      [text]="true"
+      class="app-icon-button flex h-10 w-10 items-center justify-center p-0"
       (click)="themeService.toggleTheme()"
       aria-label="Cambiar tema"
-      pTooltip="Cambiar tema">
-      <i [class]="themeService.isDark() ? 'pi pi-sun text-xl' : 'pi pi-moon text-xl'" aria-hidden="true"></i>
+      pTooltip="Cambiar tema"
+    >
+      <i
+        [class]="themeService.isDark() ? 'pi pi-sun text-xl' : 'pi pi-moon text-xl'"
+        aria-hidden="true"
+      ></i>
     </button>
 
-    <!-- Notification bell -->
-    <div class="relative">
-      <button pButton type="button" [rounded]="true" [text]="true" class="app-icon-button flex h-10 w-10 items-center justify-center p-0" aria-label="Notificaciones" pTooltip="Notificaciones">
-        <i class="pi pi-bell text-xl" aria-hidden="true"></i>
-      </button>
-      <span class="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-surface-0 dark:border-surface-900 pointer-events-none"></span>
-    </div>
+    @if (canReviewRequests()) {
+      <div class="relative">
+        <button
+          pButton
+          type="button"
+          [rounded]="true"
+          [text]="true"
+          class="app-icon-button flex h-10 w-10 items-center justify-center p-0"
+          aria-label="Solicitudes de corrección"
+          [attr.aria-description]="
+            correctionRequestsStore.pendingCount() + ' solicitudes pendientes'
+          "
+          pTooltip="Solicitudes de corrección"
+          (click)="openNotifications($event)"
+        >
+          <i class="pi pi-bell text-xl" aria-hidden="true"></i>
+        </button>
+        @if (correctionRequestsStore.pendingCount() > 0) {
+          <span
+            class="pointer-events-none absolute -top-0.5 -right-1 flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white"
+            aria-hidden="true"
+          >
+            {{
+              correctionRequestsStore.pendingCount() > 99
+                ? '99+'
+                : correctionRequestsStore.pendingCount()
+            }}
+          </span>
+        }
+      </div>
+
+      <p-popover
+        #notificationPopover
+        ariaLabel="Solicitudes de corrección pendientes"
+        styleClass="w-[min(24rem,calc(100vw-1.5rem))]"
+      >
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p class="m-0 text-sm font-bold text-surface-950 dark:text-surface-0">
+                Solicitudes pendientes
+              </p>
+              <p class="mt-0.5 mb-0 text-xs text-surface-500">
+                {{ correctionRequestsStore.pendingCount() }} por revisar
+              </p>
+            </div>
+            <a
+              pButton
+              routerLink="/admin/solicitudes"
+              size="small"
+              variant="text"
+              (click)="notificationPopover.hide()"
+            >
+              Ver todas
+            </a>
+          </div>
+
+          @if (correctionRequestsStore.recentPending().length === 0) {
+            <div
+              class="rounded-lg bg-surface-50 p-4 text-center text-sm text-surface-500 dark:bg-surface-800"
+            >
+              No hay solicitudes pendientes.
+            </div>
+          } @else {
+            <div class="flex max-h-80 flex-col gap-2 overflow-y-auto">
+              @for (request of correctionRequestsStore.recentPending(); track request.id) {
+                <a
+                  [routerLink]="['/admin/solicitudes']"
+                  class="rounded-lg border border-surface-200 p-3 text-inherit no-underline transition-colors hover:bg-surface-50 focus-visible:outline-2 focus-visible:outline-primary dark:border-surface-700 dark:hover:bg-surface-800"
+                  (click)="notificationPopover.hide()"
+                >
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <p
+                        class="m-0 truncate text-sm font-semibold text-surface-950 dark:text-surface-0"
+                      >
+                        {{ request.customerName }}
+                      </p>
+                      <p class="mt-1 mb-0 text-xs text-surface-500">
+                        {{ request.collectorName }} ·
+                        {{ request.createdAt | esDate: 'short-datetime' }}
+                      </p>
+                    </div>
+                    <i
+                      class="pi pi-chevron-right mt-1 text-xs text-surface-400"
+                      aria-hidden="true"
+                    ></i>
+                  </div>
+                </a>
+              }
+            </div>
+          }
+        </div>
+      </p-popover>
+    }
 
     <div class="h-8 w-px bg-surface-200 dark:bg-surface-700 hidden md:block mx-1"></div>
 
     <!-- User Profile Info Desktop -->
     <div class="mr-1 hidden flex-col items-end md:flex">
-      <span class="text-sm font-bold text-surface-900 dark:text-surface-0">{{ authService.currentUser()?.fullName || 'Usuario' }}</span>
-      <span class="mt-0.5 rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-bold capitalize text-primary-700 dark:bg-primary-950/40 dark:text-primary-300">{{ authService.currentUser()?.role || '' }}</span>
+      <span class="text-sm font-bold text-surface-900 dark:text-surface-0">{{
+        authService.currentUser()?.fullName || 'Usuario'
+      }}</span>
+      <span
+        class="mt-0.5 rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-bold capitalize text-primary-700 dark:bg-primary-950/40 dark:text-primary-300"
+        >{{ authService.currentUser()?.role || '' }}</span
+      >
     </div>
-
   </div>
 </div>

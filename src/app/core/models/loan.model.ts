@@ -1,25 +1,10 @@
-export type LoanStatus =
-  | 'active'
-  | 'paid'
-  | 'renewed'
-  | 'voided';
+export type LoanStatus = 'active' | 'paid' | 'renewed' | 'voided';
 
-export type LoanFrequency =
-  | 'daily'
-  | 'weekly'
-  | 'monthly';
+export type LoanFrequency = 'daily' | 'weekly' | 'monthly';
 
-export type LoanInstallmentStatus =
-  | 'pending'
-  | 'partial'
-  | 'overdue'
-  | 'paid';
+export type LoanInstallmentStatus = 'pending' | 'partial' | 'overdue' | 'paid';
 
-export type LoanPaymentMethod =
-  | 'cash'
-  | 'yape'
-  | 'plin'
-  | 'transfer';
+export type LoanPaymentMethod = 'cash' | 'yape' | 'plin' | 'transfer';
 
 export interface Loan {
   id: string;
@@ -177,4 +162,16 @@ export interface RegisterLoanPaymentResult {
   allocatedAmount: number;
   remainingBalance: number;
   resultingLoanStatus: LoanStatus;
+}
+
+export interface VoidLoanPaymentInput {
+  paymentId: string;
+  loanId: string;
+  reason: string;
+}
+
+export interface VoidLoanPaymentResult {
+  paymentId: string;
+  loanId: string;
+  remainingBalance: number;
 }

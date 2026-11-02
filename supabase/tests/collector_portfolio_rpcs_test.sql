@@ -186,7 +186,7 @@ select results_eq(
   $$ values (
     '71000000-0000-0000-0000-000000000001'::uuid,
     110.00::numeric,
-    '2026-10-17'::date
+    '2026-10-19'::date
   ) $$,
   'The loan uses the collector identity and admin-aligned calculation'
 );
@@ -200,8 +200,8 @@ select results_eq(
     where c.document_number = '82000003'
     order by i.installment_number
   $$,
-  array['2026-10-17'::date, '2026-10-19'::date, '2026-10-20'::date],
-  'Daily schedules include Saturday and skip Sunday only'
+  array['2026-10-19'::date, '2026-10-20'::date, '2026-10-21'::date],
+  'Daily schedules start after disbursement and skip Sunday only'
 );
 
 select results_eq(
@@ -245,8 +245,8 @@ select
   c.collector_id,
   10.00,
   'cash',
-  '2026-10-17 15:00:00+00'::timestamptz,
-  '2026-10-17'::date,
+  '2026-10-19 15:00:00+00'::timestamptz,
+  '2026-10-19'::date,
   'posted',
   c.collector_id
 from public.loans l
@@ -266,7 +266,7 @@ select results_eq(
   $$
     select remaining_balance, today_scheduled_amount, today_outstanding_amount,
       today_collected_amount
-    from public.collector_list_portfolio('2026-10-17')
+    from public.collector_list_portfolio('2026-10-19')
     where document_number = '82000003'
   $$,
   $$ values (100.00::numeric, 36.67::numeric, 36.67::numeric, 10.00::numeric) $$,
@@ -276,7 +276,7 @@ select results_eq(
 select results_eq(
   $$
     select loan_id, remaining_balance, today_scheduled_amount, today_collected_amount
-    from public.collector_list_portfolio('2026-10-17')
+    from public.collector_list_portfolio('2026-10-19')
     where document_number = '82000001'
   $$,
   $$ values (null::uuid, 0.00::numeric, 0.00::numeric, 0.00::numeric) $$,

@@ -263,6 +263,83 @@ export type Database = {
           },
         ];
       };
+      correction_requests: {
+        Row: {
+          created_at: string;
+          handled_at: string | null;
+          handled_by: string | null;
+          id: string;
+          loan_id: string;
+          payment_id: string | null;
+          proposed_changes: Json | null;
+          reason: string;
+          request_type: Database['public']['Enums']['correction_request_type'];
+          requested_by: string;
+          resolution_note: string | null;
+          status: Database['public']['Enums']['correction_request_status'];
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          handled_at?: string | null;
+          handled_by?: string | null;
+          id?: string;
+          loan_id: string;
+          payment_id?: string | null;
+          proposed_changes?: Json | null;
+          reason: string;
+          request_type: Database['public']['Enums']['correction_request_type'];
+          requested_by: string;
+          resolution_note?: string | null;
+          status?: Database['public']['Enums']['correction_request_status'];
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          handled_at?: string | null;
+          handled_by?: string | null;
+          id?: string;
+          loan_id?: string;
+          payment_id?: string | null;
+          proposed_changes?: Json | null;
+          reason?: string;
+          request_type?: Database['public']['Enums']['correction_request_type'];
+          requested_by?: string;
+          resolution_note?: string | null;
+          status?: Database['public']['Enums']['correction_request_status'];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'correction_requests_handled_by_fkey';
+            columns: ['handled_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'correction_requests_loan_id_fkey';
+            columns: ['loan_id'];
+            isOneToOne: false;
+            referencedRelation: 'loans';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'correction_requests_payment_id_fkey';
+            columns: ['payment_id'];
+            isOneToOne: false;
+            referencedRelation: 'payments';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'correction_requests_requested_by_fkey';
+            columns: ['requested_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       customers: {
         Row: {
           active: boolean;
@@ -611,11 +688,13 @@ export type Database = {
           created_at: string;
           credentials_invalid_before: string | null;
           dni: string;
+          failed_pin_attempts: number;
           full_name: string;
           id: string;
           must_change_pin: boolean;
           phone: string | null;
           pin_changed_at: string | null;
+          pin_locked_at: string | null;
           role: Database['public']['Enums']['app_role'];
           updated_at: string;
         };
@@ -624,11 +703,13 @@ export type Database = {
           created_at?: string;
           credentials_invalid_before?: string | null;
           dni: string;
+          failed_pin_attempts?: number;
           full_name: string;
           id: string;
           must_change_pin?: boolean;
           phone?: string | null;
           pin_changed_at?: string | null;
+          pin_locked_at?: string | null;
           role: Database['public']['Enums']['app_role'];
           updated_at?: string;
         };
@@ -637,11 +718,13 @@ export type Database = {
           created_at?: string;
           credentials_invalid_before?: string | null;
           dni?: string;
+          failed_pin_attempts?: number;
           full_name?: string;
           id?: string;
           must_change_pin?: boolean;
           phone?: string | null;
           pin_changed_at?: string | null;
+          pin_locked_at?: string | null;
           role?: Database['public']['Enums']['app_role'];
           updated_at?: string;
         };
@@ -756,7 +839,7 @@ export type Database = {
           end_date: string;
           installment_amount: number;
           loan_id: string;
-          oldest_unpaid_due_date: string | null;
+          oldest_unpaid_due_date: string;
           overdue_days: number;
           paid_to_date: number;
           principal_amount: number;
@@ -930,6 +1013,58 @@ export type Database = {
           total_amount: number;
         }[];
       };
+      count_pending_correction_requests: { Args: Record<PropertyKey, never>; Returns: number };
+      create_correction_request: {
+        Args: {
+          p_loan_id: string;
+          p_payment_id?: string;
+          p_proposed_changes?: Json;
+          p_reason: string;
+          p_request_type: Database['public']['Enums']['correction_request_type'];
+        };
+        Returns: {
+          created_at: string;
+          request_id: string;
+          request_status: Database['public']['Enums']['correction_request_status'];
+          request_type: Database['public']['Enums']['correction_request_type'];
+        }[];
+      };
+      list_correction_requests: {
+        Args: {
+          p_limit?: number;
+          p_status?: Database['public']['Enums']['correction_request_status'];
+        };
+        Returns: {
+          collector_id: string;
+          collector_name: string;
+          created_at: string;
+          customer_document: string;
+          customer_id: string;
+          customer_name: string;
+          handled_at: string;
+          handled_by: string;
+          id: string;
+          loan_frequency: Database['public']['Enums']['loan_frequency'];
+          loan_id: string;
+          loan_installment_count: number;
+          loan_interest_rate: number;
+          loan_principal: number;
+          loan_started_on: string;
+          loan_status: Database['public']['Enums']['loan_status'];
+          loan_total: number;
+          payment_amount: number;
+          payment_date: string;
+          payment_id: string;
+          payment_method: string;
+          payment_status: Database['public']['Enums']['payment_status'];
+          proposed_changes: Json;
+          reason: string;
+          request_type: Database['public']['Enums']['correction_request_type'];
+          requested_by: string;
+          resolution_note: string;
+          status: Database['public']['Enums']['correction_request_status'];
+        }[];
+      };
       register_cash_allowance: {
         Args: {
           p_amount: number;
@@ -975,6 +1110,14 @@ export type Database = {
           resulting_loan_status: Database['public']['Enums']['loan_status'];
         }[];
       };
+      reject_correction_request: {
+        Args: { p_request_id: string; p_resolution_note: string };
+        Returns: {
+          handled_at: string;
+          id: string;
+          status: Database['public']['Enums']['correction_request_status'];
+        }[];
+      };
       renew_loan: {
         Args: {
           p_frequency: Database['public']['Enums']['loan_frequency'];
@@ -1012,6 +1155,38 @@ export type Database = {
           status: Database['public']['Enums']['cash_expense_status'];
         }[];
       };
+      resolve_edit_loan_request: {
+        Args: {
+          p_frequency: Database['public']['Enums']['loan_frequency'];
+          p_installment_count: number;
+          p_interest_rate: number;
+          p_principal: number;
+          p_reason: string;
+          p_request_id: string;
+          p_started_on: string;
+        };
+        Returns: {
+          handled_at: string;
+          id: string;
+          status: Database['public']['Enums']['correction_request_status'];
+        }[];
+      };
+      resolve_void_loan_request: {
+        Args: { p_request_id: string; p_resolution_note: string };
+        Returns: {
+          handled_at: string;
+          id: string;
+          status: Database['public']['Enums']['correction_request_status'];
+        }[];
+      };
+      resolve_void_payment_request: {
+        Args: { p_request_id: string; p_resolution_note: string };
+        Returns: {
+          handled_at: string;
+          id: string;
+          status: Database['public']['Enums']['correction_request_status'];
+        }[];
+      };
       review_cash_expense: {
         Args: { p_approve: boolean; p_expense_id: string; p_reason?: string };
         Returns: {
@@ -1022,6 +1197,13 @@ export type Database = {
         }[];
       };
       service_complete_collector_pin_change: { Args: { p_user_id: string }; Returns: undefined };
+      service_record_login_attempt: {
+        Args: { p_profile_id: string; p_success: boolean };
+        Returns: {
+          failed_attempts: number;
+          locked: boolean;
+        }[];
+      };
       submit_cash_closure: {
         Args: { p_business_date: string; p_delivered_amount: number; p_observation?: string };
         Returns: {
@@ -1057,6 +1239,8 @@ export type Database = {
       cash_direction: 'inflow' | 'outflow';
       cash_expense_category: 'fuel' | 'tolls' | 'fares' | 'parking' | 'meals' | 'other';
       cash_expense_status: 'pending' | 'approved' | 'rejected';
+      correction_request_status: 'pending' | 'resolved' | 'rejected';
+      correction_request_type: 'edit_loan' | 'void_loan' | 'void_payment';
       loan_frequency: 'daily' | 'weekly' | 'monthly';
       loan_status: 'active' | 'paid' | 'renewed' | 'voided';
       payment_status: 'posted' | 'voided';
@@ -1176,6 +1360,8 @@ export const Constants = {
       cash_direction: ['inflow', 'outflow'],
       cash_expense_category: ['fuel', 'tolls', 'fares', 'parking', 'meals', 'other'],
       cash_expense_status: ['pending', 'approved', 'rejected'],
+      correction_request_status: ['pending', 'resolved', 'rejected'],
+      correction_request_type: ['edit_loan', 'void_loan', 'void_payment'],
       loan_frequency: ['daily', 'weekly', 'monthly'],
       loan_status: ['active', 'paid', 'renewed', 'voided'],
       payment_status: ['posted', 'voided'],

@@ -5,6 +5,7 @@ import { ButtonModule } from 'primeng/button';
 import { SidebarModule } from 'primeng/sidebar';
 import { ToastModule } from 'primeng/toast';
 import { AuthService } from '../modules/auth/auth.service';
+import { CorrectionRequestsStore } from '../modules/correction-requests/correction-requests.store';
 import { Topbar } from './topbar/topbar';
 
 @Component({
@@ -52,7 +53,9 @@ import { Topbar } from './topbar/topbar';
                           <div class="app-brand-mark">
                             <i class="pi pi-wallet" aria-hidden="true"></i>
                           </div>
-                          <span class="truncate text-base font-extrabold tracking-tight text-primary">
+                          <span
+                            class="truncate text-base font-extrabold tracking-tight text-primary"
+                          >
                             CobranzaPro
                           </span>
                         </div>
@@ -132,43 +135,112 @@ import { Topbar } from './topbar/topbar';
                       <p-sidebar-group-content>
                         <p-sidebar-menu>
                           <p-sidebar-menu-item>
-                            <a pSidebarMenuButton routerLink="/admin/dashboard" routerLinkActive #adminHome="routerLinkActive" [isActive]="adminHome.isActive" (click)="closeNavigation()">
+                            <a
+                              pSidebarMenuButton
+                              routerLink="/admin/dashboard"
+                              routerLinkActive
+                              #adminHome="routerLinkActive"
+                              [isActive]="adminHome.isActive"
+                              (click)="closeNavigation()"
+                            >
                               <i class="pi pi-chart-bar" aria-hidden="true"></i>
                               <span>Dashboard</span>
                             </a>
                           </p-sidebar-menu-item>
                           <p-sidebar-menu-item>
-                            <a pSidebarMenuButton routerLink="/admin/clientes" routerLinkActive #adminClients="routerLinkActive" [isActive]="adminClients.isActive" (click)="closeNavigation()">
+                            <a
+                              pSidebarMenuButton
+                              routerLink="/admin/clientes"
+                              routerLinkActive
+                              #adminClients="routerLinkActive"
+                              [isActive]="adminClients.isActive"
+                              (click)="closeNavigation()"
+                            >
                               <i class="pi pi-users" aria-hidden="true"></i>
                               <span>Clientes</span>
                             </a>
                           </p-sidebar-menu-item>
                           <p-sidebar-menu-item>
-                            <a pSidebarMenuButton routerLink="/admin/prestamos" routerLinkActive #adminLoans="routerLinkActive" [isActive]="adminLoans.isActive" (click)="closeNavigation()">
+                            <a
+                              pSidebarMenuButton
+                              routerLink="/admin/prestamos"
+                              routerLinkActive
+                              #adminLoans="routerLinkActive"
+                              [isActive]="adminLoans.isActive"
+                              (click)="closeNavigation()"
+                            >
                               <i class="pi pi-wallet" aria-hidden="true"></i>
                               <span>Préstamos</span>
                             </a>
                           </p-sidebar-menu-item>
                           <p-sidebar-menu-item>
-                            <a pSidebarMenuButton routerLink="/admin/cobradores" routerLinkActive #adminCollectors="routerLinkActive" [isActive]="adminCollectors.isActive" (click)="closeNavigation()">
+                            <a
+                              pSidebarMenuButton
+                              routerLink="/admin/cobradores"
+                              routerLinkActive
+                              #adminCollectors="routerLinkActive"
+                              [isActive]="adminCollectors.isActive"
+                              (click)="closeNavigation()"
+                            >
                               <i class="pi pi-id-card" aria-hidden="true"></i>
                               <span>Cobradores</span>
                             </a>
                           </p-sidebar-menu-item>
                           <p-sidebar-menu-item>
-                            <a pSidebarMenuButton routerLink="/admin/control-diario" routerLinkActive #adminDailyControl="routerLinkActive" [isActive]="adminDailyControl.isActive" (click)="closeNavigation()">
+                            <a
+                              pSidebarMenuButton
+                              routerLink="/admin/control-diario"
+                              routerLinkActive
+                              #adminDailyControl="routerLinkActive"
+                              [isActive]="adminDailyControl.isActive"
+                              (click)="closeNavigation()"
+                            >
                               <i class="pi pi-file-excel" aria-hidden="true"></i>
                               <span>Control diario</span>
                             </a>
                           </p-sidebar-menu-item>
                           <p-sidebar-menu-item>
-                            <a pSidebarMenuButton routerLink="/admin/cierre-caja" routerLinkActive #adminCashClosure="routerLinkActive" [isActive]="adminCashClosure.isActive" (click)="closeNavigation()">
+                            <a
+                              pSidebarMenuButton
+                              routerLink="/admin/cierre-caja"
+                              routerLinkActive
+                              #adminCashClosure="routerLinkActive"
+                              [isActive]="adminCashClosure.isActive"
+                              (click)="closeNavigation()"
+                            >
                               <i class="pi pi-calculator" aria-hidden="true"></i>
                               <span>Cierre de caja</span>
                             </a>
                           </p-sidebar-menu-item>
                           <p-sidebar-menu-item>
-                            <a pSidebarMenuButton routerLink="/admin/auditoria" routerLinkActive #adminAudit="routerLinkActive" [isActive]="adminAudit.isActive" (click)="closeNavigation()">
+                            <a
+                              pSidebarMenuButton
+                              routerLink="/admin/solicitudes"
+                              routerLinkActive
+                              #adminRequests="routerLinkActive"
+                              [isActive]="adminRequests.isActive"
+                              (click)="closeNavigation()"
+                            >
+                              <i class="pi pi-bell" aria-hidden="true"></i>
+                              <span>Solicitudes</span>
+                              @if (correctionRequestsStore.pendingCount() > 0) {
+                                <span
+                                  class="ml-auto rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white"
+                                >
+                                  {{ correctionRequestsStore.pendingCount() }}
+                                </span>
+                              }
+                            </a>
+                          </p-sidebar-menu-item>
+                          <p-sidebar-menu-item>
+                            <a
+                              pSidebarMenuButton
+                              routerLink="/admin/auditoria"
+                              routerLinkActive
+                              #adminAudit="routerLinkActive"
+                              [isActive]="adminAudit.isActive"
+                              (click)="closeNavigation()"
+                            >
                               <i class="pi pi-shield" aria-hidden="true"></i>
                               <span>Auditoría</span>
                             </a>
@@ -183,7 +255,14 @@ import { Topbar } from './topbar/topbar';
                     <p-sidebar-group-content>
                       <p-sidebar-menu>
                         <p-sidebar-menu-item>
-                          <a pSidebarMenuButton routerLink="/cambiar-pin" routerLinkActive #pinRoute="routerLinkActive" [isActive]="pinRoute.isActive" (click)="closeNavigation()">
+                          <a
+                            pSidebarMenuButton
+                            routerLink="/cambiar-pin"
+                            routerLinkActive
+                            #pinRoute="routerLinkActive"
+                            [isActive]="pinRoute.isActive"
+                            (click)="closeNavigation()"
+                          >
                             <i class="pi pi-lock" aria-hidden="true"></i>
                             <span>Cambiar PIN</span>
                           </a>
@@ -194,7 +273,9 @@ import { Topbar } from './topbar/topbar';
                 </p-sidebar-content>
 
                 <p-sidebar-footer>
-                  <div class="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5">
+                  <div
+                    class="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5"
+                  >
                     <div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                       <p-avatar
                         [label]="authService.currentUser()?.fullName?.charAt(0) || 'U'"
@@ -202,7 +283,9 @@ import { Topbar } from './topbar/topbar';
                         class="size-8 shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white"
                       />
                       <div class="flex min-w-0 flex-col">
-                        <span class="truncate text-xs font-semibold text-surface-800 dark:text-surface-100">
+                        <span
+                          class="truncate text-xs font-semibold text-surface-800 dark:text-surface-100"
+                        >
                           {{ authService.currentUser()?.fullName || 'Usuario' }}
                         </span>
                         <span class="truncate text-[10px] capitalize text-surface-400">
@@ -259,10 +342,12 @@ import { Topbar } from './topbar/topbar';
 })
 export default class AppShell implements OnInit, OnDestroy {
   readonly authService = inject(AuthService);
+  readonly correctionRequestsStore = inject(CorrectionRequestsStore);
   readonly isMobile = signal(false);
   readonly open = signal(true);
   private readonly navigationButton = viewChild<ElementRef<HTMLButtonElement>>('navigationButton');
-  private readonly mobileCloseButton = viewChild<ElementRef<HTMLButtonElement>>('mobileCloseButton');
+  private readonly mobileCloseButton =
+    viewChild<ElementRef<HTMLButtonElement>>('mobileCloseButton');
 
   private mql?: MediaQueryList;
   private mqlListener?: (event: MediaQueryListEvent) => void;

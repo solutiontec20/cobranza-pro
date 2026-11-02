@@ -2,7 +2,6 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from './auth.service';
 
-
 export const authGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
@@ -27,6 +26,28 @@ export const operationalGuard: CanActivateFn = () => {
   }
 
   return true;
+};
+
+export const adminAreaGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  if (auth.isAdmin() || auth.isSupervisor()) {
+    return true;
+  }
+
+  return router.createUrlTree([auth.isCollector() ? '/cobrador' : '/login']);
+};
+
+export const collectorAreaGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  if (auth.isCollector()) {
+    return true;
+  }
+
+  return router.createUrlTree([auth.isAdmin() || auth.isSupervisor() ? '/admin' : '/login']);
 };
 
 export const publicGuard: CanActivateFn = () => {

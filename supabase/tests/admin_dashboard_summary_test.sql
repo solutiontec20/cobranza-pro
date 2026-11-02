@@ -81,13 +81,13 @@ values
 
 -- L1 (Cliente Uno): active, due today, unpaid -> green, feeds expected_today.
 insert into public.loans (id, customer_id, principal_amount, interest_rate_percent, total_amount, disbursed_amount, installment_count, frequency, started_on, first_due_on, status, created_by)
-values ('e3000000-0000-0000-0000-000000000001', 'e2000000-0000-0000-0000-000000000001', 100.00, 20.0000, 120.00, 100.00, 1, 'daily', current_date, current_date, 'active', 'e1000000-0000-0000-0000-000000000001');
+values ('e3000000-0000-0000-0000-000000000001', 'e2000000-0000-0000-0000-000000000001', 100.00, 20.0000, 120.00, 100.00, 1, 'weekly', current_date - 7, current_date, 'active', 'e1000000-0000-0000-0000-000000000001');
 insert into public.installments (id, loan_id, installment_number, due_date, scheduled_amount)
 values ('e4000000-0000-0000-0000-000000000001', 'e3000000-0000-0000-0000-000000000001', 1, current_date, 10.00);
 
 -- L2 (Cliente Dos): active, due yesterday, partially paid today -> yellow, feeds collected_today.
 insert into public.loans (id, customer_id, principal_amount, interest_rate_percent, total_amount, disbursed_amount, installment_count, frequency, started_on, first_due_on, status, created_by)
-values ('e3000000-0000-0000-0000-000000000002', 'e2000000-0000-0000-0000-000000000002', 50.00, 20.0000, 60.00, 50.00, 1, 'daily', current_date - 1, current_date - 1, 'active', 'e1000000-0000-0000-0000-000000000001');
+values ('e3000000-0000-0000-0000-000000000002', 'e2000000-0000-0000-0000-000000000002', 50.00, 20.0000, 60.00, 50.00, 1, 'weekly', current_date - 8, current_date - 1, 'active', 'e1000000-0000-0000-0000-000000000001');
 insert into public.installments (id, loan_id, installment_number, due_date, scheduled_amount)
 values ('e4000000-0000-0000-0000-000000000002', 'e3000000-0000-0000-0000-000000000002', 1, current_date - 1, 20.00);
 insert into public.payments (id, loan_id, collector_id, amount, payment_method, status, business_date, paid_at, created_by)
@@ -97,13 +97,13 @@ values ('e5000000-0000-0000-0000-000000000001', 'e4000000-0000-0000-0000-0000000
 
 -- L3 (Cliente Tres): active, 7 days overdue, unpaid -> orange.
 insert into public.loans (id, customer_id, principal_amount, interest_rate_percent, total_amount, disbursed_amount, installment_count, frequency, started_on, first_due_on, status, created_by)
-values ('e3000000-0000-0000-0000-000000000003', 'e2000000-0000-0000-0000-000000000003', 70.00, 20.0000, 84.00, 70.00, 1, 'daily', current_date - 7, current_date - 7, 'active', 'e1000000-0000-0000-0000-000000000001');
+values ('e3000000-0000-0000-0000-000000000003', 'e2000000-0000-0000-0000-000000000003', 70.00, 20.0000, 84.00, 70.00, 1, 'weekly', current_date - 14, current_date - 7, 'active', 'e1000000-0000-0000-0000-000000000001');
 insert into public.installments (id, loan_id, installment_number, due_date, scheduled_amount)
 values ('e4000000-0000-0000-0000-000000000003', 'e3000000-0000-0000-0000-000000000003', 1, current_date - 7, 30.00);
 
 -- L4 (Cliente Cuatro): active, 15 days overdue, unpaid -> red.
 insert into public.loans (id, customer_id, principal_amount, interest_rate_percent, total_amount, disbursed_amount, installment_count, frequency, started_on, first_due_on, status, created_by)
-values ('e3000000-0000-0000-0000-000000000004', 'e2000000-0000-0000-0000-000000000004', 90.00, 20.0000, 108.00, 90.00, 1, 'daily', current_date - 15, current_date - 15, 'active', 'e1000000-0000-0000-0000-000000000001');
+values ('e3000000-0000-0000-0000-000000000004', 'e2000000-0000-0000-0000-000000000004', 90.00, 20.0000, 108.00, 90.00, 1, 'weekly', current_date - 22, current_date - 15, 'active', 'e1000000-0000-0000-0000-000000000001');
 insert into public.installments (id, loan_id, installment_number, due_date, scheduled_amount)
 values ('e4000000-0000-0000-0000-000000000004', 'e3000000-0000-0000-0000-000000000004', 1, current_date - 15, 40.00);
 
@@ -112,7 +112,7 @@ values ('e4000000-0000-0000-0000-000000000004', 'e3000000-0000-0000-0000-0000000
 -- L6 (Cliente Seis): already fully paid off -- must not count toward
 -- capital_prestado/total_esperado/total_cobrado, only toward prestamos_pagados.
 insert into public.loans (id, customer_id, principal_amount, interest_rate_percent, total_amount, disbursed_amount, installment_count, frequency, started_on, first_due_on, status, created_by)
-values ('e3000000-0000-0000-0000-000000000006', 'e2000000-0000-0000-0000-000000000006', 200.00, 20.0000, 240.00, 200.00, 1, 'daily', current_date - 10, current_date - 10, 'paid', 'e1000000-0000-0000-0000-000000000001');
+values ('e3000000-0000-0000-0000-000000000006', 'e2000000-0000-0000-0000-000000000006', 200.00, 20.0000, 240.00, 200.00, 1, 'weekly', current_date - 17, current_date - 10, 'paid', 'e1000000-0000-0000-0000-000000000001');
 insert into public.payments (id, loan_id, collector_id, amount, payment_method, status, business_date, paid_at, created_by)
 values ('e5000000-0000-0000-0000-000000000002', 'e3000000-0000-0000-0000-000000000006', 'e1000000-0000-0000-0000-000000000003', 240.00, 'cash', 'posted', current_date - 2, now(), 'e1000000-0000-0000-0000-000000000003');
 

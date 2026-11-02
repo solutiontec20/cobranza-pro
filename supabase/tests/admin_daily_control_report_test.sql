@@ -62,7 +62,7 @@ insert into public.loans (
 values (
   'd3000000-0000-0000-0000-000000000001', 'd2000000-0000-0000-0000-000000000001',
   50.00, 20.0000, 60.00, 50.00, 3, 'daily',
-  '2026-01-05', '2026-01-05', 'active', 'd1000000-0000-0000-0000-000000000001'
+  '2026-01-04', '2026-01-05', 'active', 'd1000000-0000-0000-0000-000000000001'
 );
 
 insert into public.installments (id, loan_id, installment_number, due_date, scheduled_amount)
@@ -103,7 +103,7 @@ insert into public.loans (
 values (
   'd3000000-0000-0000-0000-000000000002', 'd2000000-0000-0000-0000-000000000002',
   25.00, 20.0000, 30.00, 25.00, 1, 'daily',
-  '2026-01-05', '2026-01-05', 'paid', 'd1000000-0000-0000-0000-000000000001'
+  '2026-01-04', '2026-01-05', 'paid', 'd1000000-0000-0000-0000-000000000001'
 );
 
 insert into public.installments (id, loan_id, installment_number, due_date, scheduled_amount)
@@ -134,7 +134,7 @@ insert into public.loans (
 values (
   'd3000000-0000-0000-0000-000000000003', 'd2000000-0000-0000-0000-000000000003',
   12.50, 20.0000, 15.00, 12.50, 1, 'daily',
-  '2026-01-05', '2026-01-05', 'active', 'd1000000-0000-0000-0000-000000000001'
+  '2026-01-04', '2026-01-05', 'active', 'd1000000-0000-0000-0000-000000000001'
 );
 
 insert into public.installments (id, loan_id, installment_number, due_date, scheduled_amount)
@@ -156,7 +156,7 @@ insert into public.loans (
 values (
   'd3000000-0000-0000-0000-000000000004', 'd2000000-0000-0000-0000-000000000004',
   41.67, 20.0000, 50.00, 41.67, 1, 'daily',
-  '2026-01-10', '2026-01-10', 'active', 'd1000000-0000-0000-0000-000000000001'
+  '2026-01-09', '2026-01-10', 'active', 'd1000000-0000-0000-0000-000000000001'
 );
 
 insert into public.installments (
@@ -164,7 +164,7 @@ insert into public.installments (
   superseded_at, superseded_by, supersession_reason
 )
 values (
-  'd4000000-0000-0000-0000-000000000006', 'd3000000-0000-0000-0000-000000000004', 1, '2026-01-15', 100.00,
+  'd4000000-0000-0000-0000-000000000006', 'd3000000-0000-0000-0000-000000000004', 2, '2026-01-12', 100.00,
   now(), 'd1000000-0000-0000-0000-000000000001', 'Replaced by corrected schedule (test fixture)'
 );
 
@@ -331,7 +331,7 @@ select results_eq(
     where loan_id = 'd3000000-0000-0000-0000-000000000004'::uuid
   $$,
   $$ values ('2026-01-10'::date, 50.00::numeric) $$,
-  'The superseded installment (due 2026-01-15, 100.00) never appears; only the active replacement does'
+  'The superseded installment (due 2026-01-12, 100.00) never appears; only the active replacement does'
 );
 
 select * from finish();
