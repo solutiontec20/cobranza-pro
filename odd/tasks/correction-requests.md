@@ -119,6 +119,18 @@ the permitted correction transactionally, and leave an auditable resolution.
   - Rollback boundary: shared reason catalog and three void dialogs.
   - Commit: intentionally omitted by user request.
 
+- [x] **CR-8 - Add quick reasons to every correction description**
+  - Add shared, typed quick-reason catalogs for loan edits and request rejections, ending with
+    `Otro`.
+  - Apply the edit catalog to collector edit requests, administrative request editing, and direct
+    administrative loan editing without overwriting the collector's original request reason.
+  - Apply the rejection catalog whenever an administrator rejects a correction request.
+  - Keep the existing loan/payment void catalogs and require written text only for `Otro`.
+  - Cover catalog resolution and form behavior with Vitest, then verify TypeScript and the Angular
+    build.
+  - Rollback boundary: shared correction reason catalogs and correction description dialogs.
+  - Commit: intentionally omitted by user request.
+
 ## Progress
 
 - Verified admin_update_loan already supports admin/supervisor edits only for active loans without
@@ -148,6 +160,12 @@ the permitted correction transactionally, and leave an auditable resolution.
 - Completed CR-7 with shared typed catalogs for payment and loan void reasons. Collector requests,
   administrative request resolution, and direct administrative payment voiding now use the same
   quick-selection behavior; `Otro` is last and requires a written explanation.
+- CR-8 authorized: replace the remaining free-text-only edit and rejection descriptions with typed
+  quick reasons while preserving separate collector-request and administrator-resolution audit
+  context.
+- Completed CR-8 with shared edit and rejection catalogs. Collector edit requests, administrative
+  edit resolution, direct loan editing, and request rejection now use quick reasons; the original
+  collector reason stays visible during administrative resolution and `Otro` requires explanation.
 
 ## Verification evidence
 
@@ -170,6 +188,8 @@ the permitted correction transactionally, and leave an auditable resolution.
   and Angular development build passed.
 - CR-7 verification: 23 Angular/Vitest files and 154 tests passed; TypeScript application check,
   Angular development build, and `git diff --check` passed.
+- CR-8 verification: 24 Angular/Vitest files and 158 tests passed; TypeScript application check,
+  Angular development build, Prettier, and `git diff --check` passed.
 
 ## Next step
 

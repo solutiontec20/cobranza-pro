@@ -680,42 +680,40 @@
           </dl>
         }
 
-        @if (isVoidCorrectionRequest()) {
-          <div class="flex flex-col gap-1.5">
-            <label
-              for="correction-reason-code"
-              class="text-sm font-semibold text-surface-700 dark:text-surface-200"
-            >
-              Motivo de la anulación
-            </label>
-            <p-select
-              inputId="correction-reason-code"
-              [formField]="correctionRequestForm.reasonCode"
-              [options]="correctionReasonOptions()"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Seleccioná un motivo"
-              appendTo="body"
-              styleClass="w-full"
-            />
-            @if (
-              correctionRequestForm.reasonCode().touched() &&
-              correctionRequestForm.reasonCode().invalid()
-            ) {
-              <small class="text-red-600" role="alert">
-                {{ correctionRequestForm.reasonCode().errors()[0]?.message }}
-              </small>
-            }
-          </div>
-        }
+        <div class="flex flex-col gap-1.5">
+          <label
+            for="correction-reason-code"
+            class="text-sm font-semibold text-surface-700 dark:text-surface-200"
+          >
+            {{ correctionReasonLabel() }}
+          </label>
+          <p-select
+            inputId="correction-reason-code"
+            [formField]="correctionRequestForm.reasonCode"
+            [options]="correctionReasonOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Seleccioná un motivo"
+            appendTo="body"
+            styleClass="w-full"
+          />
+          @if (
+            correctionRequestForm.reasonCode().touched() &&
+            correctionRequestForm.reasonCode().invalid()
+          ) {
+            <small class="text-red-600" role="alert">
+              {{ correctionRequestForm.reasonCode().errors()[0]?.message }}
+            </small>
+          }
+        </div>
 
-        @if (!isVoidCorrectionRequest() || correctionRequestModel().reasonCode === 'other') {
+        @if (correctionRequestModel().reasonCode === 'other') {
           <div class="flex flex-col gap-1.5">
             <label
               for="correction-custom-reason"
               class="text-sm font-semibold text-surface-700 dark:text-surface-200"
             >
-              {{ isVoidCorrectionRequest() ? 'Explicá el motivo' : 'Motivo de la solicitud' }}
+              Explicá el motivo
             </label>
             <textarea
               id="correction-custom-reason"

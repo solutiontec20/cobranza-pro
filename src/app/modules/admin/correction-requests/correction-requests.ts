@@ -5,7 +5,6 @@ import {
   max,
   maxLength,
   min,
-  minLength,
   required,
   submit,
   validate,
@@ -25,6 +24,14 @@ import {
   CorrectionRequestStatus,
   CorrectionRequestType,
 } from '../../../core/models/correction-request.model';
+import {
+  CorrectionRejectionReasonCode,
+  CORRECTION_REJECTION_REASON_OPTIONS,
+  LoanEditReasonCode,
+  LOAN_EDIT_REASON_OPTIONS,
+  resolveCorrectionRejectionReason,
+  resolveLoanEditReason,
+} from '../../../core/models/correction-reason.model';
 import { LoanFrequency } from '../../../core/models/loan.model';
 import {
   LOAN_VOID_REASON_OPTIONS,
@@ -37,7 +44,7 @@ import { EsDate } from '../../../shared/pipes/es-date';
 import { PenCurrency } from '../../../shared/pipes/pen-currency';
 
 interface ResolutionModel {
-  reasonCode: VoidReasonCode | '';
+  reasonCode: CorrectionRejectionReasonCode | VoidReasonCode | '';
   customReason: string;
 }
 
@@ -47,7 +54,8 @@ interface EditResolutionModel {
   frequency: LoanFrequency;
   installmentCount: number;
   startedOn: string;
-  reason: string;
+  reasonCode: LoanEditReasonCode | '';
+  customReason: string;
 }
 
 type ResolutionAction = 'reject' | 'void_loan' | 'void_payment';
@@ -306,33 +314,31 @@ interface ResolutionTarget {
               Esta acción es auditada y no elimina ningún registro del historial.
             }
           </p-message>
-          @if (target.action !== 'reject') {
-            <div>
-              <label for="resolution-reason-code" class="mb-2 block text-sm font-semibold">
-                Motivo de la anulación
-              </label>
-              <p-select
-                inputId="resolution-reason-code"
-                [formField]="resolutionForm.reasonCode"
-                [options]="resolutionReasonOptions()"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Seleccioná un motivo"
-                appendTo="body"
-                styleClass="w-full"
-              />
-              @if (resolutionForm.reasonCode().touched() && resolutionForm.reasonCode().invalid()) {
-                <small class="mt-1 block text-red-600" role="alert">
-                  {{ resolutionForm.reasonCode().errors()[0]?.message }}
-                </small>
-              }
-            </div>
-          }
+          <div>
+            <label for="resolution-reason-code" class="mb-2 block text-sm font-semibold">
+              {{ target.action === 'reject' ? 'Motivo del rechazo' : 'Motivo de la anulación' }}
+            </label>
+            <p-select
+              inputId="resolution-reason-code"
+              [formField]="resolutionForm.reasonCode"
+              [options]="resolutionReasonOptions()"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Seleccioná un motivo"
+              appendTo="body"
+              styleClass="w-full"
+            />
+            @if (resolutionForm.reasonCode().touched() && resolutionForm.reasonCode().invalid()) {
+              <small class="mt-1 block text-red-600" role="alert">
+                {{ resolutionForm.reasonCode().errors()[0]?.message }}
+              </small>
+            }
+          </div>
 
-          @if (target.action === 'reject' || resolutionModel().reasonCode === 'other') {
+          @if (resolutionModel().reasonCode === 'other') {
             <div>
               <label for="resolution-custom-reason" class="mb-2 block text-sm font-semibold">
-                {{ target.action === 'reject' ? 'Motivo del rechazo' : 'Explicá el motivo' }}
+                Explicá el motivo
               </label>
               <textarea
                 id="resolution-custom-reason"
@@ -384,11 +390,14 @@ interface ResolutionTarget {
       [breakpoints]="{ '720px': '100vw' }"
       styleClass="w-[calc(100vw-1.5rem)] max-w-xl"
     >
-      @if (editTarget()) {
+      @if (editTarget(); as request) {
         <form class="flex flex-col gap-4" (submit)="submitEdit(); $event.preventDefault()">
           <p-message severity="warn" styleClass="w-full">
             La edición solo será aceptada si el préstamo continúa activo y no tiene historial de
             pagos.
+          </p-message>
+          <p-message severity="info" styleClass="w-full">
+            Motivo enviado por el cobrador: {{ request.reason }}
           </p-message>
           <div class="grid gap-4 sm:grid-cols-2">
             <div>
@@ -452,21 +461,43 @@ interface ResolutionTarget {
             />
           </div>
           <div>
-            <label for="edit-reason" class="mb-2 block text-sm font-semibold"
-              >Motivo auditado</label
-            >
-            <textarea
-              id="edit-reason"
-              rows="3"
-              [formField]="editForm.reason"
-              class="w-full resize-none rounded-md border border-surface-300 bg-surface-0 px-3 py-2 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-surface-600 dark:bg-surface-950"
-            ></textarea>
-            @if (editForm.reason().touched() && editForm.reason().invalid()) {
-              <small class="mt-1 block text-red-600" role="alert">{{
-                editForm.reason().errors()[0]?.message
-              }}</small>
+            <label for="edit-reason-code" class="mb-2 block text-sm font-semibold">
+              Justificación de la edición
+            </label>
+            <p-select
+              inputId="edit-reason-code"
+              [formField]="editForm.reasonCode"
+              [options]="editReasonOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Seleccioná un motivo"
+              appendTo="body"
+              styleClass="w-full"
+            />
+            @if (editForm.reasonCode().touched() && editForm.reasonCode().invalid()) {
+              <small class="mt-1 block text-red-600" role="alert">
+                {{ editForm.reasonCode().errors()[0]?.message }}
+              </small>
             }
           </div>
+          @if (editModel().reasonCode === 'other') {
+            <div>
+              <label for="edit-custom-reason" class="mb-2 block text-sm font-semibold">
+                Explicá el motivo
+              </label>
+              <textarea
+                id="edit-custom-reason"
+                rows="3"
+                [formField]="editForm.customReason"
+                class="w-full resize-none rounded-md border border-surface-300 bg-surface-0 px-3 py-2 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-surface-600 dark:bg-surface-950"
+              ></textarea>
+              @if (editForm.customReason().touched() && editForm.customReason().invalid()) {
+                <small class="mt-1 block text-red-600" role="alert">
+                  {{ editForm.customReason().errors()[0]?.message }}
+                </small>
+              }
+            </div>
+          }
           <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               pButton
@@ -506,6 +537,7 @@ export default class CorrectionRequests implements OnInit {
     { label: 'Semanal', value: 'weekly' },
     { label: 'Mensual', value: 'monthly' },
   ];
+  protected readonly editReasonOptions = LOAN_EDIT_REASON_OPTIONS;
 
   protected readonly resolutionTarget = signal<ResolutionTarget | null>(null);
   protected readonly resolutionModel = signal<ResolutionModel>({
@@ -522,9 +554,11 @@ export default class CorrectionRequests implements OnInit {
     );
   });
   protected readonly resolutionReasonOptions = computed(() =>
-    this.resolutionTarget()?.action === 'void_payment'
-      ? PAYMENT_VOID_REASON_OPTIONS
-      : LOAN_VOID_REASON_OPTIONS,
+    this.resolutionTarget()?.action === 'reject'
+      ? CORRECTION_REJECTION_REASON_OPTIONS
+      : this.resolutionTarget()?.action === 'void_payment'
+        ? PAYMENT_VOID_REASON_OPTIONS
+        : LOAN_VOID_REASON_OPTIONS,
   );
 
   protected readonly editTarget = signal<CorrectionRequest | null>(null);
@@ -534,7 +568,8 @@ export default class CorrectionRequests implements OnInit {
     frequency: 'daily',
     installmentCount: 1,
     startedOn: '',
-    reason: '',
+    reasonCode: '',
+    customReason: '',
   });
   protected readonly editForm = form(this.editModel, (path) => {
     required(path.principal, { message: 'Ingresá el capital.' });
@@ -544,9 +579,13 @@ export default class CorrectionRequests implements OnInit {
     min(path.installmentCount, 1, { message: 'Debe existir al menos una cuota.' });
     max(path.installmentCount, 32767, { message: 'La cantidad de cuotas es demasiado alta.' });
     required(path.startedOn, { message: 'Seleccioná la fecha del préstamo.' });
-    required(path.reason, { message: 'Ingresá el motivo auditado.' });
-    minLength(path.reason, 5, { message: 'El motivo debe tener al menos 5 caracteres.' });
-    maxLength(path.reason, 1000, { message: 'El motivo no puede superar 1000 caracteres.' });
+    required(path.reasonCode, { message: 'Seleccioná el motivo auditado.' });
+    maxLength(path.customReason, 1000, { message: 'El motivo no puede superar 1000 caracteres.' });
+    validate(path.customReason, ({ valueOf }) =>
+      valueOf(path.reasonCode) === 'other' && valueOf(path.customReason).trim().length < 5
+        ? { kind: 'required', message: 'Explicá el motivo en al menos 5 caracteres.' }
+        : undefined,
+    );
   });
 
   protected readonly resolutionDialogTitle = computed(() => {
@@ -573,7 +612,7 @@ export default class CorrectionRequests implements OnInit {
     this.store.clearError();
     this.resolutionTarget.set({ request, action });
     this.resolutionModel.set({
-      reasonCode: action === 'reject' ? 'other' : '',
+      reasonCode: '',
       customReason: '',
     });
     this.resolutionForm().reset();
@@ -589,7 +628,13 @@ export default class CorrectionRequests implements OnInit {
 
     void submit(this.resolutionForm, async () => {
       const model = this.resolutionModel();
-      const resolutionNote = resolveVoidReason(model.reasonCode, model.customReason);
+      const resolutionNote =
+        target.action === 'reject'
+          ? resolveCorrectionRejectionReason(
+              model.reasonCode as CorrectionRejectionReasonCode | '',
+              model.customReason,
+            )
+          : resolveVoidReason(model.reasonCode as VoidReasonCode | '', model.customReason);
       if (!resolutionNote) return;
       const input = { requestId: target.request.id, resolutionNote };
       const succeeded =
@@ -615,7 +660,8 @@ export default class CorrectionRequests implements OnInit {
       frequency: request.loanFrequency,
       installmentCount: request.loanInstallmentCount,
       startedOn: request.loanStartedOn,
-      reason: request.reason,
+      reasonCode: '',
+      customReason: '',
     });
     this.editForm().reset();
     this.editTarget.set(request);
@@ -631,6 +677,8 @@ export default class CorrectionRequests implements OnInit {
 
     void submit(this.editForm, async () => {
       const values = this.editModel();
+      const reason = resolveLoanEditReason(values.reasonCode, values.customReason);
+      if (!reason) return;
       const succeeded = await this.store.resolveEdit({
         requestId: request.id,
         principal: values.principal,
@@ -638,7 +686,7 @@ export default class CorrectionRequests implements OnInit {
         frequency: values.frequency,
         installmentCount: values.installmentCount,
         startedOn: values.startedOn,
-        reason: values.reason.trim(),
+        reason,
       });
 
       if (succeeded) {

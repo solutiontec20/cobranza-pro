@@ -29,6 +29,11 @@ import {
 import { CreateCollectorLoanResult } from '../../../core/models/collector-portfolio.model';
 import { CorrectionRequestType } from '../../../core/models/correction-request.model';
 import {
+  LoanEditReasonCode,
+  LOAN_EDIT_REASON_OPTIONS,
+  resolveLoanEditReason,
+} from '../../../core/models/correction-reason.model';
+import {
   LoanFrequency,
   LoanInstallmentStatus,
   LoanPaymentMethod,
@@ -56,7 +61,7 @@ interface PaymentFormModel {
 }
 
 interface CorrectionRequestFormModel {
-  reasonCode: VoidReasonCode | '';
+  reasonCode: LoanEditReasonCode | VoidReasonCode | '';
   customReason: string;
 }
 
@@ -208,13 +213,15 @@ export default class ClientDetail {
         : { kind: 'required', message: 'Detallá el motivo en al menos 10 caracteres.' };
     });
   });
-  readonly isVoidCorrectionRequest = computed(
-    () => this.correctionDialogTarget()?.requestType !== 'edit_loan',
-  );
-  readonly correctionReasonOptions = computed(() =>
-    this.correctionDialogTarget()?.requestType === 'void_payment'
-      ? PAYMENT_VOID_REASON_OPTIONS
-      : LOAN_VOID_REASON_OPTIONS,
+  readonly correctionReasonOptions = computed(() => {
+    const requestType = this.correctionDialogTarget()?.requestType;
+    if (requestType === 'edit_loan') return LOAN_EDIT_REASON_OPTIONS;
+    return requestType === 'void_payment' ? PAYMENT_VOID_REASON_OPTIONS : LOAN_VOID_REASON_OPTIONS;
+  });
+  readonly correctionReasonLabel = computed(() =>
+    this.correctionDialogTarget()?.requestType === 'edit_loan'
+      ? 'Motivo de la edición'
+      : 'Motivo de la anulación',
   );
   readonly canRequestLoanEdit = computed(() => this.loan()?.status === 'active');
   readonly canRequestLoanVoid = computed(() => this.loan()?.status === 'active');
@@ -595,7 +602,10 @@ export default class ClientDetail {
 
     void submit(this.correctionRequestForm, async () => {
       const model = this.correctionRequestModel();
-      const reason = resolveVoidReason(model.reasonCode, model.customReason);
+      const reason =
+        target.requestType === 'edit_loan'
+          ? resolveLoanEditReason(model.reasonCode as LoanEditReasonCode | '', model.customReason)
+          : resolveVoidReason(model.reasonCode as VoidReasonCode | '', model.customReason);
       if (!reason) return;
 
       const receipt = await this.correctionRequestsStore.create({
@@ -628,7 +638,7 @@ export default class ClientDetail {
     this.correctionRequestsStore.clearError();
     this.correctionDialogTarget.set(target);
     this.correctionRequestModel.set({
-      reasonCode: target.requestType === 'edit_loan' ? 'other' : '',
+      reasonCode: '',
       customReason: '',
     });
     this.correctionRequestForm().reset();
