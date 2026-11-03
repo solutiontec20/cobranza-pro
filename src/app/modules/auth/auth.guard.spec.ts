@@ -1,66 +1,89 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import {
-  ActivatedRouteSnapshot,
-  CanActivateFn,
-  Router,
-  RouterStateSnapshot,
-} from '@angular/router';
+import { CanMatchFn, provideRouter, Route, UrlSegment, UrlTree } from '@angular/router';
 import { AuthService } from './auth.service';
-import { adminAreaGuard, collectorAreaGuard } from './auth.guard';
+import { adminCanMatch, collectorCanMatch } from './auth.guard';
 
-describe('role area guards', () => {
-  let role: 'admin' | 'supervisor' | 'collector' | null;
-  let createUrlTree: ReturnType<typeof vi.fn>;
-
-  const run = (guard: CanActivateFn) =>
-    TestBed.runInInjectionContext(() =>
-      guard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
-    );
+describe('role CanMatch guards', () => {
+  const auth = {
+    isAuthenticated: signal(false),
+    mustChangePin: signal(false),
+    isAdmin: signal(false),
+    isSupervisor: signal(false),
+    isCollector: signal(false),
+  };
 
   beforeEach(() => {
-    role = null;
-    createUrlTree = vi.fn((commands: string[]) => ({ commands }));
+    auth.isAuthenticated.set(false);
+    auth.mustChangePin.set(false);
+    auth.isAdmin.set(false);
+    auth.isSupervisor.set(false);
+    auth.isCollector.set(false);
 
     TestBed.configureTestingModule({
-      providers: [
-        {
-          provide: AuthService,
-          useValue: {
-            isAdmin: () => role === 'admin',
-            isSupervisor: () => role === 'supervisor',
-            isCollector: () => role === 'collector',
-          },
-        },
-        { provide: Router, useValue: { createUrlTree } },
-      ],
+      providers: [provideRouter([]), { provide: AuthService, useValue: auth }],
     });
   });
 
-  it('allows administrators and supervisors into the admin area', () => {
-    role = 'admin';
-    expect(run(adminAreaGuard)).toBe(true);
-
-    role = 'supervisor';
-    expect(run(adminAreaGuard)).toBe(true);
+  it('redirects unauthenticated users to login', () => {
+    expectGuardRedirect(collectorCanMatch, '/login');
+    expectGuardRedirect(adminCanMatch, '/login');
   });
 
-  it('redirects collectors away from the admin area', () => {
-    role = 'collector';
+  it('redirects users who must change their PIN before matching a role area', () => {
+    auth.isAuthenticated.set(true);
+    auth.mustChangePin.set(true);
 
-    expect(run(adminAreaGuard)).toEqual({ commands: ['/cobrador'] });
+    expectGuardRedirect(collectorCanMatch, '/cambiar-pin');
+    expectGuardRedirect(adminCanMatch, '/cambiar-pin');
   });
 
-  it('allows collectors into the collector area', () => {
-    role = 'collector';
+  it('allows collectors to match only the collector area', () => {
+    auth.isAuthenticated.set(true);
+    auth.isCollector.set(true);
 
-    expect(run(collectorAreaGuard)).toBe(true);
+    expect(runGuard(collectorCanMatch)).toBe(true);
+    expectGuardRedirect(adminCanMatch, '/cobrador');
   });
 
-  it('redirects privileged staff away from the collector area', () => {
-    role = 'admin';
-    expect(run(collectorAreaGuard)).toEqual({ commands: ['/admin'] });
+  it('allows administrators to match only the admin area', () => {
+    auth.isAuthenticated.set(true);
+    auth.isAdmin.set(true);
 
-    role = 'supervisor';
-    expect(run(collectorAreaGuard)).toEqual({ commands: ['/admin'] });
+    expect(runGuard(adminCanMatch)).toBe(true);
+    expectGuardRedirect(collectorCanMatch, '/admin');
   });
+
+  it('allows supervisors to match only the admin area', () => {
+    auth.isAuthenticated.set(true);
+    auth.isSupervisor.set(true);
+
+    expect(runGuard(adminCanMatch)).toBe(true);
+    expectGuardRedirect(collectorCanMatch, '/admin');
+  });
+
+  it('redirects an authenticated profile with no recognized role to login', () => {
+    auth.isAuthenticated.set(true);
+
+    expectGuardRedirect(collectorCanMatch, '/login');
+    expectGuardRedirect(adminCanMatch, '/login');
+  });
+
+  function runGuard(guard: CanMatchFn): boolean | UrlTree {
+    const result = TestBed.runInInjectionContext(() =>
+      guard({} as Route, [] as UrlSegment[], {} as Parameters<CanMatchFn>[2]),
+    );
+
+    if (typeof result === 'boolean' || result instanceof UrlTree) {
+      return result;
+    }
+
+    throw new Error('The role guard must return synchronously');
+  }
+
+  function expectGuardRedirect(guard: CanMatchFn, expectedUrl: string): void {
+    const result = runGuard(guard);
+    expect(result).toBeInstanceOf(UrlTree);
+    expect(result.toString()).toBe(expectedUrl);
+  }
 });

@@ -1,4 +1,12 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, effect, input } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  afterRenderEffect,
+  inject,
+  input,
+  viewChild,
+} from '@angular/core';
 import Chart from 'chart.js/auto';
 
 @Component({
@@ -9,33 +17,43 @@ import Chart from 'chart.js/auto';
     </div>
   `,
 })
-export class RecoveryChart implements AfterViewInit, OnDestroy {
+export class RecoveryChart {
   readonly totalCobrado = input.required<number>();
   readonly saldoPendiente = input.required<number>();
 
-  @ViewChild('donutChart') private donutChartRef!: ElementRef<HTMLCanvasElement>;
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly donutChartRef =
+    viewChild.required<ElementRef<HTMLCanvasElement>>('donutChart');
   private chartInstance: Chart | null = null;
 
   constructor() {
-    // Mantiene el gráfico sincronizado si los KPIs cambian mientras está montado.
-    effect(() => {
+    afterRenderEffect(() => {
       const cobrado = this.totalCobrado();
       const pendiente = this.saldoPendiente();
-      if (this.chartInstance) {
-        this.chartInstance.data.datasets[0].data = [cobrado, pendiente];
-        this.chartInstance.update();
+
+      if (!this.chartInstance) {
+        this.chartInstance = this.createChart(cobrado, pendiente);
+        return;
       }
+
+      this.chartInstance.data.datasets[0].data = [cobrado, pendiente];
+      this.chartInstance.update();
+    });
+
+    this.destroyRef.onDestroy(() => {
+      this.chartInstance?.destroy();
+      this.chartInstance = null;
     });
   }
 
-  ngAfterViewInit(): void {
-    this.chartInstance = new Chart(this.donutChartRef.nativeElement, {
+  private createChart(cobrado: number, pendiente: number): Chart {
+    return new Chart(this.donutChartRef().nativeElement, {
       type: 'doughnut',
       data: {
         labels: ['Cobrado', 'Pendiente'],
         datasets: [
           {
-            data: [this.totalCobrado(), this.saldoPendiente()],
+            data: [cobrado, pendiente],
             backgroundColor: ['#2563EB', '#DCE5F0'],
             hoverBackgroundColor: ['#1D4ED8', '#CBD5E1'],
           },
@@ -50,9 +68,5 @@ export class RecoveryChart implements AfterViewInit, OnDestroy {
         },
       },
     });
-  }
-
-  ngOnDestroy(): void {
-    this.chartInstance?.destroy();
   }
 }

@@ -1,9 +1,11 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { Component, DestroyRef, computed, inject, linkedSignal, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
+import { PaginatorModule } from 'primeng/paginator';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { SortIcon, TableModule } from 'primeng/table';
@@ -29,6 +31,7 @@ import { DailyControlStore } from './daily-control.store';
     FormsModule,
     InputTextModule,
     MessageModule,
+    PaginatorModule,
     PenCurrency,
     SelectModule,
     SkeletonModule,
@@ -42,11 +45,28 @@ export default class DailyControl {
   readonly store = inject(DailyControlStore);
   private readonly exportService = inject(DailyControlExportService);
   private readonly authService = inject(AuthService);
+  private readonly document = inject(DOCUMENT);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loadingRows = [1, 2, 3, 4, 5];
-  protected readonly selectedDate = signal(parseDateValue(this.store.filters().businessDate));
+  protected readonly pageSizeOptions = [10, 20, 50];
+  protected readonly first = signal(0);
+  protected readonly rows = signal(10);
+  protected readonly selectedDate = linkedSignal(() =>
+    parseDateValue(this.store.filters().businessDate),
+  );
   protected readonly exporting = signal<DailyControlExportFormat | null>(null);
   protected readonly exportError = signal<string | null>(null);
+  protected readonly pageFirst = computed(() => {
+    const total = this.store.visibleReport()?.rows.length ?? 0;
+    if (total === 0) return 0;
+    return Math.min(this.first(), Math.floor((total - 1) / this.rows()) * this.rows());
+  });
+  protected readonly paginatedRows = computed(() => {
+    const rows = this.store.visibleReport()?.rows ?? [];
+    const first = this.pageFirst();
+    return rows.slice(first, first + this.rows());
+  });
 
   protected readonly collectorOptions = computed(() => [
     { label: 'Todos los cobradores', value: null },
@@ -68,29 +88,48 @@ export default class DailyControl {
 
   constructor() {
     void this.store.initialize();
+
+    const refreshWhenVisible = (): void => {
+      if (this.document.visibilityState === 'visible') {
+        void this.store.refresh();
+      }
+    };
+
+    this.document.addEventListener('visibilitychange', refreshWhenVisible);
+    this.destroyRef.onDestroy(() => {
+      this.document.removeEventListener('visibilitychange', refreshWhenVisible);
+    });
   }
 
-  protected async changeDate(value: Date | null): Promise<void> {
+  protected changeDate(value: Date | null): void {
     if (!value) return;
-    this.selectedDate.set(value);
-    await this.store.updateFilters({ businessDate: toIsoDateLima(value) });
+    this.resetPage();
+    this.store.updateFilters({ businessDate: toIsoDateLima(value) });
   }
 
-  protected async changeCollector(value: string | null): Promise<void> {
-    await this.store.updateFilters({ collectorId: value });
+  protected changeCollector(value: string | null): void {
+    this.resetPage();
+    this.store.updateFilters({ collectorId: value });
   }
 
-  protected async changeStatus(value: DailyControlStatusFilter): Promise<void> {
-    await this.store.updateFilters({ status: value });
+  protected changeStatus(value: DailyControlStatusFilter): void {
+    this.resetPage();
+    this.store.updateFilters({ status: value });
   }
 
   protected updateSearch(event: Event): void {
+    this.resetPage();
     this.store.query.set((event.target as HTMLInputElement).value);
   }
 
-  protected async clearFilters(): Promise<void> {
-    await this.store.clearFilters();
-    this.selectedDate.set(parseDateValue(this.store.filters().businessDate));
+  protected clearFilters(): void {
+    this.resetPage();
+    this.store.clearFilters();
+  }
+
+  protected changePage(event: { first?: number; rows?: number }): void {
+    this.first.set(event.first ?? 0);
+    this.rows.set(event.rows ?? this.rows());
   }
 
   protected async exportReport(format: DailyControlExportFormat): Promise<void> {
@@ -126,5 +165,9 @@ export default class DailyControl {
     if (status === 'overdue') return 'danger';
     if (status === 'paid') return 'secondary';
     return 'success';
+  }
+
+  private resetPage(): void {
+    this.first.set(0);
   }
 }

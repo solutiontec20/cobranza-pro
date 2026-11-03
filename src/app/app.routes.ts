@@ -38,6 +38,7 @@ export const routes: Routes = [
       // Collector routes
       {
         path: 'cobrador',
+        canMatch: [collectorCanMatch],
         canActivate: [operationalGuard, collectorAreaGuard],
         loadChildren: () =>
           import('./modules/collector/collector.routes').then((m) => m.COLLECTOR_ROUTES),
@@ -45,6 +46,7 @@ export const routes: Routes = [
       // Admin routes
       {
         path: 'admin',
+        canMatch: [adminCanMatch],
         canActivate: [operationalGuard, adminAreaGuard],
         loadChildren: () => import('./modules/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
       },

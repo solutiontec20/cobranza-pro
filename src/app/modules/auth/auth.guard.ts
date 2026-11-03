@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { CanActivateFn, Router } from '@angular/router';
+import { CanActivateFn, CanMatchFn, Router } from '@angular/router';
 import { AuthService } from './auth.service';
 
 export const authGuard: CanActivateFn = () => {
@@ -28,26 +28,50 @@ export const operationalGuard: CanActivateFn = () => {
   return true;
 };
 
-export const adminAreaGuard: CanActivateFn = () => {
+export const collectorCanMatch: CanMatchFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  if (auth.isAdmin() || auth.isSupervisor()) {
-    return true;
+  if (!auth.isAuthenticated()) {
+    return router.createUrlTree(['/login']);
   }
 
-  return router.createUrlTree([auth.isCollector() ? '/cobrador' : '/login']);
-};
-
-export const collectorAreaGuard: CanActivateFn = () => {
-  const auth = inject(AuthService);
-  const router = inject(Router);
+  if (auth.mustChangePin()) {
+    return router.createUrlTree(['/cambiar-pin']);
+  }
 
   if (auth.isCollector()) {
     return true;
   }
 
-  return router.createUrlTree([auth.isAdmin() || auth.isSupervisor() ? '/admin' : '/login']);
+  if (auth.isAdmin() || auth.isSupervisor()) {
+    return router.createUrlTree(['/admin']);
+  }
+
+  return router.createUrlTree(['/login']);
+};
+
+export const adminCanMatch: CanMatchFn = () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+
+  if (!auth.isAuthenticated()) {
+    return router.createUrlTree(['/login']);
+  }
+
+  if (auth.mustChangePin()) {
+    return router.createUrlTree(['/cambiar-pin']);
+  }
+
+  if (auth.isAdmin() || auth.isSupervisor()) {
+    return true;
+  }
+
+  if (auth.isCollector()) {
+    return router.createUrlTree(['/cobrador']);
+  }
+
+  return router.createUrlTree(['/login']);
 };
 
 export const publicGuard: CanActivateFn = () => {
@@ -66,5 +90,9 @@ export const publicGuard: CanActivateFn = () => {
     return router.createUrlTree(['/cobrador']);
   }
 
-  return router.createUrlTree(['/admin']);
+  if (auth.isAdmin() || auth.isSupervisor()) {
+    return router.createUrlTree(['/admin']);
+  }
+
+  return true;
 };

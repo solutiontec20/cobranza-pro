@@ -91,6 +91,19 @@ describe('SupabaseDailyControlRepository', () => {
     });
   });
 
+  it('forwards an AbortSignal to the RPC request', async () => {
+    const abortSignal = new AbortController().signal;
+    const abortRequest = vi.fn().mockResolvedValue({ data: [reportRow()], error: null });
+    rpc.mockReturnValueOnce({ abortSignal: abortRequest });
+
+    await repository.getReport(
+      { businessDate: '2026-10-21', collectorId: null, status: 'all' },
+      abortSignal,
+    );
+
+    expect(abortRequest).toHaveBeenCalledWith(abortSignal);
+  });
+
   it('derives "paid" status once the balance reaches zero, regardless of overdue days', async () => {
     rpc.mockResolvedValueOnce({
       data: [reportRow({ balance_as_of: 0, overdue_days: 0, oldest_unpaid_due_date: null })],
