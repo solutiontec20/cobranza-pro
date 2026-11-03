@@ -43,7 +43,7 @@
         <span class="sr-only">Buscar cobrador</span>
         <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-muted-color" aria-hidden="true"></i>
         <input pInputText type="search" class="w-full pl-10" placeholder="Buscar por nombre, DNI o teléfono"
-          [value]="store.query()" (input)="store.query.set(searchValue($event))" />
+          [value]="store.query()" (input)="store.setQuery(searchValue($event))" />
       </label>
       <p class="text-sm text-muted-color" aria-live="polite">
         {{ store.filteredCollectors().length }} resultado(s)

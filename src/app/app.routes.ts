@@ -2,9 +2,9 @@ import { Routes } from '@angular/router';
 import { SupabaseCorrectionRequestRepository } from './core/adapters/supabase-correction-request.repository';
 import { CORRECTION_REQUEST_REPOSITORY } from './core/repositories/correction-request.repository';
 import {
-  adminAreaGuard,
+  adminCanMatch,
   authGuard,
-  collectorAreaGuard,
+  collectorCanMatch,
   operationalGuard,
   publicGuard,
 } from './modules/auth/auth.guard';
@@ -38,14 +38,16 @@ export const routes: Routes = [
       // Collector routes
       {
         path: 'cobrador',
-        canActivate: [operationalGuard, collectorAreaGuard],
+        canMatch: [collectorCanMatch],
+        canActivate: [operationalGuard],
         loadChildren: () =>
           import('./modules/collector/collector.routes').then((m) => m.COLLECTOR_ROUTES),
       },
       // Admin routes
       {
         path: 'admin',
-        canActivate: [operationalGuard, adminAreaGuard],
+        canMatch: [adminCanMatch],
+        canActivate: [operationalGuard],
         loadChildren: () => import('./modules/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
       },
       // Redirects

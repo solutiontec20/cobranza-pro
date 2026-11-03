@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import { form, FormField, max, maxLength, min, required, submit, validate } from '@angular/forms/signals';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
@@ -77,7 +77,7 @@ export default class AdminCashClosure {
 
   protected readonly loadingRows = [1, 2, 3];
   protected readonly categoryOptions = CATEGORY_OPTIONS;
-  protected readonly selectedDate = signal(parseDateValue(this.store.businessDate()));
+  protected readonly selectedDate = linkedSignal(() => parseDateValue(this.store.businessDate()));
 
   // Opening / allowance dialogs share the same form shape.
   protected readonly openingDialogVisible = signal(false);
@@ -134,7 +134,6 @@ export default class AdminCashClosure {
 
   protected async changeDate(value: Date | null): Promise<void> {
     if (!value) return;
-    this.selectedDate.set(value);
     this.store.setBusinessDate(toIsoDateLima(value));
   }
 

@@ -137,7 +137,7 @@
         </div>
       } @else {
         <div class="divide-y divide-surface lg:hidden">
-          @for (row of report.rows; track row.loanId) {
+          @for (row of paginatedRows(); track row.loanId) {
             <article class="p-4" [class]="row.status === 'overdue' ? 'bg-red-50 dark:bg-red-950/30' : ''">
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0"><h3 class="truncate font-semibold text-color">{{ row.clientName }}</h3>
@@ -153,10 +153,24 @@
               @if (row.oldestUnpaidDueDate) { <p class="mt-3 text-xs text-muted-color">Cuota impaga más antigua: {{ row.oldestUnpaidDueDate | esDate:'short' }}</p> }
             </article>
           }
+          @if (report.rows.length > pageSizeOptions[0]) {
+            <p-paginator
+              styleClass="border-t border-surface"
+              [first]="pageFirst()"
+              [rows]="rows()"
+              [totalRecords]="report.rows.length"
+              [rowsPerPageOptions]="pageSizeOptions"
+              (onPageChange)="changePage($event)"
+              aria-label="Paginación del detalle de cartera"
+            />
+          }
         </div>
 
         <div class="hidden lg:block">
-          <p-table [value]="report.rows" [rows]="10" [paginator]="report.rows.length > 10" [scrollable]="true"
+          <p-table [value]="report.rows" [first]="pageFirst()" [rows]="rows()"
+            [rowsPerPageOptions]="pageSizeOptions"
+            [paginator]="report.rows.length > pageSizeOptions[0]"
+            (onPage)="changePage($event)" [scrollable]="true"
             scrollHeight="34rem" sortField="overdueDays" [sortOrder]="-1" styleClass="p-datatable-sm">
             <ng-template #header>
               <tr>
