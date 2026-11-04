@@ -70,7 +70,6 @@ export const adminCanMatch: CanMatchFn = () => {
   if (auth.isCollector()) {
     return router.createUrlTree(['/cobrador']);
   }
-
   return router.createUrlTree(['/login']);
 };
 

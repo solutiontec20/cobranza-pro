@@ -206,12 +206,12 @@ select results_eq(
     order by i.installment_number
   $$,
   array[
-    current_date,
     current_date + 7,
     current_date + 14,
-    current_date + 21
+    current_date + 21,
+    current_date + 28
   ],
-  'A weekly schedule lands on the same weekday every week'
+  'A weekly schedule starts seven days later and stays on the same weekday'
 );
 
 select * from finish();

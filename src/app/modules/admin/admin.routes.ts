@@ -32,17 +32,11 @@ export const ADMIN_ROUTES: Routes = [
   {
     path: 'clientes',
     loadComponent: () => import('./clients/clients'),
-    providers: [
-      ClientsStore,
-      { provide: CLIENT_REPOSITORY, useClass: SupabaseClientRepository },
-    ],
+    providers: [ClientsStore, { provide: CLIENT_REPOSITORY, useClass: SupabaseClientRepository }],
   },
   {
     path: 'prestamos',
-    providers: [
-      LoansStore,
-      { provide: LOAN_REPOSITORY, useClass: SupabaseLoanRepository },
-    ],
+    providers: [LoansStore, { provide: LOAN_REPOSITORY, useClass: SupabaseLoanRepository }],
     children: [
       {
         path: '',
@@ -83,6 +77,10 @@ export const ADMIN_ROUTES: Routes = [
       { provide: CASH_CLOSURE_REPOSITORY, useClass: SupabaseCashClosureRepository },
     ],
   },
+  {
+    path: 'solicitudes',
+    title: 'Solicitudes de corrección | CobranzaPro',
+    loadComponent: () => import('./correction-requests/correction-requests'),
+  },
   { path: 'auditoria', loadComponent: () => import('./audit/audit') },
 ];
-

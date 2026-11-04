@@ -240,7 +240,7 @@ const emptyModel = (): NewClientFormModel => ({
           </div>
 
           <div>
-            <label for="new-client-start" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Fecha de inicio</label>
+            <label for="new-client-start" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Fecha del préstamo</label>
             <input id="new-client-start" type="date" [formField]="clientForm.startedOn"
               class="w-full rounded-md border border-surface-300 px-3 py-2.5 text-surface-950 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-surface-600 dark:bg-surface-950 dark:text-surface-0" />
             @if (clientForm.startedOn().touched() && clientForm.startedOn().invalid()) {
@@ -313,7 +313,7 @@ export default class CollectorClients {
     min(path.interestRate, 0, { message: 'La tasa no puede ser negativa.' });
     min(path.installmentCount, 1, { message: 'Debe existir al menos una cuota.' });
     max(path.installmentCount, 32767, { message: 'La cantidad de cuotas es demasiado alta.' });
-    required(path.startedOn, { message: 'Seleccioná la fecha de inicio.' });
+    required(path.startedOn, { message: 'Seleccioná la fecha del préstamo.' });
     validate(path.installmentCount, ({ valueOf }) => {
       const summary = calculateLoanSummary(
         valueOf(path.principal),
