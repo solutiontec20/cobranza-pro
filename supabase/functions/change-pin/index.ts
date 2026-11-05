@@ -57,6 +57,25 @@ export default {
       });
     }
 
+    const { data: accessRows, error: accessError } = await ctx.supabase.rpc(
+      'current_access_status',
+    );
+    const accessStatus = accessRows?.[0];
+
+    if (accessError || !accessStatus) {
+      return jsonResponse(503, {
+        error: 'ACCESS_STATUS_UNAVAILABLE',
+        message: 'No se pudo verificar el horario de acceso. Intentá nuevamente.',
+      });
+    }
+
+    if (!accessStatus.allowed) {
+      return jsonResponse(403, {
+        error: 'COLLECTOR_ACCESS_CLOSED',
+        message: 'El acceso para cobradores está disponible de 7:00 a. m. a 8:00 p. m.',
+      });
+    }
+
     if (isWeakPin(body.newPin, profile.dni)) {
       return jsonResponse(400, {
         error: 'PIN_TOO_WEAK',

@@ -6,11 +6,19 @@ export const authGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  if (auth.isAuthenticated()) {
-    return true;
+  if (!auth.isAuthenticated()) {
+    return router.createUrlTree(['/login']);
   }
 
-  return router.createUrlTree(['/login']);
+  if (!auth.isCollector()) return true;
+
+  return auth.ensureCurrentAccess().then((allowed) =>
+    allowed
+      ? true
+      : router.createUrlTree(['/login'], {
+          queryParams: auth.collectorAccessClosed() ? { accessClosed: '1' } : undefined,
+        }),
+  );
 };
 
 export const operationalGuard: CanActivateFn = () => {
@@ -81,12 +89,22 @@ export const publicGuard: CanActivateFn = () => {
     return true;
   }
 
-  if (auth.mustChangePin()) {
-    return router.createUrlTree(['/cambiar-pin']);
+  if (auth.isCollector()) {
+    return auth.ensureCurrentAccess().then((allowed) => {
+      if (!allowed) {
+        return auth.collectorAccessClosed()
+          ? router.createUrlTree(['/login'], { queryParams: { accessClosed: '1' } })
+          : true;
+      }
+
+      return auth.mustChangePin()
+        ? router.createUrlTree(['/cambiar-pin'])
+        : router.createUrlTree(['/cobrador']);
+    });
   }
 
-  if (auth.isCollector()) {
-    return router.createUrlTree(['/cobrador']);
+  if (auth.mustChangePin()) {
+    return router.createUrlTree(['/cambiar-pin']);
   }
 
   if (auth.isAdmin() || auth.isSupervisor()) {
