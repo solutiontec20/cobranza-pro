@@ -1,11 +1,17 @@
 import { inject, Service } from '@angular/core';
-import { SupabaseClient } from '@supabase/supabase-js';
+import {
+  RealtimePostgresChangesPayload,
+  SupabaseClient,
+} from '@supabase/supabase-js';
 
 import { AppError } from '../errors/app-error';
 import {
   CorrectionRequest,
+  CorrectionRequestChange,
+  CorrectionRequestChangeEvent,
   CorrectionRequestReceipt,
   CorrectionRequestResolution,
+  CorrectionRequestSubscription,
   CreateCorrectionRequestInput,
   RejectCorrectionRequestInput,
   ResolveCorrectionRequestInput,
@@ -16,6 +22,8 @@ import { Database, Json } from '../supabase/database.types';
 import { SUPABASE } from '../supabase/supabase-client';
 
 type ListRow = Database['public']['Functions']['list_correction_requests']['Returns'][number];
+type MyListRow = Database['public']['Functions']['list_my_correction_requests']['Returns'][number];
+type RealtimeRow = Database['public']['Tables']['correction_requests']['Row'];
 type CreateRow = Database['public']['Functions']['create_correction_request']['Returns'][number];
 type ResolutionRow =
   Database['public']['Functions']['reject_correction_request']['Returns'][number];
@@ -39,6 +47,75 @@ export class SupabaseCorrectionRequestRepository implements CorrectionRequestRep
 
     if (error) throw this.toAppError(error, 'No se pudo cargar el contador de solicitudes.');
     return Number(data ?? 0);
+  }
+
+  async listMine(limit = 20): Promise<CorrectionRequest[]> {
+    const { data, error } = await this.supabase.rpc('list_my_correction_requests', {
+      p_limit: limit,
+    });
+
+    if (error) throw this.toAppError(error, 'No se pudieron cargar tus solicitudes.');
+    return (data ?? []).map((row) => this.mapRequest(row));
+  }
+
+  async countMineUnread(): Promise<number> {
+    const { data, error } = await this.supabase.rpc('count_my_unread_correction_requests');
+
+    if (error) throw this.toAppError(error, 'No se pudo cargar el contador de notificaciones.');
+    return Number(data ?? 0);
+  }
+
+  async markMineRead(): Promise<number> {
+    const { data, error } = await this.supabase.rpc('mark_my_correction_requests_read');
+
+    if (error) throw this.toAppError(error, 'No se pudieron marcar las notificaciones como leídas.');
+    return Number(data ?? 0);
+  }
+
+  subscribe(
+    subscription: CorrectionRequestSubscription,
+    onChange: (change: CorrectionRequestChange) => void,
+    onStatus?: Parameters<CorrectionRequestRepository['subscribe']>[2],
+  ): () => void {
+    const channel = this.supabase.channel(`correction-requests:${subscription.userId}`);
+    const emit = (
+      eventType: CorrectionRequestChangeEvent,
+      payload: RealtimePostgresChangesPayload<RealtimeRow>,
+    ) => {
+      const change = this.mapRealtimeChange(eventType, payload.new);
+      if (change) onChange(change);
+    };
+
+    if (subscription.role === 'collector') {
+      channel.on<RealtimeRow>(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'correction_requests',
+          filter: `requested_by=eq.${subscription.userId}`,
+        },
+        (payload) => emit('UPDATE', payload),
+      );
+    } else {
+      channel
+        .on<RealtimeRow>(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'correction_requests' },
+          (payload) => emit('INSERT', payload),
+        )
+        .on<RealtimeRow>(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'correction_requests' },
+          (payload) => emit('UPDATE', payload),
+        );
+    }
+
+    channel.subscribe((status) => onStatus?.(status));
+
+    return () => {
+      void this.supabase.removeChannel(channel);
+    };
   }
 
   async create(input: CreateCorrectionRequestInput): Promise<CorrectionRequestReceipt> {
@@ -111,7 +188,7 @@ export class SupabaseCorrectionRequestRepository implements CorrectionRequestRep
     );
   }
 
-  private mapRequest(row: ListRow): CorrectionRequest {
+  private mapRequest(row: ListRow | MyListRow): CorrectionRequest {
     return {
       id: row.id,
       requestType: row.request_type,
@@ -141,6 +218,35 @@ export class SupabaseCorrectionRequestRepository implements CorrectionRequestRep
       paymentDate: row.payment_date ?? null,
       paymentStatus: row.payment_status ?? null,
       paymentMethod: row.payment_method ?? null,
+      readAt: 'read_at' in row ? row.read_at ?? null : null,
+    };
+  }
+
+  private mapRealtimeChange(
+    eventType: CorrectionRequestChangeEvent,
+    row: Partial<RealtimeRow>,
+  ): CorrectionRequestChange | null {
+    if (
+      !row.id ||
+      !row.request_type ||
+      !row.status ||
+      !row.loan_id ||
+      !row.requested_by
+    ) {
+      return null;
+    }
+
+    return {
+      eventType,
+      requestId: row.id,
+      requestType: row.request_type,
+      status: row.status,
+      loanId: row.loan_id,
+      paymentId: row.payment_id ?? null,
+      requestedBy: row.requested_by,
+      handledBy: row.handled_by ?? null,
+      handledAt: row.handled_at ?? null,
+      resolutionNote: row.resolution_note ?? null,
     };
   }
 

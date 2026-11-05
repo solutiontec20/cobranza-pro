@@ -27,7 +27,7 @@
       ></i>
     </button>
 
-    @if (canReviewRequests()) {
+    @if (canUseNotifications()) {
       <div class="relative">
         <button
           pButton
@@ -35,24 +35,22 @@
           [rounded]="true"
           [text]="true"
           class="app-icon-button flex h-10 w-10 items-center justify-center p-0"
-          aria-label="Solicitudes de corrección"
-          [attr.aria-description]="
-            correctionRequestsStore.pendingCount() + ' solicitudes pendientes'
-          "
-          pTooltip="Solicitudes de corrección"
+          aria-label="Notificaciones"
+          [attr.aria-description]="notificationDescription()"
+          pTooltip="Notificaciones"
           (click)="openNotifications($event)"
         >
           <i class="pi pi-bell text-xl" aria-hidden="true"></i>
         </button>
-        @if (correctionRequestsStore.pendingCount() > 0) {
+        @if (notificationCount() > 0) {
           <span
             class="pointer-events-none absolute -top-0.5 -right-1 flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white"
             aria-hidden="true"
           >
             {{
-              correctionRequestsStore.pendingCount() > 99
+              notificationCount() > 99
                 ? '99+'
-                : correctionRequestsStore.pendingCount()
+                : notificationCount()
             }}
           </span>
         }
@@ -60,22 +58,22 @@
 
       <p-popover
         #notificationPopover
-        ariaLabel="Solicitudes de corrección pendientes"
+        ariaLabel="Notificaciones de solicitudes de corrección"
         styleClass="w-[min(24rem,calc(100vw-1.5rem))]"
       >
         <div class="flex flex-col gap-3">
           <div class="flex items-center justify-between gap-3">
             <div>
               <p class="m-0 text-sm font-bold text-surface-950 dark:text-surface-0">
-                Solicitudes pendientes
+                {{ notificationHeading() }}
               </p>
               <p class="mt-0.5 mb-0 text-xs text-surface-500">
-                {{ correctionRequestsStore.pendingCount() }} por revisar
+                {{ notificationDescription() }}
               </p>
             </div>
             <a
               pButton
-              routerLink="/admin/solicitudes"
+              [routerLink]="authService.isCollector() ? '/cobrador' : '/admin/solicitudes'"
               size="small"
               variant="text"
               (click)="notificationPopover.hide()"
@@ -84,17 +82,17 @@
             </a>
           </div>
 
-          @if (correctionRequestsStore.recentPending().length === 0) {
+          @if (notifications().length === 0) {
             <div
               class="rounded-lg bg-surface-50 p-4 text-center text-sm text-surface-500 dark:bg-surface-800"
             >
-              No hay solicitudes pendientes.
+              No hay notificaciones de solicitudes.
             </div>
           } @else {
             <div class="flex max-h-80 flex-col gap-2 overflow-y-auto">
-              @for (request of correctionRequestsStore.recentPending(); track request.id) {
+              @for (request of notifications(); track request.id) {
                 <a
-                  [routerLink]="['/admin/solicitudes']"
+                  [routerLink]="notificationLink(request)"
                   class="rounded-lg border border-surface-200 p-3 text-inherit no-underline transition-colors hover:bg-surface-50 focus-visible:outline-2 focus-visible:outline-primary dark:border-surface-700 dark:hover:bg-surface-800"
                   (click)="notificationPopover.hide()"
                 >
@@ -103,10 +101,22 @@
                       <p
                         class="m-0 truncate text-sm font-semibold text-surface-950 dark:text-surface-0"
                       >
-                        {{ request.customerName }}
+                        {{ requestTypeLabel(request.requestType) }} · {{ request.customerName }}
                       </p>
                       <p class="mt-1 mb-0 text-xs text-surface-500">
-                        {{ request.collectorName }} ·
+                        @if (authService.isCollector()) {
+                          <span
+                            class="font-semibold"
+                            [class.text-green-600]="request.status === 'resolved'"
+                            [class.text-red-600]="request.status === 'rejected'"
+                            [class.text-amber-600]="request.status === 'pending'"
+                          >
+                            {{ statusLabel(request) }}
+                          </span>
+                          ·
+                        } @else {
+                          {{ request.collectorName }} ·
+                        }
                         {{ request.createdAt | esDate: 'short-datetime' }}
                       </p>
                     </div>

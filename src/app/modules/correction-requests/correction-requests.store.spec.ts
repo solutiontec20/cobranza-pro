@@ -35,6 +35,7 @@ const request: CorrectionRequest = {
   paymentDate: '2026-11-02',
   paymentStatus: 'posted',
   paymentMethod: 'cash',
+  readAt: null,
 };
 
 describe('CorrectionRequestsStore', () => {
@@ -44,11 +45,31 @@ describe('CorrectionRequestsStore', () => {
       typeof vi.fn<CorrectionRequestRepository[K]>
     >;
   };
+  let emitChange: Parameters<CorrectionRequestRepository['subscribe']>[1];
+  let emitStatus: NonNullable<Parameters<CorrectionRequestRepository['subscribe']>[2]>;
+  let unsubscribe: () => void;
+  let unsubscribeCalls: number;
 
   beforeEach(() => {
+    unsubscribeCalls = 0;
+    unsubscribe = () => {
+      unsubscribeCalls += 1;
+    };
     repository = {
       list: vi.fn<CorrectionRequestRepository['list']>().mockResolvedValue([request]),
+      listMine: vi.fn<CorrectionRequestRepository['listMine']>().mockResolvedValue([request]),
       countPending: vi.fn<CorrectionRequestRepository['countPending']>().mockResolvedValue(1),
+      countMineUnread: vi
+        .fn<CorrectionRequestRepository['countMineUnread']>()
+        .mockResolvedValue(0),
+      markMineRead: vi.fn<CorrectionRequestRepository['markMineRead']>().mockResolvedValue(0),
+      subscribe: vi.fn<CorrectionRequestRepository['subscribe']>().mockImplementation(
+        (_subscription, onChange, onStatus) => {
+          emitChange = onChange;
+          emitStatus = onStatus ?? vi.fn();
+          return unsubscribe;
+        },
+      ),
       create: vi.fn<CorrectionRequestRepository['create']>().mockResolvedValue({
         requestId: 'request-1',
         requestType: 'void_payment',
@@ -99,6 +120,67 @@ describe('CorrectionRequestsStore', () => {
     expect(receipt?.requestId).toBe('request-1');
     expect(repository.list).not.toHaveBeenCalled();
     expect(repository.countPending).not.toHaveBeenCalled();
+  });
+
+  it('loads collector notifications and subscribes only once for the authenticated profile', async () => {
+    await store.initializeNotifications('collector-1', 'collector');
+
+    expect(repository.subscribe).toHaveBeenCalledWith(
+      { userId: 'collector-1', role: 'collector' },
+      expect.any(Function),
+      expect.any(Function),
+    );
+    expect(repository.listMine).toHaveBeenCalledWith(10);
+    expect(repository.countMineUnread).toHaveBeenCalled();
+    expect(store.myRequests()).toEqual([request]);
+  });
+
+  it('marks resolved collector notifications as read locally after the RPC succeeds', async () => {
+    repository.listMine.mockResolvedValue([{ ...request, status: 'resolved' }]);
+    repository.countMineUnread.mockResolvedValue(1);
+    repository.markMineRead.mockResolvedValue(1);
+    await store.initializeNotifications('collector-1', 'collector');
+
+    await store.markMineRead();
+
+    expect(repository.markMineRead).toHaveBeenCalled();
+    expect(store.unreadCount()).toBe(0);
+    expect(store.myRequests()[0]?.readAt).not.toBeNull();
+  });
+
+  it('reconciles the collector inbox when their request is resolved in realtime', async () => {
+    await store.initializeNotifications('collector-1', 'collector');
+    repository.listMine.mockResolvedValue([{ ...request, status: 'resolved' }]);
+    repository.countMineUnread.mockResolvedValue(1);
+
+    emitChange({
+      eventType: 'UPDATE',
+      requestId: 'request-1',
+      requestType: 'void_payment',
+      status: 'resolved',
+      loanId: 'loan-1',
+      paymentId: 'payment-1',
+      requestedBy: 'collector-1',
+      handledBy: 'admin-1',
+      handledAt: '2026-11-01T13:00:00Z',
+      resolutionNote: 'Pago duplicado confirmado.',
+    });
+
+    await vi.waitFor(() => expect(store.unreadCount()).toBe(1));
+    expect(store.lastChange()?.status).toBe('resolved');
+    expect(store.myRequests()[0]?.status).toBe('resolved');
+  });
+
+  it('reconciles persisted notifications after a realtime reconnect and cleans up the channel', async () => {
+    await store.initializeNotifications('collector-1', 'collector');
+    repository.listMine.mockClear();
+
+    emitStatus('SUBSCRIBED');
+    await vi.waitFor(() => expect(repository.listMine).toHaveBeenCalled());
+
+    store.disconnectNotifications();
+    expect(unsubscribeCalls).toBe(1);
+    expect(store.realtimeConnected()).toBe(false);
   });
 
   it('resolves payment voiding and refreshes the inbox', async () => {

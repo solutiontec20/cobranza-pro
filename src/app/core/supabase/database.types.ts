@@ -340,6 +340,39 @@ export type Database = {
           },
         ];
       };
+      correction_request_reads: {
+        Row: {
+          read_at: string;
+          request_id: string;
+          user_id: string;
+        };
+        Insert: {
+          read_at?: string;
+          request_id: string;
+          user_id: string;
+        };
+        Update: {
+          read_at?: string;
+          request_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'correction_request_reads_request_id_fkey';
+            columns: ['request_id'];
+            isOneToOne: false;
+            referencedRelation: 'correction_requests';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'correction_request_reads_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       customers: {
         Row: {
           active: boolean;
@@ -1013,6 +1046,10 @@ export type Database = {
           total_amount: number;
         }[];
       };
+      count_my_unread_correction_requests: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
+      };
       count_pending_correction_requests: { Args: Record<PropertyKey, never>; Returns: number };
       create_correction_request: {
         Args: {
@@ -1064,6 +1101,44 @@ export type Database = {
           resolution_note: string;
           status: Database['public']['Enums']['correction_request_status'];
         }[];
+      };
+      list_my_correction_requests: {
+        Args: { p_limit?: number };
+        Returns: {
+          collector_id: string;
+          collector_name: string;
+          created_at: string;
+          customer_document: string;
+          customer_id: string;
+          customer_name: string;
+          handled_at: string;
+          handled_by: string;
+          id: string;
+          loan_frequency: Database['public']['Enums']['loan_frequency'];
+          loan_id: string;
+          loan_installment_count: number;
+          loan_interest_rate: number;
+          loan_principal: number;
+          loan_started_on: string;
+          loan_status: Database['public']['Enums']['loan_status'];
+          loan_total: number;
+          payment_amount: number;
+          payment_date: string;
+          payment_id: string;
+          payment_method: string;
+          payment_status: Database['public']['Enums']['payment_status'];
+          proposed_changes: Json;
+          read_at: string;
+          reason: string;
+          request_type: Database['public']['Enums']['correction_request_type'];
+          requested_by: string;
+          resolution_note: string;
+          status: Database['public']['Enums']['correction_request_status'];
+        }[];
+      };
+      mark_my_correction_requests_read: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
       };
       register_cash_allowance: {
         Args: {

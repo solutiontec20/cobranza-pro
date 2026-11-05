@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(62);
+select plan(77);
 
 insert into auth.users (id, email)
 values
@@ -29,6 +29,7 @@ values
   ('92000000-0000-0000-0000-000000000005', '92000005', 'Other Portfolio Customer', '91000000-0000-0000-0000-000000000002', '91000000-0000-0000-0000-000000000004');
 
 select has_table('public', 'correction_requests', 'Correction requests are persisted');
+select has_table('public', 'correction_request_reads', 'Correction notification reads are persisted');
 
 select results_eq(
   $$ select unnest(enum_range(null::public.correction_request_type))::text $$,
@@ -40,11 +41,29 @@ select ok(
   (select relrowsecurity from pg_class where oid = 'public.correction_requests'::regclass),
   'Correction requests have RLS enabled'
 );
+select ok(
+  (select relrowsecurity from pg_class where oid = 'public.correction_request_reads'::regclass),
+  'Correction notification reads have RLS enabled'
+);
 
 select ok(has_table_privilege('authenticated', 'public.correction_requests', 'SELECT'), 'Authenticated users receive SELECT only');
 select ok(not has_table_privilege('authenticated', 'public.correction_requests', 'INSERT'), 'Authenticated users cannot insert requests directly');
 select ok(not has_table_privilege('authenticated', 'public.correction_requests', 'UPDATE'), 'Authenticated users cannot update requests directly');
 select ok(not has_table_privilege('authenticated', 'public.correction_requests', 'DELETE'), 'Authenticated users cannot delete requests directly');
+select ok(
+  not has_table_privilege('authenticated', 'public.correction_request_reads', 'SELECT'),
+  'Read receipts are only exposed through scoped RPCs'
+);
+select ok(
+  exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'correction_requests'
+  ),
+  'Correction requests are published to Supabase Realtime'
+);
 select ok(
   has_function_privilege('authenticated', 'public.create_correction_request(public.correction_request_type,uuid,text,uuid,jsonb)', 'EXECUTE'),
   'Authenticated callers can execute request creation subject to role checks'
@@ -56,6 +75,22 @@ select ok(
 select ok(
   not has_function_privilege('anon', 'public.resolve_void_loan_request(uuid,text)', 'EXECUTE'),
   'Anonymous callers cannot execute financial resolution'
+);
+select ok(
+  has_function_privilege('authenticated', 'public.list_my_correction_requests(integer)', 'EXECUTE'),
+  'Collectors can execute their scoped notification list'
+);
+select ok(
+  not has_function_privilege('anon', 'public.list_my_correction_requests(integer)', 'EXECUTE'),
+  'Anonymous callers cannot list collector notifications'
+);
+select ok(
+  has_function_privilege('authenticated', 'public.count_my_unread_correction_requests()', 'EXECUTE'),
+  'Collectors can count their unread correction notifications'
+);
+select ok(
+  has_function_privilege('authenticated', 'public.mark_my_correction_requests_read()', 'EXECUTE'),
+  'Collectors can mark their own correction notifications as read'
 );
 
 set local role authenticated;
@@ -539,6 +574,69 @@ select throws_ok(
 );
 
 select is((select count(*) from public.correction_requests), 6::bigint, 'All request identities and lifecycle history remain persisted');
+
+set local role authenticated;
+set local request.jwt.claim.sub = '91000000-0000-0000-0000-000000000001';
+
+select is(
+  (select count(*) from public.list_my_correction_requests(100)),
+  (select count(*) from public.correction_requests where requested_by = auth.uid()),
+  'Collector notification list contains every request created by that collector'
+);
+select is(
+  public.count_my_unread_correction_requests(),
+  (
+    select count(*)
+    from public.correction_requests
+    where requested_by = auth.uid()
+      and status in ('resolved', 'rejected')
+  ),
+  'Unread count includes resolved and rejected requests only'
+);
+select is(
+  public.mark_my_correction_requests_read(),
+  (
+    select count(*)
+    from public.correction_requests
+    where requested_by = auth.uid()
+      and status in ('resolved', 'rejected')
+  ),
+  'Collector marks every resolved notification as read once'
+);
+select is(
+  public.count_my_unread_correction_requests(),
+  0::bigint,
+  'No unread correction notifications remain after marking them read'
+);
+
+reset role;
+
+select is(
+  (select count(*) from public.correction_request_reads where user_id = '91000000-0000-0000-0000-000000000001'),
+  (
+    select count(*)
+    from public.correction_requests
+    where requested_by = '91000000-0000-0000-0000-000000000001'
+      and status in ('resolved', 'rejected')
+  ),
+  'Read receipts remain scoped to the requesting collector'
+);
+
+set local role authenticated;
+set local request.jwt.claim.sub = '91000000-0000-0000-0000-000000000002';
+
+select is(
+  (select count(*) from public.list_my_correction_requests(100)),
+  0::bigint,
+  'Another collector cannot list the first collector notifications'
+);
+select is(
+  public.count_my_unread_correction_requests(),
+  0::bigint,
+  'Another collector receives no unread notification count'
+);
+
+reset role;
 
 select * from finish();
 
