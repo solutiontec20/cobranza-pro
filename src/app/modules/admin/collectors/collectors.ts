@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { form, FormField, minLength, pattern, required, submit } from '@angular/forms/signals';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -43,6 +43,7 @@ export default class Collectors {
   protected readonly editVisible = signal(false);
   protected readonly resetResult = signal<{ collectorName: string; temporaryPin: string } | null>(null);
   protected readonly selectedCollector = signal<Collector | null>(null);
+  private readonly editBaseline = signal<{ fullName: string; phone: string | null } | null>(null);
 
   protected readonly createModel = signal({ ...EMPTY_CREATE_MODEL });
   protected readonly createForm = form(this.createModel, (path) => {
@@ -75,6 +76,15 @@ export default class Collectors {
     });
     required(path.reason, { message: 'Ingresá el motivo de la edición.' });
     minLength(path.reason, 5, { message: 'Detallá el motivo en al menos 5 caracteres.' });
+  });
+  protected readonly hasEditChanges = computed(() => {
+    const baseline = this.editBaseline();
+    if (!baseline) return false;
+    const value = this.editModel();
+    return (
+      baseline.fullName !== value.fullName.trim() ||
+      baseline.phone !== (value.phone.trim() || null)
+    );
   });
 
   constructor() {
@@ -178,6 +188,10 @@ export default class Collectors {
   protected openEditDialog(collector: Collector): void {
     this.store.clearError();
     this.selectedCollector.set(collector);
+    this.editBaseline.set({
+      fullName: collector.fullName,
+      phone: collector.phone ?? null,
+    });
     this.editModel.set({
       fullName: collector.fullName,
       phone: collector.phone ?? '',
@@ -189,7 +203,7 @@ export default class Collectors {
 
   protected editCollector(): void {
     const collector = this.selectedCollector();
-    if (!collector) return;
+    if (!collector || !this.hasEditChanges()) return;
 
     void submit(this.editForm, async () => {
       const value = this.editModel();

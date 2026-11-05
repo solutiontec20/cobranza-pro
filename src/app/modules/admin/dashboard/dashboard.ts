@@ -1,14 +1,15 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { SkeletonModule } from 'primeng/skeleton';
 import { MessageModule } from 'primeng/message';
+import { RouterLink } from '@angular/router';
 import { AdminDashboardStore } from './admin-dashboard.store';
 import { RecoveryChart } from './recovery-chart';
 import { currentLimaDate, formatEsDate } from '../../../core/calculations/date-time';
 import { PenCurrency } from '../../../shared/pipes/pen-currency';
+import { CollectorPerformanceTable } from './collector-performance-table';
 
 const EMPTY_BUCKET = { count: 0, percent: 0 };
 
@@ -17,16 +18,17 @@ const EMPTY_BUCKET = { count: 0, percent: 0 };
   imports: [
     CardModule,
     ButtonModule,
-    TableModule,
     ProgressBarModule,
     SkeletonModule,
     MessageModule,
+    RouterLink,
     PenCurrency,
     RecoveryChart,
+    CollectorPerformanceTable,
   ],
   templateUrl: './dashboard.html',
 })
-export default class Dashboard {
+export default class Dashboard implements OnInit, OnDestroy {
   protected readonly store = inject(AdminDashboardStore);
 
   protected readonly today = formatEsDate(currentLimaDate(), 'long');
@@ -58,8 +60,29 @@ export default class Dashboard {
   );
 
   protected readonly collectorPerformance = computed(() => this.store.collectorPerformance());
+  protected readonly isDesktop = signal(
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches,
+  );
+
+  private desktopQuery?: MediaQueryList;
+  private desktopQueryListener?: (event: MediaQueryListEvent) => void;
 
   constructor() {
     void this.store.load();
+  }
+
+  ngOnInit(): void {
+    if (typeof window === 'undefined') return;
+
+    this.desktopQuery = window.matchMedia('(min-width: 1024px)');
+    this.isDesktop.set(this.desktopQuery.matches);
+    this.desktopQueryListener = (event) => this.isDesktop.set(event.matches);
+    this.desktopQuery.addEventListener('change', this.desktopQueryListener);
+  }
+
+  ngOnDestroy(): void {
+    if (this.desktopQueryListener) {
+      this.desktopQuery?.removeEventListener('change', this.desktopQueryListener);
+    }
   }
 }

@@ -146,6 +146,21 @@ export class LoansStore {
   }
 
   async update(input: UpdateLoanInput): Promise<boolean> {
+    const current =
+      this.selectedDetail()?.loan.id === input.loanId
+        ? this.selectedDetail()?.loan
+        : this.loans().find((loan) => loan.id === input.loanId);
+    if (
+      current &&
+      current.principal === input.principal &&
+      current.interestRate === input.interestRate &&
+      current.frequency === input.frequency &&
+      current.installmentCount === input.installmentCount &&
+      current.startedOn === input.startedOn
+    ) {
+      return false;
+    }
+
     this.saving.set(true);
     this.error.set(null);
 

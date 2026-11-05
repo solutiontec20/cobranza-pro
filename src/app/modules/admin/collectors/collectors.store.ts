@@ -109,6 +109,17 @@ export class CollectorsStore {
   }
 
   async update(input: UpdateCollectorInput): Promise<boolean> {
+    const current = this.collectorsState().find(
+      (collector) => collector.id === input.collectorId,
+    );
+    if (
+      current &&
+      current.fullName === input.fullName.trim() &&
+      (current.phone ?? null) === (input.phone?.trim() || null)
+    ) {
+      return false;
+    }
+
     this.editingCollectorIdState.set(input.collectorId);
     this.errorState.set(null);
 

@@ -217,6 +217,23 @@ describe('LoansStore', () => {
     expect(store.saving()).toBe(false);
   });
 
+  it('does not call Supabase when the final loan values equal the originals', async () => {
+    await store.loadDetail(loan.id);
+
+    const updated = await store.update({
+      loanId: loan.id,
+      principal: loan.principal,
+      interestRate: loan.interestRate,
+      frequency: loan.frequency,
+      installmentCount: loan.installmentCount,
+      startedOn: loan.startedOn,
+      reason: 'El usuario cambió y restauró las condiciones',
+    });
+
+    expect(updated).toBe(false);
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
   it('exposes repository errors without replacing the current loan list', async () => {
     await store.load();
     repository.update.mockRejectedValue(
@@ -225,7 +242,7 @@ describe('LoansStore', () => {
 
     const updated = await store.update({
       loanId: loan.id,
-      principal: loan.principal,
+      principal: loan.principal + 10,
       interestRate: loan.interestRate,
       frequency: loan.frequency,
       installmentCount: loan.installmentCount,

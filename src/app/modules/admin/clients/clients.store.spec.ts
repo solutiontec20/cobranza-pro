@@ -33,7 +33,9 @@ describe('ClientsStore', () => {
 
   beforeEach(() => {
     repository = {
-      list: vi.fn<ClientRepository['list']>().mockResolvedValue([client]),
+      list: vi
+        .fn<ClientRepository['list']>()
+        .mockResolvedValue({ items: [client], total: 1 }),
       listActiveCollectors: vi
         .fn<ClientRepository['listActiveCollectors']>()
         .mockResolvedValue([{ id: 'collector-1', fullName: 'María Quispe' }]),
@@ -47,14 +49,37 @@ describe('ClientsStore', () => {
     store = TestBed.inject(ClientsStore);
   });
 
-  it('loads clients and active collectors together', async () => {
-    await store.load();
+  it('loads the first server page and active collectors together', async () => {
+    await store.initialize();
 
     expect(store.clients()).toEqual([client]);
+    expect(store.totalRecords()).toBe(1);
     expect(store.collectors()).toEqual([{ id: 'collector-1', fullName: 'María Quispe' }]);
+    expect(repository.list.mock.calls[0]?.[0]).toEqual({
+      pageIndex: 0,
+      pageSize: 10,
+      search: '',
+      collectorId: null,
+    });
   });
 
-  it('creates a client and reloads server state', async () => {
+  it('requests pagination and filters from the repository', async () => {
+    await store.initialize();
+    repository.list.mockClear();
+
+    await store.setSearch('Ana');
+    await store.setCollectorFilter('collector-1');
+    await store.setPage(25, 25);
+
+    expect(repository.list.mock.calls.at(-1)?.[0]).toEqual({
+      pageIndex: 1,
+      pageSize: 25,
+      search: 'Ana',
+      collectorId: 'collector-1',
+    });
+  });
+
+  it('creates a client and reloads only the server page', async () => {
     const created = await store.create({
       dni: client.dni,
       fullName: client.fullName,
@@ -67,9 +92,13 @@ describe('ClientsStore', () => {
     expect(created).toBe(true);
     expect(repository.create).toHaveBeenCalledOnce();
     expect(repository.list).toHaveBeenCalledOnce();
+    expect(repository.listActiveCollectors).not.toHaveBeenCalled();
   });
 
-  it('updates a client and reloads server state', async () => {
+  it('updates a client and reloads the current server page', async () => {
+    await store.initialize();
+    repository.list.mockClear();
+
     const updated = await store.update({
       id: client.id,
       dni: client.dni,
@@ -84,5 +113,23 @@ describe('ClientsStore', () => {
     expect(updated).toBe(true);
     expect(repository.update).toHaveBeenCalledOnce();
     expect(repository.list).toHaveBeenCalledOnce();
+  });
+
+  it('does not call Supabase when the final client values equal the originals', async () => {
+    await store.initialize();
+
+    const updated = await store.update({
+      id: client.id,
+      dni: ` ${client.dni} `,
+      fullName: ` ${client.fullName} `,
+      phone: client.phone,
+      address: ` ${client.address} `,
+      collectorId: client.collectorId,
+      notes: client.notes,
+      active: client.active,
+    });
+
+    expect(updated).toBe(false);
+    expect(repository.update).not.toHaveBeenCalled();
   });
 });
