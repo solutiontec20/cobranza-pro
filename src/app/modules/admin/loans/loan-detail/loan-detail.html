@@ -115,44 +115,6 @@
               } @else {
                 No registrado
               }
-
-              <section class="grid grid-cols-2 gap-3 rounded-xl bg-surface-50 p-4 text-sm dark:bg-surface-800 sm:grid-cols-3" aria-label="Nuevo resumen del préstamo">
-                <div>
-                  <p class="text-muted-color">Nuevo total</p>
-                  <p class="mt-1 font-semibold text-color">{{ editSummary().totalAmount | penCurrency }}</p>
-                </div>
-                <div>
-                  <p class="text-muted-color">Nueva cuota</p>
-                  <p class="mt-1 font-semibold text-primary">{{ editSummary().baseInstallmentAmount | penCurrency }}</p>
-                </div>
-                <div class="col-span-2 sm:col-span-1">
-                  <p class="text-muted-color">Primer pago</p>
-                  <p class="mt-1 font-semibold text-color">{{ editFirstDueDate() | esDate }}</p>
-                </div>
-              </section>
-
-              <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <button pButton type="button" severity="secondary" variant="text" class="w-full sm:w-auto" (click)="cancelEditing()">
-                  Cancelar
-                </button>
-                <button pButton type="submit" class="w-full sm:w-auto" [disabled]="store.saving() || editForm().invalid() || !hasEditChanges()">
-                  @if (store.saving()) {
-                    <i class="pi pi-spin pi-spinner"></i>
-                  } @else {
-                    <i class="pi pi-check"></i>
-                  }
-                  Guardar cambios
-                </button>
-              </div>
-            </form>
-          </section>
-        }
-
-        <section class="rounded-xl border border-surface bg-surface-0 p-4 shadow-sm dark:bg-surface-900 sm:p-5" aria-labelledby="schedule-title">
-          <div class="mb-4 flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <h2 id="schedule-title" class="text-xl font-semibold text-color">Cronograma de pagos</h2>
-              <p class="mt-1 text-sm text-muted-color">{{ detail.installments.length }} cuotas programadas</p>
             </dd>
           </div>
           <div class="grid gap-1 py-3 sm:grid-cols-[7rem_1fr]">
@@ -167,7 +129,6 @@
             <div class="grid gap-1 py-3 sm:grid-cols-[7rem_1fr]">
               <dt class="text-muted-color">Observaciones</dt>
               <dd class="whitespace-pre-line text-color">{{ detail.client.notes }}</dd>
-
             </div>
           }
         </dl>
