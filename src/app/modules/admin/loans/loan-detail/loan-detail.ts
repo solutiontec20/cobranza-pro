@@ -1,5 +1,14 @@
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { form, FormField, max, maxLength, min, required, submit, validate } from '@angular/forms/signals';
+import {
+  form,
+  FormField,
+  max,
+  maxLength,
+  min,
+  required,
+  submit,
+  validate,
+} from '@angular/forms/signals';
 import { Router, RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -19,6 +28,11 @@ import {
   RegisterLoanPaymentResult,
   RenewLoanResult,
 } from '../../../../core/models/loan.model';
+import {
+  PAYMENT_VOID_REASON_OPTIONS,
+  resolveVoidReason,
+  VoidReasonCode,
+} from '../../../../core/models/void-reason.model';
 import { EsDate } from '../../../../shared/pipes/es-date';
 import { PenCurrency } from '../../../../shared/pipes/pen-currency';
 import {
@@ -56,6 +70,11 @@ interface RenewFormModel {
   frequency: LoanFrequency;
   installmentCount: number;
   startedOn: string;
+}
+
+interface VoidPaymentModel {
+  reasonCode: VoidReasonCode | '';
+  customReason: string;
 }
 
 type TagSeverity = 'success' | 'warn' | 'danger' | 'secondary' | 'info';
@@ -121,11 +140,15 @@ export default class LoanDetailPage {
     { label: 'Plin', value: 'plin' },
     { label: 'Transferencia', value: 'transfer' },
   ];
+  protected readonly voidPaymentReasonOptions = PAYMENT_VOID_REASON_OPTIONS;
 
   protected readonly detail = computed(() => {
     const detail = this.store.selectedDetail();
     return detail?.loan.id === this.loanId() ? detail : null;
   });
+  protected readonly firstCollectionDate = computed(
+    () => this.detail()?.installments[0]?.dueDate ?? null,
+  );
   protected readonly paymentDialogVisible = signal(false);
   protected readonly paymentResult = signal<RegisterLoanPaymentResult | null>(null);
   protected readonly paymentModel = signal<PaymentFormModel>(emptyPaymentModel());
@@ -133,6 +156,20 @@ export default class LoanDetailPage {
     min(path.amount, 0.01, { message: 'El monto debe ser mayor que cero.' });
     required(path.paymentMethod, { message: 'Selecciona el medio de pago.' });
     maxLength(path.notes, 500, { message: 'La observación no puede superar 500 caracteres.' });
+  });
+  protected readonly voidPaymentTarget = signal<LoanPaymentRecord | null>(null);
+  protected readonly voidPaymentModel = signal<VoidPaymentModel>({
+    reasonCode: '',
+    customReason: '',
+  });
+  protected readonly voidPaymentForm = form(this.voidPaymentModel, (path) => {
+    required(path.reasonCode, { message: 'Seleccioná un motivo.' });
+    maxLength(path.customReason, 1000, { message: 'El motivo no puede superar 1000 caracteres.' });
+    validate(path.customReason, ({ valueOf }) =>
+      valueOf(path.reasonCode) === 'other' && valueOf(path.customReason).trim().length < 5
+        ? { kind: 'required', message: 'Explicá el motivo en al menos 5 caracteres.' }
+        : undefined,
+    );
   });
   protected readonly editModel = signal<LoanEditModel>(emptyEditModel());
   private readonly editBaseline = signal<
@@ -146,9 +183,11 @@ export default class LoanDetailPage {
     min(path.interestRate, 0, { message: 'La tasa no puede ser negativa.' });
     min(path.installmentCount, 1, { message: 'Debe existir al menos una cuota.' });
     max(path.installmentCount, 32767, { message: 'La cantidad de cuotas es demasiado alta.' });
-    required(path.startedOn, { message: 'Selecciona la fecha de inicio.' });
+    required(path.startedOn, { message: 'Selecciona la fecha del préstamo.' });
     required(path.reasonCode, { message: 'Selecciona el motivo de la edición.' });
-    maxLength(path.customReason, 500, { message: 'La justificación no puede superar 500 caracteres.' });
+    maxLength(path.customReason, 500, {
+      message: 'La justificación no puede superar 500 caracteres.',
+    });
     validate(path.customReason, ({ valueOf }) =>
       valueOf(path.reasonCode) === 'other' && valueOf(path.customReason).trim().length === 0
         ? { kind: 'required', message: 'Ingresa una justificación.' }
@@ -174,12 +213,15 @@ export default class LoanDetailPage {
     min(path.interestRate, 0, { message: 'La tasa no puede ser negativa.' });
     min(path.installmentCount, 1, { message: 'Debe existir al menos una cuota.' });
     max(path.installmentCount, 32767, { message: 'La cantidad de cuotas es demasiado alta.' });
-    required(path.startedOn, { message: 'Selecciona la fecha de inicio.' });
+    required(path.startedOn, { message: 'Selecciona la fecha del préstamo.' });
     validate(path.principal, ({ valueOf }) => {
       const minPrincipal = this.remainingBalance();
       return valueOf(path.principal) >= minPrincipal
         ? undefined
-        : { kind: 'belowOutstanding', message: `El capital debe ser al menos el saldo pendiente (S/ ${minPrincipal.toFixed(2)}).` };
+        : {
+            kind: 'belowOutstanding',
+            message: `El capital debe ser al menos el saldo pendiente (S/ ${minPrincipal.toFixed(2)}).`,
+          };
     });
     validate(path.installmentCount, ({ valueOf }) => {
       const summary = calculateLoanSummary(
@@ -229,6 +271,10 @@ export default class LoanDetailPage {
     const model = this.renewModel();
     return calculateLoanSummary(model.principal, model.interestRate, model.installmentCount);
   });
+  protected readonly renewFirstDueDate = computed(() => {
+    const model = this.renewModel();
+    return firstDueOn(model.startedOn, model.frequency);
+  });
   protected readonly renewDisbursedPreview = computed(() =>
     Math.max(0, Math.round((this.renewModel().principal - this.remainingBalance()) * 100) / 100),
   );
@@ -267,8 +313,8 @@ export default class LoanDetailPage {
     if (!detail || balance <= 0) return [];
 
     const nextInstallment =
-      detail.installments.find((installment) => installment.outstandingAmount > 0)?.outstandingAmount ??
-      detail.loan.installmentAmount;
+      detail.installments.find((installment) => installment.outstandingAmount > 0)
+        ?.outstandingAmount ?? detail.loan.installmentAmount;
 
     return [...new Set([5, 10, 15, nextInstallment, balance])]
       .filter((amount) => amount > 0 && amount <= balance)
@@ -339,8 +385,8 @@ export default class LoanDetailPage {
     if (!detail || detail.loan.status !== 'active' || balance <= 0) return;
 
     const suggestedAmount =
-      detail.installments.find((installment) => installment.outstandingAmount > 0)?.outstandingAmount ??
-      detail.loan.installmentAmount;
+      detail.installments.find((installment) => installment.outstandingAmount > 0)
+        ?.outstandingAmount ?? detail.loan.installmentAmount;
 
     this.editing.set(false);
     this.store.clearError();
@@ -387,6 +433,48 @@ export default class LoanDetailPage {
           severity: 'success',
           summary: 'Pago registrado',
           detail: 'El saldo y el cronograma fueron actualizados.',
+        });
+      }
+    });
+  }
+
+  protected openVoidPaymentDialog(payment: LoanPaymentRecord): void {
+    if (payment.status !== 'posted') return;
+    this.store.clearError();
+    this.voidPaymentModel.set({ reasonCode: '', customReason: '' });
+    this.voidPaymentForm().reset();
+    this.voidPaymentTarget.set(payment);
+  }
+
+  protected closeVoidPaymentDialog(): void {
+    if (this.store.voidingPayment()) return;
+    this.voidPaymentTarget.set(null);
+    this.store.clearError();
+  }
+
+  protected submitVoidPayment(): void {
+    const payment = this.voidPaymentTarget();
+    if (!payment) return;
+
+    void submit(this.voidPaymentForm, async () => {
+      const model = this.voidPaymentModel();
+      const reason = resolveVoidReason(model.reasonCode, model.customReason);
+      if (!reason) return;
+
+      const succeeded = await this.store.voidPayment({
+        paymentId: payment.id,
+        loanId: this.loanId(),
+        reason,
+      });
+
+      if (succeeded) {
+        this.voidPaymentTarget.set(null);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Pago anulado',
+          detail:
+            'El saldo, el cronograma y la caja fueron actualizados sin eliminar el historial.',
+          life: 5000,
         });
       }
     });
@@ -496,11 +584,15 @@ export default class LoanDetailPage {
   }
 
   protected installmentStatusLabel(status: LoanInstallmentStatus): string {
-    return { pending: 'Pendiente', partial: 'Pago parcial', overdue: 'Vencido', paid: 'Pagado' }[status];
+    return { pending: 'Pendiente', partial: 'Pago parcial', overdue: 'Vencido', paid: 'Pagado' }[
+      status
+    ];
   }
 
   protected installmentSeverity(status: LoanInstallmentStatus): TagSeverity {
-    return { pending: 'secondary', partial: 'warn', overdue: 'danger', paid: 'success' }[status] as TagSeverity;
+    return { pending: 'secondary', partial: 'warn', overdue: 'danger', paid: 'success' }[
+      status
+    ] as TagSeverity;
   }
 
   protected paymentStatusLabel(status: LoanPaymentRecord['status']): string {

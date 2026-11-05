@@ -116,8 +116,8 @@ reset role;
 
 select is(
   (select first_due_on from public.loans where customer_id = '60000000-0000-0000-0000-000000000001'),
-  '2026-10-17'::date,
-  'A daily first due date may fall on Saturday'
+  '2026-10-19'::date,
+  'A daily loan disbursed Saturday starts collection Monday'
 );
 
 select results_eq(
@@ -129,8 +129,8 @@ select results_eq(
     )
     order by installment_number
   $$,
-  array['2026-10-17'::date, '2026-10-19'::date, '2026-10-20'::date],
-  'Daily installments include Saturday and skip Sunday'
+  array['2026-10-19'::date, '2026-10-20'::date, '2026-10-21'::date],
+  'Daily installments start after disbursement and skip Sunday'
 );
 
 select results_eq(
@@ -202,10 +202,10 @@ select results_eq(
     order by installment_number
   $$,
   array[
-    '2026-10-19'::date,
     '2026-10-26'::date,
     '2026-11-02'::date,
-    '2026-11-09'::date
+    '2026-11-09'::date,
+    '2026-11-16'::date
   ],
   'Weekly installments land on the same calendar weekday every time'
 );
@@ -309,7 +309,7 @@ select results_eq(
     6,
     'daily'::text,
     '2026-10-24'::date,
-    '2026-10-24'::date
+    '2026-10-26'::date
   ) $$,
   'Loan terms, disbursed amount, and normalized first due date are updated'
 );
@@ -325,12 +325,12 @@ select results_eq(
     order by installment_number
   $$,
   array[
-    '2026-10-24'::date,
     '2026-10-26'::date,
     '2026-10-27'::date,
     '2026-10-28'::date,
     '2026-10-29'::date,
-    '2026-10-30'::date
+    '2026-10-30'::date,
+    '2026-10-31'::date
   ],
   'Replacement daily installments include Saturday and skip Sunday'
 );
@@ -559,7 +559,7 @@ select results_eq(
   $$ values (
     65.00::numeric,
     4,
-    '2026-10-20'::date
+    '2026-10-21'::date
   ) $$,
   'A supervisor-driven update is applied just like an administrator one'
 );

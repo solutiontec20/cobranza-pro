@@ -8,11 +8,7 @@ import {
   RenewLoanResult,
 } from '../../../core/models/loan.model';
 import { LOAN_REPOSITORY, LoanRepository } from '../../../core/repositories/loan.repository';
-import {
-  calculateLoanPaymentSummary,
-  calculateLoanSummary,
-  firstDueOn,
-} from './loan-calculations';
+import { calculateLoanPaymentSummary, calculateLoanSummary, firstDueOn } from './loan-calculations';
 import { LoansStore } from './loans.store';
 
 const loan: LoanListItem = {
@@ -87,6 +83,7 @@ describe('LoansStore', () => {
     create: ReturnType<typeof vi.fn<LoanRepository['create']>>;
     update: ReturnType<typeof vi.fn<LoanRepository['update']>>;
     registerPayment: ReturnType<typeof vi.fn<LoanRepository['registerPayment']>>;
+    voidPayment: ReturnType<typeof vi.fn<LoanRepository['voidPayment']>>;
     renew: ReturnType<typeof vi.fn<LoanRepository['renew']>>;
   };
 
@@ -99,6 +96,7 @@ describe('LoansStore', () => {
       create: vi.fn<LoanRepository['create']>(),
       update: vi.fn<LoanRepository['update']>(),
       registerPayment: vi.fn<LoanRepository['registerPayment']>(),
+      voidPayment: vi.fn<LoanRepository['voidPayment']>(),
       renew: vi.fn<LoanRepository['renew']>(),
     };
     TestBed.configureTestingModule({
@@ -169,9 +167,7 @@ describe('LoansStore', () => {
     let resolveFirst!: (value: LoanDetail) => void;
     let resolveSecond!: (value: LoanDetail) => void;
     repository.getDetail
-      .mockImplementationOnce(
-        () => new Promise<LoanDetail>((resolve) => (resolveFirst = resolve)),
-      )
+      .mockImplementationOnce(() => new Promise<LoanDetail>((resolve) => (resolveFirst = resolve)))
       .mockImplementationOnce(
         () => new Promise<LoanDetail>((resolve) => (resolveSecond = resolve)),
       );
@@ -312,6 +308,31 @@ describe('LoansStore', () => {
     expect(store.error()).toContain('El pago se registró');
   });
 
+  it('voids a posted payment and refreshes the loan balance and history', async () => {
+    repository.voidPayment.mockResolvedValue({
+      paymentId: 'payment-1',
+      loanId: loan.id,
+      remainingBalance: 110,
+    });
+
+    await expect(
+      store.voidPayment({
+        paymentId: 'payment-1',
+        loanId: loan.id,
+        reason: 'Pago duplicado confirmado.',
+      }),
+    ).resolves.toBe(true);
+
+    expect(repository.voidPayment).toHaveBeenCalledWith({
+      paymentId: 'payment-1',
+      loanId: loan.id,
+      reason: 'Pago duplicado confirmado.',
+    });
+    expect(repository.list).toHaveBeenCalledOnce();
+    expect(repository.getDetail).toHaveBeenCalledWith(loan.id);
+    expect(store.voidingPayment()).toBe(false);
+  });
+
   it('renews a loan and refreshes the complete server state with the new loan id', async () => {
     const renewResult: RenewLoanResult = {
       loanId: 'loan-2',
@@ -344,7 +365,10 @@ describe('LoansStore', () => {
 
   it('sets an error message when the renewal fails', async () => {
     repository.renew.mockRejectedValue(
-      new AppError('VALIDATION', 'El cliente es moroso (más de 5 días de atraso) y no puede renovar su préstamo.'),
+      new AppError(
+        'VALIDATION',
+        'El cliente es moroso (más de 5 días de atraso) y no puede renovar su préstamo.',
+      ),
     );
 
     const result = await store.renew({
@@ -467,8 +491,9 @@ describe('loan calculations', () => {
     });
   });
 
-  it('keeps Saturday and moves Sunday to Monday for daily collections', () => {
-    expect(firstDueOn('2026-10-17', 'daily')).toBe('2026-10-17');
+  it('starts daily collections after disbursement and skips Sunday', () => {
+    expect(firstDueOn('2026-10-16', 'daily')).toBe('2026-10-17');
+    expect(firstDueOn('2026-10-17', 'daily')).toBe('2026-10-19');
     expect(firstDueOn('2026-10-18', 'daily')).toBe('2026-10-19');
   });
 });

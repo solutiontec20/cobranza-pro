@@ -95,7 +95,7 @@ export default class Loans {
     min(path.interestRate, 0, { message: 'La tasa no puede ser negativa.' });
     min(path.installmentCount, 1, { message: 'Debe existir al menos una cuota.' });
     max(path.installmentCount, 32767, { message: 'La cantidad de cuotas es demasiado alta.' });
-    required(path.startedOn, { message: 'Selecciona la fecha de inicio.' });
+    required(path.startedOn, { message: 'Selecciona la fecha del préstamo.' });
     validate(path.installmentCount, ({ valueOf }) => {
       const summary = calculateLoanSummary(
         valueOf(path.principal),
