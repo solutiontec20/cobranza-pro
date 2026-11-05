@@ -1,5 +1,7 @@
 begin;
 
+set local app.test_business_timestamp = '2026-11-05 12:00:00-05';
+
 create extension if not exists pgtap with schema extensions;
 
 select plan(18);

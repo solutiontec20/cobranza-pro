@@ -16,3 +16,11 @@ export interface ChangePinInput {
   currentPin: string;
   newPin: string;
 }
+
+export interface AccessStatus {
+  allowed: boolean;
+  role: UserRole;
+  serverNow: string;
+  opensAt: string;
+  closesAt: string;
+}

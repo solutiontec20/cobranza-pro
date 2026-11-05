@@ -2,7 +2,7 @@ import { inject, Service } from '@angular/core';
 import { FunctionsHttpError, SupabaseClient } from '@supabase/supabase-js';
 import { AuthRepository } from '../repositories/auth.repository';
 import { SUPABASE } from '../supabase/supabase-client';
-import { ChangePinInput, Profile } from '../models/profile.model';
+import { AccessStatus, ChangePinInput, Profile } from '../models/profile.model';
 import { AppError, AppErrorCode } from '../errors/app-error';
 import { Database } from '../supabase/database.types';
 
@@ -53,6 +53,27 @@ export class SupabaseAuthRepository implements AuthRepository {
       return null;
     }
     return this.fetchProfile(user.id);
+  }
+
+  async currentAccessStatus(): Promise<AccessStatus> {
+    const { data, error } = await this.supabase.rpc('current_access_status');
+    const row = data?.[0];
+
+    if (error || !row) {
+      throw new AppError(
+        'AUTH_UNAUTHORIZED',
+        'No se pudo verificar el horario de acceso.',
+        error,
+      );
+    }
+
+    return {
+      allowed: row.allowed,
+      role: row.role,
+      serverNow: row.server_now,
+      opensAt: row.opens_at,
+      closesAt: row.closes_at,
+    };
   }
 
   async changePin(input: ChangePinInput): Promise<void> {
@@ -111,8 +132,13 @@ export class SupabaseAuthRepository implements AuthRepository {
 
     if (error instanceof FunctionsHttpError) {
       try {
-        const body = (await error.context.json()) as { message?: string };
+        const body = (await error.context.json()) as { error?: string; message?: string };
         message = body.message ?? message;
+        if (body.error === 'COLLECTOR_ACCESS_CLOSED') {
+          code = 'AUTH_UNAUTHORIZED';
+        } else if (body.error === 'ACCESS_STATUS_UNAVAILABLE') {
+          code = 'SUPABASE_CONNECTION';
+        }
       } catch {
         // Infrastructure errors may return an empty response.
       }

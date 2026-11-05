@@ -18,6 +18,8 @@ function isEightDigitDni(value: unknown): value is string {
 // Generic message for both "DNI does not exist" and "PIN incorrect" so this
 // endpoint never becomes a user-enumeration oracle.
 const INVALID_CREDENTIALS_MESSAGE = 'DNI o PIN incorrecto.';
+const ACCESS_CLOSED_MESSAGE =
+  'El acceso para cobradores está disponible de 7:00 a. m. a 8:00 p. m.';
 
 export default {
   // No JWT exists yet at this point -- this is the pre-authentication login
@@ -105,6 +107,30 @@ export default {
       return jsonResponse(401, {
         error: 'INVALID_CREDENTIALS',
         message: INVALID_CREDENTIALS_MESSAGE,
+      });
+    }
+
+    // Credentials are valid at this point. Check the database-owned access
+    // policy only now so this endpoint cannot reveal a profile's role before
+    // authentication succeeds.
+    const { data: accessRows, error: accessError } = await ctx.supabase.rpc(
+      'current_access_status',
+    );
+    const accessStatus = accessRows?.[0];
+
+    if (accessError || !accessStatus) {
+      await ctx.supabase.auth.signOut({ scope: 'local' });
+      return jsonResponse(503, {
+        error: 'ACCESS_STATUS_UNAVAILABLE',
+        message: 'No se pudo verificar el horario de acceso. Intentá nuevamente.',
+      });
+    }
+
+    if (profile?.active && accessStatus.role === 'collector' && !accessStatus.allowed) {
+      await ctx.supabase.auth.signOut({ scope: 'local' });
+      return jsonResponse(403, {
+        error: 'COLLECTOR_ACCESS_CLOSED',
+        message: ACCESS_CLOSED_MESSAGE,
       });
     }
 
