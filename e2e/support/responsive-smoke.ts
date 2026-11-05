@@ -41,23 +41,33 @@ export async function prepareResponsiveSmoke(
 
   await page.route('**/rest/v1/**', async (route) => {
     const pathname = new URL(route.request().url()).pathname;
-    const body = pathname.endsWith('/rpc/admin_dashboard_summary')
+    const body = pathname.endsWith('/rpc/current_access_status')
       ? [
           {
-            capital_prestado: 1000,
-            total_esperado: 1200,
-            total_cobrado: 500,
-            saldo_pendiente: 700,
-            total_clientes: 10,
-            prestamos_pagados: 2,
-            cobradores: 0,
-            risk_green: 6,
-            risk_yellow: 2,
-            risk_orange: 1,
-            risk_red: 1,
+            allowed: true,
+            role: 'collector',
+            server_now: '2026-11-05T12:00:00-05:00',
+            opens_at: '2026-11-05T07:00:00-05:00',
+            closes_at: '2026-11-05T20:00:00-05:00',
           },
         ]
-      : [];
+      : pathname.endsWith('/rpc/admin_dashboard_summary')
+        ? [
+            {
+              capital_prestado: 1000,
+              total_esperado: 1200,
+              total_cobrado: 500,
+              saldo_pendiente: 700,
+              total_clientes: 10,
+              prestamos_pagados: 2,
+              cobradores: 0,
+              risk_green: 6,
+              risk_yellow: 2,
+              risk_orange: 1,
+              risk_red: 1,
+            },
+          ]
+        : [];
 
     await route.fulfill({
       status: 200,
