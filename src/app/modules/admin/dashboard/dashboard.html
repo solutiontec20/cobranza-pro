@@ -172,7 +172,25 @@
     </ng-template>
 
     @defer (on viewport) {
-      <div class="divide-y divide-surface-200 dark:divide-surface-700 lg:hidden">
+      @if (isDesktop()) {
+        @defer (when isDesktop()) {
+          <app-collector-performance-table [entries]="collectorPerformance()" />
+        } @placeholder {
+          <div class="space-y-3 p-4" aria-hidden="true">
+            @for (row of loadingRows; track row) {
+              <p-skeleton height="2.5rem" borderRadius="0.5rem" />
+            }
+          </div>
+        } @error {
+          <div class="p-8 text-center text-sm text-red-600 dark:text-red-400" role="alert">
+            No se pudo cargar la tabla de rendimiento de cobradores.
+          </div>
+        }
+      } @else {
+      <div
+        class="divide-y divide-surface-200 dark:divide-surface-700"
+        data-testid="collector-performance-mobile"
+      >
         @for (col of collectorPerformance(); track col.id) {
           <article class="flex flex-col gap-3 p-4">
             <div class="flex items-start justify-between gap-3">
@@ -215,57 +233,7 @@
           <div class="p-8 text-center text-surface-500">No hay datos de cobradores.</div>
         }
       </div>
-
-      <div class="hidden overflow-x-auto lg:block">
-        <p-table
-          [value]="collectorPerformance()"
-          [tableStyle]="{ 'min-width': '58rem' }"
-          styleClass="p-datatable-sm"
-        >
-          <ng-template #header>
-            <tr>
-              <th>Cobrador</th>
-              <th>Clientes</th>
-              <th>Esperado hoy</th>
-              <th>Cobrado hoy</th>
-              <th>Pendiente</th>
-              <th>Atrasados</th>
-              <th class="text-center">Acciones</th>
-            </tr>
-          </ng-template>
-          <ng-template #body let-col>
-            <tr>
-              <td>
-                <div class="font-bold text-surface-900 dark:text-surface-0">{{ col.name }}</div>
-                <div class="text-xs text-surface-500">DNI: {{ col.dni }}</div>
-              </td>
-              <td>{{ col.clientsCount }}</td>
-              <td class="font-medium">{{ col.expectedToday | penCurrency }}</td>
-              <td class="font-bold text-green-600 dark:text-green-400">{{ col.collectedToday | penCurrency }}</td>
-              <td class="text-surface-500">{{ col.pendingToday | penCurrency }}</td>
-              <td>
-                <span class="rounded-full px-2.5 py-1 text-sm font-semibold" [class.bg-green-100]="col.delayedCount === 0" [class.text-green-700]="col.delayedCount === 0" [class.bg-yellow-100]="col.delayedCount > 0" [class.text-yellow-700]="col.delayedCount > 0">
-                  {{ col.delayedCount }}
-                </span>
-              </td>
-              <td class="text-center">
-                <a
-                  pButton
-                  variant="outlined"
-                  size="small"
-                  [routerLink]="['/admin/clientes']"
-                  [queryParams]="{ collectorId: col.id }"
-                ><i class="pi pi-eye mr-2" aria-hidden="true"></i>Ver cartera</a>
-              </td>
-            </tr>
-          </ng-template>
-          <ng-template #emptymessage>
-            <tr>
-              <td colspan="7" class="p-8 text-center text-surface-500">No hay datos de cobradores.</td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </div>
+      }
     } @placeholder {
       <div class="space-y-3 p-4" aria-hidden="true">
         @for (row of loadingRows; track row) {

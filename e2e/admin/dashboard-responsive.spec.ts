@@ -22,15 +22,15 @@ test.describe('rendimiento de cobradores responsive', () => {
 
       const card = heading.locator('xpath=ancestor::p-card[1]');
       await card.evaluate((element) => element.scrollIntoView({ block: 'center' }));
-      const mobileCards = card.locator('div.lg\\:hidden');
-      const desktopTable = card.locator('div.hidden.overflow-x-auto');
+      const mobileCards = card.getByTestId('collector-performance-mobile');
+      const desktopTable = card.getByTestId('collector-performance-desktop');
 
       if (viewport.width < 1024) {
         await expect(mobileCards).toBeVisible();
         await expect(mobileCards.getByText('Ana Torres', { exact: true })).toBeVisible();
-        await expect(desktopTable).toBeHidden();
+        await expect(desktopTable).toHaveCount(0);
       } else {
-        await expect(mobileCards).toBeHidden();
+        await expect(mobileCards).toHaveCount(0);
         await expect(desktopTable).toBeVisible();
         await expect(desktopTable.getByRole('columnheader', { name: 'Cobrador' })).toBeVisible();
         await expect(desktopTable.getByText('Ana Torres', { exact: true })).toBeVisible();
@@ -59,8 +59,8 @@ test.describe('rendimiento de cobradores responsive', () => {
 
       const variant =
         scenario.result === 'cards'
-          ? card.locator('div.lg\\:hidden')
-          : card.locator('div.hidden.overflow-x-auto');
+          ? card.getByTestId('collector-performance-mobile')
+          : card.getByTestId('collector-performance-desktop');
       await variant.getByRole('link', { name: 'Ver cartera' }).first().click();
 
       await expect(page).toHaveURL(/\/admin\/clientes\?collectorId=collector-1$/);
