@@ -343,6 +343,23 @@ export default class ClientDetail {
       const customerId = this.id();
       untracked(() => void this.initialize(customerId));
     });
+
+    effect(() => {
+      const change = this.correctionRequestsStore.lastChange();
+      if (
+        change?.eventType !== 'UPDATE' ||
+        change.status !== 'resolved' ||
+        change.requestType !== 'void_payment'
+      ) {
+        return;
+      }
+
+      untracked(() => {
+        const loan = this.loan();
+        if (!loan || loan.id !== change.loanId) return;
+        void Promise.all([this.loanStore.loadDetail(loan.id), this.store.load()]);
+      });
+    });
   }
 
   private async initialize(customerId: string): Promise<void> {

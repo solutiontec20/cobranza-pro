@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal, untracked } from '@angular/core';
 import {
   form,
   FormField,
@@ -594,6 +594,14 @@ export default class CorrectionRequests implements OnInit {
     if (action === 'void_payment') return 'Anular pago';
     return 'Anular préstamo';
   });
+
+  constructor() {
+    effect(() => {
+      const change = this.store.lastChange();
+      if (!change) return;
+      untracked(() => this.reload());
+    });
+  }
 
   ngOnInit(): void {
     this.reload();

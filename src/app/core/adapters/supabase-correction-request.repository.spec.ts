@@ -36,12 +36,23 @@ const listRow = {
 
 describe('SupabaseCorrectionRequestRepository', () => {
   const rpc = vi.fn();
+  const channelOn = vi.fn();
+  const channelSubscribe = vi.fn();
+  const removeChannel = vi.fn().mockResolvedValue('ok');
+  const channel = { on: channelOn, subscribe: channelSubscribe };
+  const createChannel = vi.fn();
   let repository: SupabaseCorrectionRequestRepository;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    channelOn.mockReturnValue(channel);
+    channelSubscribe.mockReturnValue(channel);
+    createChannel.mockReturnValue(channel);
     TestBed.configureTestingModule({
-      providers: [SupabaseCorrectionRequestRepository, { provide: SUPABASE, useValue: { rpc } }],
+      providers: [
+        SupabaseCorrectionRequestRepository,
+        { provide: SUPABASE, useValue: { rpc, channel: createChannel, removeChannel } },
+      ],
     });
     repository = TestBed.inject(SupabaseCorrectionRequestRepository);
   });
@@ -91,6 +102,70 @@ describe('SupabaseCorrectionRequestRepository', () => {
       p_proposed_changes: undefined,
     });
     expect(result.requestId).toBe('request-1');
+  });
+
+  it('maps the collector notification list including its read state', async () => {
+    rpc.mockResolvedValueOnce({
+      data: [{ ...listRow, status: 'rejected', read_at: '2026-11-01T12:00:00Z' }],
+      error: null,
+    });
+
+    const requests = await repository.listMine(5);
+
+    expect(rpc).toHaveBeenCalledWith('list_my_correction_requests', { p_limit: 5 });
+    expect(requests[0]).toMatchObject({
+      id: 'request-1',
+      status: 'rejected',
+      readAt: '2026-11-01T12:00:00Z',
+    });
+  });
+
+  it('subscribes a collector only to updates for their own requests and removes the channel', () => {
+    const onChange = vi.fn();
+
+    const unsubscribe = repository.subscribe(
+      { userId: 'collector-1', role: 'collector' },
+      onChange,
+    );
+
+    expect(createChannel).toHaveBeenCalledWith('correction-requests:collector-1');
+    expect(channelOn).toHaveBeenCalledWith(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'correction_requests',
+        filter: 'requested_by=eq.collector-1',
+      },
+      expect.any(Function),
+    );
+
+    const realtimeCallback = channelOn.mock.calls[0]?.[2] as
+      | ((payload: { new: Record<string, unknown> }) => void)
+      | undefined;
+    realtimeCallback?.({
+      new: {
+        id: 'request-1',
+        request_type: 'void_payment',
+        status: 'resolved',
+        loan_id: 'loan-1',
+        payment_id: 'payment-1',
+        requested_by: 'collector-1',
+        handled_by: 'admin-1',
+        handled_at: '2026-11-01T11:00:00Z',
+        resolution_note: 'Pago duplicado confirmado.',
+      },
+    });
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'UPDATE',
+        requestId: 'request-1',
+        status: 'resolved',
+      }),
+    );
+
+    unsubscribe();
+    expect(removeChannel).toHaveBeenCalledWith(channel);
   });
 
   it('translates a duplicate request into a user-facing validation error', async () => {

@@ -1,4 +1,5 @@
 import { LoanFrequency, LoanStatus } from './loan.model';
+import { UserRole } from './profile.model';
 
 export type CorrectionRequestType = 'edit_loan' | 'void_loan' | 'void_payment';
 export type CorrectionRequestStatus = 'pending' | 'resolved' | 'rejected';
@@ -32,7 +33,34 @@ export interface CorrectionRequest {
   paymentDate: string | null;
   paymentStatus: 'posted' | 'voided' | null;
   paymentMethod: string | null;
+  readAt: string | null;
 }
+
+export type CorrectionRequestChangeEvent = 'INSERT' | 'UPDATE';
+
+export interface CorrectionRequestChange {
+  eventType: CorrectionRequestChangeEvent;
+  requestId: string;
+  requestType: CorrectionRequestType;
+  status: CorrectionRequestStatus;
+  loanId: string;
+  paymentId: string | null;
+  requestedBy: string;
+  handledBy: string | null;
+  handledAt: string | null;
+  resolutionNote: string | null;
+}
+
+export interface CorrectionRequestSubscription {
+  userId: string;
+  role: UserRole;
+}
+
+export type CorrectionRequestRealtimeStatus =
+  | 'SUBSCRIBED'
+  | 'CHANNEL_ERROR'
+  | 'TIMED_OUT'
+  | 'CLOSED';
 
 export interface CreateCorrectionRequestInput {
   requestType: CorrectionRequestType;
