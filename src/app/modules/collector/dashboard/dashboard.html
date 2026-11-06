@@ -1,10 +1,12 @@
-<div class="mx-auto flex w-full  flex-col gap-6 p-4 sm:p-6 lg:p-8">
+<div class="mx-auto flex w-full flex-col gap-6 p-4 sm:p-6 lg:p-8">
   <header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
     <div>
       <p class="m-0 text-sm font-medium text-primary-700 dark:text-primary-300">
         {{ today | esDate: 'weekday' }}
       </p>
-      <h1 class="mt-1 mb-0 text-2xl font-semibold tracking-tight text-pretty text-surface-950 sm:text-3xl dark:text-surface-0">
+      <h1
+        class="mt-1 mb-0 text-2xl font-semibold tracking-tight text-pretty text-surface-950 sm:text-3xl dark:text-surface-0"
+      >
         Ruta de cobranza de {{ collectorFirstName() }}
       </h1>
       <p class="mt-1 mb-0 text-sm text-surface-500 dark:text-surface-400">
@@ -13,7 +15,9 @@
     </div>
     <div class="flex items-center gap-2 text-sm text-surface-600 dark:text-surface-300">
       <span class="relative flex h-2.5 w-2.5" aria-hidden="true">
-        <span class="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-50"></span>
+        <span
+          class="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-50"
+        ></span>
         <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-600"></span>
       </span>
       Jornada activa
@@ -59,14 +63,18 @@
             (click)="openRequest(request)"
           >
             <span class="min-w-0">
-              <span class="block truncate text-sm font-semibold text-surface-950 dark:text-surface-0">
+              <span
+                class="block truncate text-sm font-semibold text-surface-950 dark:text-surface-0"
+              >
                 {{ requestTypeLabel(request.requestType) }}
               </span>
               <span class="mt-1 block truncate text-xs text-surface-500">
                 {{ request.customerName }} · {{ request.createdAt | esDate: 'short-datetime' }}
               </span>
               @if (request.resolutionNote) {
-                <span class="mt-2 line-clamp-2 block text-xs text-surface-600 dark:text-surface-300">
+                <span
+                  class="mt-2 line-clamp-2 block text-xs text-surface-600 dark:text-surface-300"
+                >
                   {{ request.resolutionNote }}
                 </span>
               }
@@ -119,7 +127,10 @@
     </p>
   </section>
 
-  <section aria-label="Resumen operativo" class="grid grid-cols-2 gap-y-5 rounded-xl border border-surface-200 bg-surface-0 py-4 sm:grid-cols-4 dark:border-surface-700 dark:bg-surface-900">
+  <section
+    aria-label="Resumen operativo"
+    class="grid grid-cols-2 gap-y-5 rounded-xl border border-surface-200 bg-surface-0 py-4 sm:grid-cols-4 dark:border-surface-700 dark:bg-surface-900"
+  >
     <app-collection-metric
       label="Cobrar hoy"
       [value]="store.summary().dueToday.toString()"
@@ -152,7 +163,9 @@
   <section aria-labelledby="collection-list-title" class="flex flex-col gap-4">
     <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_14rem]">
       <div>
-        <label for="collection-search" class="sr-only">Buscar cliente por nombre, DNI o teléfono</label>
+        <label for="collection-search" class="sr-only"
+          >Buscar cliente por nombre, DNI o teléfono</label
+        >
         <p-iconfield class="w-full">
           <p-inputicon class="pi pi-search" />
           <input
@@ -177,7 +190,7 @@
           optionLabel="label"
           optionValue="value"
           [ngModel]="store.sortOrder()"
-          (ngModelChange)="store.setSortOrder($event)"
+          (ngModelChange)="changeSort($event)"
           ariaLabel="Ordenar clientes"
         />
       </div>
@@ -209,7 +222,10 @@
 
     <div class="flex items-center justify-between gap-3">
       <div>
-        <h2 id="collection-list-title" class="m-0 text-xl font-semibold text-surface-950 dark:text-surface-0">
+        <h2
+          id="collection-list-title"
+          class="m-0 text-xl font-semibold text-surface-950 dark:text-surface-0"
+        >
           Cobranzas priorizadas
         </h2>
         <p class="mt-1 mb-0 text-sm text-surface-500 dark:text-surface-400">
@@ -223,30 +239,57 @@
     }
 
     @if (store.loading()) {
-      <div class="grid gap-3 lg:grid-cols-3 md:grid-cols-2" aria-label="Cargando cobranzas" aria-live="polite">
+      <div
+        class="grid gap-3 lg:grid-cols-3 md:grid-cols-2"
+        aria-label="Cargando cobranzas"
+        aria-live="polite"
+      >
         @for (row of loadingRows; track row) {
           <p-skeleton height="11rem" borderRadius="0.75rem" />
         }
       </div>
     } @else if (store.filteredClients().length > 0) {
       <div class="grid gap-3 lg:grid-cols-3 md:grid-cols-2">
-        @for (client of store.filteredClients(); track client.id) {
+        @for (client of visibleClients(); track client.id) {
           <app-collection-client-card
             [client]="client"
             (paymentRequested)="requestPayment($event)"
           />
         }
       </div>
+      <p-paginator
+        [first]="pageFirst()"
+        [rows]="pageRows()"
+        [totalRecords]="store.filteredClients().length"
+        [rowsPerPageOptions]="pageSizeOptions"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="{first}–{last} de {totalRecords} clientes"
+        (onPageChange)="changePage($event)"
+      />
     } @else {
-      <div class="rounded-xl border border-dashed border-surface-300 bg-surface-0 px-6 py-12 text-center dark:border-surface-700 dark:bg-surface-900">
-        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-surface-100 text-surface-500 dark:bg-surface-800 dark:text-surface-300">
+      <div
+        class="rounded-xl border border-dashed border-surface-300 bg-surface-0 px-6 py-12 text-center dark:border-surface-700 dark:bg-surface-900"
+      >
+        <div
+          class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-surface-100 text-surface-500 dark:bg-surface-800 dark:text-surface-300"
+        >
           <i class="pi pi-search" aria-hidden="true"></i>
         </div>
-        <h3 class="mt-4 mb-1 text-lg font-semibold text-surface-950 dark:text-surface-0">No hay clientes en esta vista</h3>
-        <p class="mt-0 mb-4 text-sm text-surface-500 dark:text-surface-400">Cambiá el filtro o limpiá la búsqueda para continuar.</p>
-        <button pButton type="button" severity="secondary" variant="outlined" label="Limpiar filtros" (click)="store.clearFilters()"></button>
+        <h3 class="mt-4 mb-1 text-lg font-semibold text-surface-950 dark:text-surface-0">
+          No hay clientes en esta vista
+        </h3>
+        <p class="mt-0 mb-4 text-sm text-surface-500 dark:text-surface-400">
+          Cambiá el filtro o limpiá la búsqueda para continuar.
+        </p>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          variant="outlined"
+          label="Limpiar filtros"
+          (click)="clearFilters()"
+        ></button>
       </div>
     }
   </section>
 </div>
-

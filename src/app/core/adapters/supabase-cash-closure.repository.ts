@@ -2,14 +2,16 @@ import { inject, Service } from '@angular/core';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { AppError } from '../errors/app-error';
 import {
+  CashAllowanceRequest,
   CashClosure,
   CashCollectorOption,
   CashDayBreakdown,
   CashExpense,
   CollectorCashDay,
-  RegisterCashAllowanceInput,
   RegisterCashOpeningInput,
+  RequestCashAllowanceInput,
   RequestCashExpenseInput,
+  ReviewCashAllowanceRequestInput,
   ReviewCashExpenseInput,
   SubmitCashClosureInput,
   ValidateCashClosureInput,
@@ -20,6 +22,7 @@ import { Database } from '../supabase/database.types';
 import { SUPABASE } from '../supabase/supabase-client';
 
 type BreakdownRow = Database['public']['Views']['collector_cash_day_breakdown']['Row'];
+type AllowanceRequestRow = Database['public']['Tables']['cash_allowance_requests']['Row'];
 type ClosureRow = Database['public']['Tables']['cash_closures']['Row'];
 type ExpenseRow = Database['public']['Tables']['cash_expenses']['Row'];
 
@@ -46,7 +49,11 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
     const { data: userData, error: userError } = await this.supabase.auth.getUser();
 
     if (userError || !userData.user) {
-      throw new AppError('AUTH_SESSION_EXPIRED', 'La sesión expiró. Volvé a iniciar sesión.', userError);
+      throw new AppError(
+        'AUTH_SESSION_EXPIRED',
+        'La sesión expiró. Volvé a iniciar sesión.',
+        userError,
+      );
     }
 
     const collectorId = userData.user.id;
@@ -80,16 +87,47 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
     }
   }
 
-  async registerAllowance(input: RegisterCashAllowanceInput): Promise<void> {
-    const { error } = await this.supabase.rpc('register_cash_allowance', {
-      p_collector_id: input.collectorId,
+  async requestAllowance(input: RequestCashAllowanceInput): Promise<CashAllowanceRequest> {
+    const { data, error } = await this.supabase.rpc('request_cash_allowance', {
       p_business_date: input.businessDate,
       p_amount: input.amount,
       p_notes: input.notes.trim() || undefined,
     });
 
     if (error) {
-      throw this.allowanceError(error);
+      throw this.allowanceRequestError(error);
+    }
+
+    const row = data?.[0];
+    if (!row) {
+      throw new AppError('SUPABASE_RPC', 'La solicitud no devolvió el viático registrado.');
+    }
+
+    return {
+      id: row.request_id,
+      collectorId: row.collector_id,
+      businessDate: row.business_date,
+      amount: Number(row.amount),
+      notes: input.notes.trim() || null,
+      status: row.status,
+      cashMovementId: null,
+      requestedBy: row.collector_id,
+      reviewedBy: null,
+      reviewedAt: null,
+      rejectionReason: null,
+      createdAt: row.created_at,
+    };
+  }
+
+  async reviewAllowanceRequest(input: ReviewCashAllowanceRequestInput): Promise<void> {
+    const { error } = await this.supabase.rpc('review_cash_allowance_request', {
+      p_request_id: input.requestId,
+      p_approve: input.approve,
+      p_reason: input.reason.trim() || undefined,
+    });
+
+    if (error) {
+      throw this.allowanceReviewError(error);
     }
   }
 
@@ -144,7 +182,11 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
     const { data: userData, error: userError } = await this.supabase.auth.getUser();
 
     if (userError || !userData.user) {
-      throw new AppError('AUTH_SESSION_EXPIRED', 'La sesión expiró. Volvé a iniciar sesión.', userError);
+      throw new AppError(
+        'AUTH_SESSION_EXPIRED',
+        'La sesión expiró. Volvé a iniciar sesión.',
+        userError,
+      );
     }
 
     const { data, error } = await this.supabase.rpc('submit_cash_closure', {
@@ -197,9 +239,17 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
       .from('collector_cash_day_breakdown')
       .select('*')
       .eq('business_date', businessDate);
-    let closuresQuery = this.supabase.from('cash_closures').select('*').eq('business_date', businessDate);
+    let closuresQuery = this.supabase
+      .from('cash_closures')
+      .select('*')
+      .eq('business_date', businessDate);
     let expensesQuery = this.supabase
       .from('cash_expenses')
+      .select('*')
+      .eq('business_date', businessDate)
+      .order('created_at', { ascending: false });
+    let allowanceRequestsQuery = this.supabase
+      .from('cash_allowance_requests')
       .select('*')
       .eq('business_date', businessDate)
       .order('created_at', { ascending: false });
@@ -208,13 +258,11 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
       breakdownQuery = breakdownQuery.eq('collector_id', collectorId);
       closuresQuery = closuresQuery.eq('collector_id', collectorId);
       expensesQuery = expensesQuery.eq('collector_id', collectorId);
+      allowanceRequestsQuery = allowanceRequestsQuery.eq('collector_id', collectorId);
     }
 
-    const [breakdownResult, closuresResult, expensesResult] = await Promise.all([
-      breakdownQuery,
-      closuresQuery,
-      expensesQuery,
-    ]);
+    const [breakdownResult, closuresResult, expensesResult, allowanceRequestsResult] =
+      await Promise.all([breakdownQuery, closuresQuery, expensesQuery, allowanceRequestsQuery]);
 
     if (breakdownResult.error) {
       throw this.toAppError(breakdownResult.error, 'No se pudo cargar el resumen de caja.');
@@ -224,6 +272,12 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
     }
     if (expensesResult.error) {
       throw this.toAppError(expensesResult.error, 'No se pudo cargar los gastos operativos.');
+    }
+    if (allowanceRequestsResult.error) {
+      throw this.toAppError(
+        allowanceRequestsResult.error,
+        'No se pudo cargar las solicitudes de viático.',
+      );
     }
 
     const closureByCollector = new Map(
@@ -235,28 +289,51 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
       list.push(this.toExpense(row));
       expensesByCollector.set(row.collector_id, list);
     }
+    const allowanceRequestsByCollector = new Map<string, CashAllowanceRequest[]>();
+    for (const row of allowanceRequestsResult.data ?? []) {
+      const list = allowanceRequestsByCollector.get(row.collector_id) ?? [];
+      list.push(this.toAllowanceRequest(row));
+      allowanceRequestsByCollector.set(row.collector_id, list);
+    }
 
-    return (breakdownResult.data ?? [])
-      .filter((row): row is BreakdownRow & { collector_id: string; business_date: string } =>
-        row.collector_id !== null && row.business_date !== null,
-      )
-      .map((row) => ({
-        collectorId: row.collector_id,
-        collectorName: '',
-        businessDate: row.business_date,
-        breakdown: this.toBreakdown(row),
-        closure: closureByCollector.get(row.collector_id) ?? null,
-        expenses: expensesByCollector.get(row.collector_id) ?? [],
-      }));
+    const breakdownByCollector = new Map<string, CashDayBreakdown>();
+    for (const row of breakdownResult.data ?? []) {
+      if (row.collector_id === null || row.business_date === null) continue;
+      breakdownByCollector.set(row.collector_id, this.toBreakdown(row));
+    }
+
+    const collectorIds = new Set([
+      ...breakdownByCollector.keys(),
+      ...closureByCollector.keys(),
+      ...expensesByCollector.keys(),
+      ...allowanceRequestsByCollector.keys(),
+    ]);
+
+    return [...collectorIds].map((currentCollectorId) => ({
+      collectorId: currentCollectorId,
+      collectorName: '',
+      businessDate,
+      breakdown:
+        breakdownByCollector.get(currentCollectorId) ??
+        emptyCashDayBreakdown(currentCollectorId, businessDate),
+      closure: closureByCollector.get(currentCollectorId) ?? null,
+      allowanceRequests: allowanceRequestsByCollector.get(currentCollectorId) ?? [],
+      expenses: expensesByCollector.get(currentCollectorId) ?? [],
+    }));
   }
 
-  private emptyDay(collectorId: string, collectorName: string, businessDate: string): CollectorCashDay {
+  private emptyDay(
+    collectorId: string,
+    collectorName: string,
+    businessDate: string,
+  ): CollectorCashDay {
     return {
       collectorId,
       collectorName,
       businessDate,
       breakdown: emptyCashDayBreakdown(collectorId, businessDate),
       closure: null,
+      allowanceRequests: [],
       expenses: [],
     };
   }
@@ -311,6 +388,23 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
     };
   }
 
+  private toAllowanceRequest(row: AllowanceRequestRow): CashAllowanceRequest {
+    return {
+      id: row.id,
+      collectorId: row.collector_id,
+      businessDate: row.business_date,
+      amount: Number(row.amount),
+      notes: row.notes,
+      status: row.status,
+      cashMovementId: row.cash_movement_id,
+      requestedBy: row.requested_by,
+      reviewedBy: row.reviewed_by,
+      reviewedAt: row.reviewed_at,
+      rejectionReason: row.rejection_reason,
+      createdAt: row.created_at,
+    };
+  }
+
   // ==========================================================
   // ERRORS
   // ==========================================================
@@ -322,10 +416,18 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
     if (operationalError) return operationalError;
 
     if (message.includes('Only administrators or supervisors may register an opening float')) {
-      return new AppError('AUTH_UNAUTHORIZED', 'Solo un administrador o supervisor puede registrar la apertura.', error);
+      return new AppError(
+        'AUTH_UNAUTHORIZED',
+        'Solo un administrador o supervisor puede registrar la apertura.',
+        error,
+      );
     }
     if (message.includes('Opening float has already been registered')) {
-      return new AppError('VALIDATION', 'Ya se registró la apertura de este cobrador para esta fecha.', error);
+      return new AppError(
+        'VALIDATION',
+        'Ya se registró la apertura de este cobrador para esta fecha.',
+        error,
+      );
     }
     if (message.includes('Opening float must be registered for an active collector')) {
       return new AppError('VALIDATION', 'Seleccioná un cobrador activo válido.', error);
@@ -334,38 +436,100 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
       return new AppError('VALIDATION', 'El monto de apertura debe ser mayor que cero.', error);
     }
     if (message.includes('Future opening floats are not allowed')) {
-      return new AppError('VALIDATION', 'No se puede registrar una apertura con fecha futura.', error);
+      return new AppError(
+        'VALIDATION',
+        'No se puede registrar una apertura con fecha futura.',
+        error,
+      );
     }
-    if (message.includes('Cannot register cash movements once the cash closure has been validated')) {
-      return new AppError('VALIDATION', 'No se puede modificar la caja: el cierre de ese día ya fue validado.', error);
+    if (
+      message.includes('Cannot register cash movements once the cash closure has been validated')
+    ) {
+      return new AppError(
+        'VALIDATION',
+        'No se puede modificar la caja: el cierre de ese día ya fue validado.',
+        error,
+      );
     }
 
     return this.toAppError(error, 'No se pudo registrar la apertura.');
   }
 
-  private allowanceError(error: unknown): AppError {
+  private allowanceRequestError(error: unknown): AppError {
     const message = this.errorMessage(error);
 
     const operationalError = this.operationalProfileError(message, error);
     if (operationalError) return operationalError;
 
-    if (message.includes('Only administrators or supervisors may register an allowance')) {
-      return new AppError('AUTH_UNAUTHORIZED', 'Solo un administrador o supervisor puede registrar viáticos.', error);
-    }
-    if (message.includes('Allowance must be registered for an active collector')) {
-      return new AppError('VALIDATION', 'Seleccioná un cobrador activo válido.', error);
+    if (message.includes('Only collectors may request an allowance')) {
+      return new AppError('AUTH_UNAUTHORIZED', 'Solo un cobrador puede solicitar viáticos.', error);
     }
     if (message.includes('Allowance amount must be greater than zero')) {
       return new AppError('VALIDATION', 'El monto del viático debe ser mayor que cero.', error);
     }
-    if (message.includes('Future allowances are not allowed')) {
-      return new AppError('VALIDATION', 'No se puede registrar un viático con fecha futura.', error);
+    if (message.includes('Allowance amount may contain at most two decimals')) {
+      return new AppError(
+        'VALIDATION',
+        'El monto del viático admite como máximo dos decimales.',
+        error,
+      );
     }
-    if (message.includes('Cannot register cash movements once the cash closure has been validated')) {
-      return new AppError('VALIDATION', 'No se puede modificar la caja: el cierre de ese día ya fue validado.', error);
+    if (message.includes('Allowances may only be requested for the current business date')) {
+      return new AppError('VALIDATION', 'Solo podés solicitar viáticos para el día actual.', error);
+    }
+    if (message.includes('A pending allowance request already exists')) {
+      return new AppError(
+        'VALIDATION',
+        'Ya tenés una solicitud de viático pendiente para hoy.',
+        error,
+      );
+    }
+    if (message.includes('Cannot request an allowance once the cash closure has been validated')) {
+      return new AppError(
+        'VALIDATION',
+        'No se puede solicitar un viático: el cierre de hoy ya fue validado.',
+        error,
+      );
     }
 
-    return this.toAppError(error, 'No se pudo registrar el viático.');
+    return this.toAppError(error, 'No se pudo solicitar el viático.');
+  }
+
+  private allowanceReviewError(error: unknown): AppError {
+    const message = this.errorMessage(error);
+
+    const operationalError = this.operationalProfileError(message, error);
+    if (operationalError) return operationalError;
+
+    if (message.includes('Only administrators or supervisors may review allowance requests')) {
+      return new AppError(
+        'AUTH_UNAUTHORIZED',
+        'Solo un administrador o supervisor puede revisar viáticos.',
+        error,
+      );
+    }
+    if (message.includes('A rejection reason is required')) {
+      return new AppError('VALIDATION', 'Ingresá el motivo del rechazo.', error);
+    }
+    if (message.includes('Only pending allowance requests may be reviewed')) {
+      return new AppError('VALIDATION', 'Esta solicitud de viático ya fue revisada.', error);
+    }
+    if (message.includes('Allowance request not found')) {
+      return new AppError('VALIDATION', 'No se encontró la solicitud de viático.', error);
+    }
+    if (
+      message.includes(
+        'Cannot review an allowance request once the cash closure has been validated',
+      )
+    ) {
+      return new AppError(
+        'VALIDATION',
+        'No se puede revisar el viático: el cierre de ese día ya fue validado.',
+        error,
+      );
+    }
+
+    return this.toAppError(error, 'No se pudo revisar la solicitud de viático.');
   }
 
   private expenseError(error: unknown): AppError {
@@ -375,7 +539,11 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
     if (operationalError) return operationalError;
 
     if (message.includes('Collector cannot request an expense for another portfolio')) {
-      return new AppError('AUTH_UNAUTHORIZED', 'No podés registrar un gasto para otro cobrador.', error);
+      return new AppError(
+        'AUTH_UNAUTHORIZED',
+        'No podés registrar un gasto para otro cobrador.',
+        error,
+      );
     }
     if (message.includes('Collector is required when an administrator requests an expense')) {
       return new AppError('VALIDATION', 'Seleccioná el cobrador para este gasto.', error);
@@ -390,7 +558,11 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
       return new AppError('VALIDATION', 'No se puede registrar un gasto con fecha futura.', error);
     }
     if (message.includes('Cannot request an expense once the cash closure has been validated')) {
-      return new AppError('VALIDATION', 'No se puede registrar un gasto: el cierre de ese día ya fue validado.', error);
+      return new AppError(
+        'VALIDATION',
+        'No se puede registrar un gasto: el cierre de ese día ya fue validado.',
+        error,
+      );
     }
 
     return this.toAppError(error, 'No se pudo registrar el gasto.');
@@ -403,7 +575,11 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
     if (operationalError) return operationalError;
 
     if (message.includes('Only administrators or supervisors may review expenses')) {
-      return new AppError('AUTH_UNAUTHORIZED', 'Solo un administrador o supervisor puede revisar gastos.', error);
+      return new AppError(
+        'AUTH_UNAUTHORIZED',
+        'Solo un administrador o supervisor puede revisar gastos.',
+        error,
+      );
     }
     if (message.includes('A rejection reason is required')) {
       return new AppError('VALIDATION', 'Ingresá el motivo del rechazo.', error);
@@ -415,7 +591,11 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
       return new AppError('VALIDATION', 'No se encontró el gasto.', error);
     }
     if (message.includes('Cannot review an expense once the cash closure has been validated')) {
-      return new AppError('VALIDATION', 'No se puede revisar el gasto: el cierre de ese día ya fue validado.', error);
+      return new AppError(
+        'VALIDATION',
+        'No se puede revisar el gasto: el cierre de ese día ya fue validado.',
+        error,
+      );
     }
 
     return this.toAppError(error, 'No se pudo revisar el gasto.');
@@ -428,7 +608,11 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
     if (operationalError) return operationalError;
 
     if (message.includes('Only collectors may submit their cash closure')) {
-      return new AppError('AUTH_UNAUTHORIZED', 'Solo un cobrador puede enviar su propio cierre de caja.', error);
+      return new AppError(
+        'AUTH_UNAUTHORIZED',
+        'Solo un cobrador puede enviar su propio cierre de caja.',
+        error,
+      );
     }
     if (message.includes('Future cash closures are not allowed')) {
       return new AppError('VALIDATION', 'No se puede cerrar caja con fecha futura.', error);
@@ -436,11 +620,23 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
     if (message.includes('Delivered amount cannot be negative')) {
       return new AppError('VALIDATION', 'El monto entregado no puede ser negativo.', error);
     }
-    if (message.includes('An observation is required when the delivered amount differs from the expected amount')) {
-      return new AppError('VALIDATION', 'Ingresá una observación: el monto entregado no coincide con el esperado.', error);
+    if (
+      message.includes(
+        'An observation is required when the delivered amount differs from the expected amount',
+      )
+    ) {
+      return new AppError(
+        'VALIDATION',
+        'Ingresá una observación: el monto entregado no coincide con el esperado.',
+        error,
+      );
     }
     if (message.includes('Validated cash closure cannot be resubmitted')) {
-      return new AppError('VALIDATION', 'Este cierre ya fue validado y no se puede modificar.', error);
+      return new AppError(
+        'VALIDATION',
+        'Este cierre ya fue validado y no se puede modificar.',
+        error,
+      );
     }
 
     return this.toAppError(error, 'No se pudo enviar el cierre de caja.');
@@ -453,16 +649,32 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
     if (operationalError) return operationalError;
 
     if (message.includes('Only administrators or supervisors may validate cash closures')) {
-      return new AppError('AUTH_UNAUTHORIZED', 'Solo un administrador o supervisor puede validar el cierre.', error);
+      return new AppError(
+        'AUTH_UNAUTHORIZED',
+        'Solo un administrador o supervisor puede validar el cierre.',
+        error,
+      );
     }
     if (message.includes('Cash closure not found')) {
       return new AppError('VALIDATION', 'No se encontró el cierre de caja.', error);
     }
     if (message.includes('Only submitted cash closures may be validated')) {
-      return new AppError('VALIDATION', 'Solo se pueden validar cierres enviados por el cobrador.', error);
+      return new AppError(
+        'VALIDATION',
+        'Solo se pueden validar cierres enviados por el cobrador.',
+        error,
+      );
     }
-    if (message.includes('An observation is required when the delivered amount differs from the expected amount')) {
-      return new AppError('VALIDATION', 'Ingresá una observación: el monto entregado no coincide con el esperado.', error);
+    if (
+      message.includes(
+        'An observation is required when the delivered amount differs from the expected amount',
+      )
+    ) {
+      return new AppError(
+        'VALIDATION',
+        'Ingresá una observación: el monto entregado no coincide con el esperado.',
+        error,
+      );
     }
 
     return this.toAppError(error, 'No se pudo validar el cierre de caja.');
@@ -489,7 +701,11 @@ export class SupabaseCashClosureRepository implements CashClosureRepository {
     const code = this.errorCode(error);
 
     if (code === '42501') {
-      return new AppError('AUTH_UNAUTHORIZED', 'No tenés permisos para realizar esta acción.', error);
+      return new AppError(
+        'AUTH_UNAUTHORIZED',
+        'No tenés permisos para realizar esta acción.',
+        error,
+      );
     }
 
     if (code === '22023' || code === '23505') {

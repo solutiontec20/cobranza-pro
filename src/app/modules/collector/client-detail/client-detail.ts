@@ -10,17 +10,28 @@ import {
   submit,
   validate,
 } from '@angular/forms/signals';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { MessageModule } from 'primeng/message';
+import { PaginatorModule } from 'primeng/paginator';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
+import {
+  filterInstallments,
+  filterPayments,
+  InstallmentStatusFilter,
+  pageFirst,
+  pageItems,
+  PaymentMethodFilter,
+  PaymentStatusFilter,
+} from '../../../core/calculations/loan-detail-filtering';
 import {
   calculateLoanSummary,
   firstDueOn,
@@ -117,8 +128,10 @@ type TagSeverity = 'success' | 'warn' | 'danger' | 'secondary' | 'info';
     EsDate,
     DialogModule,
     FormField,
+    FormsModule,
     InputNumberModule,
     MessageModule,
+    PaginatorModule,
     PenCurrency,
     SelectModule,
     SkeletonModule,
@@ -164,6 +177,54 @@ export default class ClientDetail {
   readonly installments = computed(() => this.detail()?.installments ?? []);
   readonly firstCollectionDate = computed(() => this.installments()[0]?.dueDate ?? null);
   readonly payments = computed(() => this.detail()?.payments ?? []);
+  readonly pageSizeOptions = [5, 10, 25];
+  readonly installmentStatusOptions: Array<{
+    label: string;
+    value: InstallmentStatusFilter;
+  }> = [
+    { label: 'Todas las cuotas', value: 'all' },
+    { label: 'Pendientes', value: 'pending' },
+    { label: 'Parciales', value: 'partial' },
+    { label: 'Vencidas', value: 'overdue' },
+    { label: 'Pagadas', value: 'paid' },
+  ];
+  readonly paymentStatusOptions: Array<{
+    label: string;
+    value: PaymentStatusFilter;
+  }> = [
+    { label: 'Todos los pagos', value: 'all' },
+    { label: 'Registrados', value: 'posted' },
+    { label: 'Anulados', value: 'voided' },
+  ];
+  readonly paymentMethodFilterOptions: Array<{
+    label: string;
+    value: PaymentMethodFilter;
+  }> = [{ label: 'Todos los medios', value: 'all' }, ...this.paymentMethodOptions];
+  readonly installmentStatusFilter = signal<InstallmentStatusFilter>('all');
+  readonly installmentFirst = signal(0);
+  readonly installmentRows = signal(10);
+  readonly paymentStatusFilter = signal<PaymentStatusFilter>('all');
+  readonly paymentMethodFilter = signal<PaymentMethodFilter>('all');
+  readonly paymentFirst = signal(0);
+  readonly paymentRows = signal(10);
+  readonly filteredInstallments = computed(() =>
+    filterInstallments(this.installments(), this.installmentStatusFilter()),
+  );
+  readonly installmentPageFirst = computed(() =>
+    pageFirst(this.filteredInstallments().length, this.installmentFirst(), this.installmentRows()),
+  );
+  readonly visibleInstallments = computed(() =>
+    pageItems(this.filteredInstallments(), this.installmentPageFirst(), this.installmentRows()),
+  );
+  readonly filteredPayments = computed(() =>
+    filterPayments(this.payments(), this.paymentStatusFilter(), this.paymentMethodFilter()),
+  );
+  readonly paymentPageFirst = computed(() =>
+    pageFirst(this.filteredPayments().length, this.paymentFirst(), this.paymentRows()),
+  );
+  readonly visiblePayments = computed(() =>
+    pageItems(this.filteredPayments(), this.paymentPageFirst(), this.paymentRows()),
+  );
 
   // Payment dialog state
   readonly paymentDialogVisible = signal(false);
@@ -341,7 +402,10 @@ export default class ClientDetail {
   constructor() {
     effect(() => {
       const customerId = this.id();
-      untracked(() => void this.initialize(customerId));
+      untracked(() => {
+        this.resetDetailFilters();
+        void this.initialize(customerId);
+      });
     });
 
     effect(() => {
@@ -360,6 +424,39 @@ export default class ClientDetail {
         void Promise.all([this.loanStore.loadDetail(loan.id), this.store.load()]);
       });
     });
+  }
+
+  changeInstallmentStatus(status: InstallmentStatusFilter): void {
+    this.installmentStatusFilter.set(status);
+    this.installmentFirst.set(0);
+  }
+
+  changeInstallmentPage(event: { first?: number; rows?: number }): void {
+    this.installmentFirst.set(event.first ?? 0);
+    this.installmentRows.set(event.rows ?? this.installmentRows());
+  }
+
+  changePaymentStatus(status: PaymentStatusFilter): void {
+    this.paymentStatusFilter.set(status);
+    this.paymentFirst.set(0);
+  }
+
+  changePaymentMethod(method: PaymentMethodFilter): void {
+    this.paymentMethodFilter.set(method);
+    this.paymentFirst.set(0);
+  }
+
+  changePaymentPage(event: { first?: number; rows?: number }): void {
+    this.paymentFirst.set(event.first ?? 0);
+    this.paymentRows.set(event.rows ?? this.paymentRows());
+  }
+
+  private resetDetailFilters(): void {
+    this.installmentStatusFilter.set('all');
+    this.installmentFirst.set(0);
+    this.paymentStatusFilter.set('all');
+    this.paymentMethodFilter.set('all');
+    this.paymentFirst.set(0);
   }
 
   private async initialize(customerId: string): Promise<void> {
@@ -681,6 +778,16 @@ export default class ClientDetail {
 
   paymentSeverity(status: LoanPaymentRecord['status']): TagSeverity {
     return status === 'posted' ? 'success' : 'secondary';
+  }
+
+  paymentMethodLabel(method: string): string {
+    const labels: Record<string, string> = {
+      cash: 'Efectivo',
+      yape: 'Yape',
+      plin: 'Plin',
+      transfer: 'Transferencia',
+    };
+    return labels[method] ?? method;
   }
 
   getRiskSeverity(): TagSeverity {

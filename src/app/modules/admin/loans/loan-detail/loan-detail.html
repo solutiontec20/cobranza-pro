@@ -413,113 +413,185 @@
       class="rounded-xl border border-surface bg-surface-0 p-4 shadow-sm dark:bg-surface-900 sm:p-5"
       aria-labelledby="schedule-title"
     >
-      <div class="mb-4 flex flex-wrap items-end justify-between gap-2">
+      <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 id="schedule-title" class="text-xl font-semibold text-color">Cronograma de pagos</h2>
           <p class="mt-1 text-sm text-muted-color">
-            {{ detail.installments.length }} cuotas programadas
+            {{ filteredInstallments().length }} de {{ detail.installments.length }} cuotas
           </p>
         </div>
-        <span class="text-sm font-medium text-muted-color"
-          >Fin: {{ detail.loan.endDate | esDate }}</span
-        >
+        <div class="grid gap-2 sm:grid-cols-[minmax(12rem,1fr)_auto] sm:items-end">
+          <label class="flex flex-col gap-1 text-sm font-medium text-color">
+            Estado
+            <p-select
+              [options]="installmentStatusOptions"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="installmentStatusFilter()"
+              (ngModelChange)="changeInstallmentStatus($event)"
+              appendTo="body"
+              styleClass="w-full"
+            />
+          </label>
+          <span class="pb-2 text-sm font-medium text-muted-color"
+            >Fin: {{ detail.loan.endDate | esDate }}</span
+          >
+        </div>
       </div>
 
-      <div class="space-y-3 md:hidden">
-        @for (installment of detail.installments; track installment.id) {
-          <article class="rounded-lg border border-surface p-3">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <p class="font-semibold text-color">Cuota {{ installment.installmentNumber }}</p>
-                <p class="text-sm text-muted-color">Vence {{ installment.dueDate | esDate }}</p>
-              </div>
-              <p-tag
-                [severity]="installmentSeverity(installment.status)"
-                [value]="installmentStatusLabel(installment.status)"
-              />
-            </div>
-            <dl
-              class="mt-3 grid grid-cols-3 gap-2 border-t border-surface-200 pt-3 text-sm dark:border-surface-700"
-            >
-              <div>
-                <dt class="text-muted-color">Esperado</dt>
-                <dd class="mt-1 font-semibold text-color">
-                  {{ installment.scheduledAmount | penCurrency }}
-                </dd>
-              </div>
-              <div>
-                <dt class="text-muted-color">Pagado</dt>
-                <dd class="mt-1 font-semibold text-green-600">
-                  {{ installment.paidAmount | penCurrency }}
-                </dd>
-              </div>
-              <div>
-                <dt class="text-muted-color">Saldo</dt>
-                <dd class="mt-1 font-semibold text-color">
-                  {{ installment.outstandingAmount | penCurrency }}
-                </dd>
-              </div>
-            </dl>
-            @if (installment.overdueDays > 0) {
-              <p class="mt-2 text-sm font-medium text-red-600">
-                {{ installment.overdueDays }} días de atraso
-              </p>
-            }
-          </article>
-        }
-      </div>
-
-      <div class="hidden md:block">
-        <p-table
-          [value]="detail.installments"
-          responsiveLayout="scroll"
-          styleClass="p-datatable-sm"
-        >
-          <ng-template #header>
-            <tr>
-              <th>N.°</th>
-              <th>Vencimiento</th>
-              <th class="text-right">Esperado</th>
-              <th class="text-right">Pagado</th>
-              <th class="text-right">Saldo</th>
-              <th>Estado</th>
-            </tr>
-          </ng-template>
-          <ng-template #body let-installment>
-            <tr>
-              <td class="font-semibold">{{ installment.installmentNumber }}</td>
-              <td>{{ installment.dueDate | esDate }}</td>
-              <td class="text-right">{{ installment.scheduledAmount | penCurrency }}</td>
-              <td class="text-right text-green-600">{{ installment.paidAmount | penCurrency }}</td>
-              <td class="text-right font-semibold">
-                {{ installment.outstandingAmount | penCurrency }}
-              </td>
-              <td>
+      @if (filteredInstallments().length === 0) {
+        <div class="rounded-lg border border-dashed border-surface px-5 py-8 text-center">
+          <i class="pi pi-filter-slash mb-3 text-3xl text-muted-color" aria-hidden="true"></i>
+          <p class="font-medium text-color">No hay cuotas con este estado</p>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            variant="text"
+            class="mt-2"
+            (click)="changeInstallmentStatus('all')"
+          >
+            Ver todas las cuotas
+          </button>
+        </div>
+      } @else {
+        <div class="space-y-3 md:hidden">
+          @for (installment of visibleInstallments(); track installment.id) {
+            <article class="rounded-lg border border-surface p-3">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="font-semibold text-color">Cuota {{ installment.installmentNumber }}</p>
+                  <p class="text-sm text-muted-color">Vence {{ installment.dueDate | esDate }}</p>
+                </div>
                 <p-tag
                   [severity]="installmentSeverity(installment.status)"
                   [value]="installmentStatusLabel(installment.status)"
                 />
-                @if (installment.overdueDays > 0) {
-                  <small class="ml-2 text-red-600">{{ installment.overdueDays }} días</small>
-                }
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </div>
+              </div>
+              <dl
+                class="mt-3 grid grid-cols-3 gap-2 border-t border-surface-200 pt-3 text-sm dark:border-surface-700"
+              >
+                <div>
+                  <dt class="text-muted-color">Esperado</dt>
+                  <dd class="mt-1 font-semibold text-color">
+                    {{ installment.scheduledAmount | penCurrency }}
+                  </dd>
+                </div>
+                <div>
+                  <dt class="text-muted-color">Pagado</dt>
+                  <dd class="mt-1 font-semibold text-green-600">
+                    {{ installment.paidAmount | penCurrency }}
+                  </dd>
+                </div>
+                <div>
+                  <dt class="text-muted-color">Saldo</dt>
+                  <dd class="mt-1 font-semibold text-color">
+                    {{ installment.outstandingAmount | penCurrency }}
+                  </dd>
+                </div>
+              </dl>
+              @if (installment.overdueDays > 0) {
+                <p class="mt-2 text-sm font-medium text-red-600">
+                  {{ installment.overdueDays }} días de atraso
+                </p>
+              }
+            </article>
+          }
+        </div>
+
+        <div class="hidden overflow-x-auto md:block">
+          <p-table [value]="visibleInstallments()" styleClass="p-datatable-sm">
+            <ng-template #header>
+              <tr>
+                <th>N.°</th>
+                <th>Vencimiento</th>
+                <th class="text-right">Esperado</th>
+                <th class="text-right">Pagado</th>
+                <th class="text-right">Saldo</th>
+                <th>Estado</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-installment>
+              <tr>
+                <td class="font-semibold">{{ installment.installmentNumber }}</td>
+                <td>{{ installment.dueDate | esDate }}</td>
+                <td class="text-right tabular-nums">
+                  {{ installment.scheduledAmount | penCurrency }}
+                </td>
+                <td class="text-right text-green-600 tabular-nums">
+                  {{ installment.paidAmount | penCurrency }}
+                </td>
+                <td class="text-right font-semibold tabular-nums">
+                  {{ installment.outstandingAmount | penCurrency }}
+                </td>
+                <td>
+                  <p-tag
+                    [severity]="installmentSeverity(installment.status)"
+                    [value]="installmentStatusLabel(installment.status)"
+                  />
+                  @if (installment.overdueDays > 0) {
+                    <small class="ml-2 text-red-600">{{ installment.overdueDays }} días</small>
+                  }
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+
+        <p-paginator
+          [first]="installmentPageFirst()"
+          [rows]="installmentRows()"
+          [totalRecords]="filteredInstallments().length"
+          [rowsPerPageOptions]="pageSizeOptions"
+          [showCurrentPageReport]="true"
+          currentPageReportTemplate="{first}–{last} de {totalRecords} cuotas"
+          (onPageChange)="changeInstallmentPage($event)"
+          styleClass="mt-4"
+        />
+      }
     </section>
 
     <section
       class="rounded-xl border border-surface bg-surface-0 p-4 shadow-sm dark:bg-surface-900 sm:p-5"
       aria-labelledby="payments-title"
     >
-      <div class="mb-4">
-        <h2 id="payments-title" class="text-xl font-semibold text-color">
-          Historial de pagos recibidos
-        </h2>
-        <p class="mt-1 text-sm text-muted-color">
-          Incluye pagos vigentes y anulados para conservar la trazabilidad.
-        </p>
+      <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h2 id="payments-title" class="text-xl font-semibold text-color">
+            Historial de pagos recibidos
+          </h2>
+          <p class="mt-1 text-sm text-muted-color">
+            {{ filteredPayments().length }} de {{ detail.payments.length }} pagos · incluye anulados
+          </p>
+        </div>
+        @if (detail.payments.length > 0) {
+          <div class="grid gap-2 sm:grid-cols-2">
+            <label class="flex flex-col gap-1 text-sm font-medium text-color">
+              Estado
+              <p-select
+                [options]="paymentStatusOptions"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="paymentStatusFilter()"
+                (ngModelChange)="changePaymentStatus($event)"
+                appendTo="body"
+                styleClass="w-full"
+              />
+            </label>
+            <label class="flex flex-col gap-1 text-sm font-medium text-color">
+              Medio
+              <p-select
+                [options]="paymentMethodFilterOptions"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="paymentMethodFilter()"
+                (ngModelChange)="changePaymentMethod($event)"
+                appendTo="body"
+                styleClass="w-full"
+              />
+            </label>
+          </div>
+        }
       </div>
 
       @if (detail.payments.length === 0) {
@@ -530,9 +602,24 @@
             Los pagos recibidos aparecerán aquí en orden reciente.
           </p>
         </div>
+      } @else if (filteredPayments().length === 0) {
+        <div class="rounded-lg border border-dashed border-surface px-5 py-8 text-center">
+          <i class="pi pi-filter-slash mb-3 text-3xl text-muted-color" aria-hidden="true"></i>
+          <p class="font-medium text-color">No hay pagos con estos filtros</p>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            variant="text"
+            class="mt-2"
+            (click)="changePaymentStatus('all'); changePaymentMethod('all')"
+          >
+            Ver todos los pagos
+          </button>
+        </div>
       } @else {
         <div class="space-y-3 md:hidden">
-          @for (payment of detail.payments; track payment.id) {
+          @for (payment of visiblePayments(); track payment.id) {
             <article
               class="rounded-lg border border-surface p-3"
               [class.opacity-60]="payment.status === 'voided'"
@@ -598,8 +685,8 @@
           }
         </div>
 
-        <div class="hidden md:block">
-          <p-table [value]="detail.payments" responsiveLayout="scroll" styleClass="p-datatable-sm">
+        <div class="hidden overflow-x-auto md:block">
+          <p-table [value]="visiblePayments()" styleClass="p-datatable-sm">
             <ng-template #header>
               <tr>
                 <th>Fecha</th>
@@ -655,6 +742,16 @@
             </ng-template>
           </p-table>
         </div>
+        <p-paginator
+          [first]="paymentPageFirst()"
+          [rows]="paymentRows()"
+          [totalRecords]="filteredPayments().length"
+          [rowsPerPageOptions]="pageSizeOptions"
+          [showCurrentPageReport]="true"
+          currentPageReportTemplate="{first}–{last} de {totalRecords} pagos"
+          (onPageChange)="changePaymentPage($event)"
+          styleClass="mt-4"
+        />
       }
     </section>
   } @else {

@@ -51,7 +51,7 @@ describe('SupabaseCashClosureRepository', () => {
     ]);
   });
 
-  it('maps a full breakdown + closure + expenses for a given collector and date', async () => {
+  it('maps a full breakdown, closure, allowance requests, and expenses for a collector day', async () => {
     from
       .mockReturnValueOnce(
         chain({
@@ -114,6 +114,28 @@ describe('SupabaseCashClosureRepository', () => {
           ],
           error: null,
         }),
+      )
+      .mockReturnValueOnce(
+        chain({
+          data: [
+            {
+              id: 'allowance-request-1',
+              collector_id: 'collector-1',
+              business_date: '2026-10-25',
+              amount: 100,
+              notes: 'Movilidad',
+              status: 'approved',
+              cash_movement_id: 'allowance-movement-1',
+              requested_by: 'collector-1',
+              reviewed_by: 'admin-1',
+              reviewed_at: '2026-10-25T17:00:00Z',
+              rejection_reason: null,
+              created_at: '2026-10-25T16:00:00Z',
+              updated_at: '2026-10-25T17:00:00Z',
+            },
+          ],
+          error: null,
+        }),
       );
 
     getUser.mockResolvedValue({ data: { user: { id: 'collector-1' } }, error: null });
@@ -133,14 +155,22 @@ describe('SupabaseCashClosureRepository', () => {
       loanDisbursementAmount: 600,
       operatingExpenseAmount: 50,
     });
-    expect(day.closure).toMatchObject({ id: 'closure-1', status: 'submitted', deliveredAmount: 1100 });
+    expect(day.closure).toMatchObject({
+      id: 'closure-1',
+      status: 'submitted',
+      deliveredAmount: 1100,
+    });
     expect(day.expenses).toEqual([
       expect.objectContaining({ id: 'expense-1', category: 'fuel', status: 'approved' }),
+    ]);
+    expect(day.allowanceRequests).toEqual([
+      expect.objectContaining({ id: 'allowance-request-1', status: 'approved', amount: 100 }),
     ]);
   });
 
   it('returns an empty day when the collector has no movements yet', async () => {
     from
+      .mockReturnValueOnce(chain({ data: [], error: null }))
       .mockReturnValueOnce(chain({ data: [], error: null }))
       .mockReturnValueOnce(chain({ data: [], error: null }))
       .mockReturnValueOnce(chain({ data: [], error: null }));
@@ -150,7 +180,45 @@ describe('SupabaseCashClosureRepository', () => {
 
     expect(day.breakdown.openingAmount).toBe(0);
     expect(day.closure).toBeNull();
+    expect(day.allowanceRequests).toEqual([]);
     expect(day.expenses).toEqual([]);
+  });
+
+  it('preserves a pending allowance request when the collector has no cash movements yet', async () => {
+    from
+      .mockReturnValueOnce(chain({ data: [], error: null }))
+      .mockReturnValueOnce(chain({ data: [], error: null }))
+      .mockReturnValueOnce(chain({ data: [], error: null }))
+      .mockReturnValueOnce(
+        chain({
+          data: [
+            {
+              id: 'allowance-request-1',
+              collector_id: 'collector-2',
+              business_date: '2026-10-25',
+              amount: 35,
+              notes: 'Movilidad',
+              status: 'pending',
+              cash_movement_id: null,
+              requested_by: 'collector-2',
+              reviewed_by: null,
+              reviewed_at: null,
+              rejection_reason: null,
+              created_at: '2026-10-25T08:00:00Z',
+              updated_at: '2026-10-25T08:00:00Z',
+            },
+          ],
+          error: null,
+        }),
+      );
+    getUser.mockResolvedValue({ data: { user: { id: 'collector-2' } }, error: null });
+
+    const day = await repository.getOwnDay('2026-10-25');
+
+    expect(day.breakdown.openingAmount).toBe(0);
+    expect(day.allowanceRequests).toEqual([
+      expect.objectContaining({ id: 'allowance-request-1', status: 'pending', amount: 35 }),
+    ]);
   });
 
   it('fills in a zero-valued day for every active collector in listDay', async () => {
@@ -184,6 +252,7 @@ describe('SupabaseCashClosureRepository', () => {
           error: null,
         }),
       )
+      .mockReturnValueOnce(chain({ data: [], error: null }))
       .mockReturnValueOnce(chain({ data: [], error: null }))
       .mockReturnValueOnce(chain({ data: [], error: null }));
 
@@ -268,13 +337,68 @@ describe('SupabaseCashClosureRepository', () => {
     });
   });
 
+  it('requests an allowance via RPC and maps the pending result', async () => {
+    rpc.mockResolvedValue({
+      data: [
+        {
+          request_id: 'allowance-request-1',
+          collector_id: 'collector-1',
+          business_date: '2026-10-25',
+          amount: 35,
+          status: 'pending',
+          created_at: '2026-10-25T08:00:00Z',
+        },
+      ],
+      error: null,
+    });
+
+    await expect(
+      repository.requestAllowance({
+        businessDate: '2026-10-25',
+        amount: 35,
+        notes: 'Movilidad para la ruta',
+      }),
+    ).resolves.toMatchObject({
+      id: 'allowance-request-1',
+      collectorId: 'collector-1',
+      status: 'pending',
+      amount: 35,
+    });
+
+    expect(rpc).toHaveBeenCalledWith('request_cash_allowance', {
+      p_business_date: '2026-10-25',
+      p_amount: 35,
+      p_notes: 'Movilidad para la ruta',
+    });
+  });
+
+  it('reviews an allowance request through the reviewer RPC', async () => {
+    rpc.mockResolvedValue({ data: [{}], error: null });
+
+    await repository.reviewAllowanceRequest({
+      requestId: 'allowance-request-1',
+      approve: false,
+      reason: 'Monto incorrecto',
+    });
+
+    expect(rpc).toHaveBeenCalledWith('review_cash_allowance_request', {
+      p_request_id: 'allowance-request-1',
+      p_approve: false,
+      p_reason: 'Monto incorrecto',
+    });
+  });
+
   it('translates a rejection-reason-required error on review', async () => {
     rpc.mockResolvedValue({
       data: null,
       error: { code: '22023', message: 'A rejection reason is required' },
     });
 
-    const promise = repository.reviewExpense({ expenseId: 'expense-1', approve: false, reason: '' });
+    const promise = repository.reviewExpense({
+      expenseId: 'expense-1',
+      approve: false,
+      reason: '',
+    });
 
     await expect(promise).rejects.toMatchObject({
       code: 'VALIDATION',
@@ -319,7 +443,8 @@ describe('SupabaseCashClosureRepository', () => {
       data: null,
       error: {
         code: '22023',
-        message: 'An observation is required when the delivered amount differs from the expected amount',
+        message:
+          'An observation is required when the delivered amount differs from the expected amount',
       },
     });
 
@@ -348,7 +473,10 @@ describe('SupabaseCashClosureRepository', () => {
   it('translates an unauthorized validation error', async () => {
     rpc.mockResolvedValue({
       data: null,
-      error: { code: '42501', message: 'Only administrators or supervisors may validate cash closures' },
+      error: {
+        code: '42501',
+        message: 'Only administrators or supervisors may validate cash closures',
+      },
     });
 
     const promise = repository.validateClosure({ closureId: 'closure-1', observation: '' });

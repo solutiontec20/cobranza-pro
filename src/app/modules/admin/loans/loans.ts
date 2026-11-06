@@ -8,10 +8,12 @@ import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
+import { PaginatorModule } from 'primeng/paginator';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
+import { pageItems } from '../../../core/calculations/loan-detail-filtering';
 import { LoanFrequency, LoanStatus } from '../../../core/models/loan.model';
 import { EsDate } from '../../../shared/pipes/es-date';
 import { PenCurrency } from '../../../shared/pipes/pen-currency';
@@ -47,6 +49,7 @@ const emptyModel = (): LoanFormModel => ({
     InputNumberModule,
     InputTextModule,
     MessageModule,
+    PaginatorModule,
     PenCurrency,
     RouterLink,
     SelectModule,
@@ -62,6 +65,9 @@ export default class Loans {
 
   protected readonly loadingRows = [1, 2, 3];
   protected readonly createDialogVisible = signal(false);
+  protected readonly pageSizeOptions = [5, 10, 25];
+  protected readonly pageFirst = signal(0);
+  protected readonly pageRows = signal(10);
   protected readonly frequencyOptions: Array<{ label: string; value: LoanFrequency }> = [
     { label: 'Diario', value: 'daily' },
     { label: 'Semanal', value: 'weekly' },
@@ -74,12 +80,13 @@ export default class Loans {
     { label: 'Renovado', value: 'renewed' },
     { label: 'Anulado', value: 'voided' },
   ];
-  protected readonly frequencyFilterOptions: Array<{ label: string; value: LoanFrequencyFilter }> = [
-    { label: 'Todas las frecuencias', value: 'all' },
-    { label: 'Diario', value: 'daily' },
-    { label: 'Semanal', value: 'weekly' },
-    { label: 'Mensual', value: 'monthly' },
-  ];
+  protected readonly frequencyFilterOptions: Array<{ label: string; value: LoanFrequencyFilter }> =
+    [
+      { label: 'Todas las frecuencias', value: 'all' },
+      { label: 'Diario', value: 'daily' },
+      { label: 'Semanal', value: 'weekly' },
+      { label: 'Mensual', value: 'monthly' },
+    ];
   protected readonly collectorFilterOptions = computed(() => [
     { label: 'Todos los cobradores', value: null },
     ...this.store.collectorOptions().map((collector) => ({
@@ -122,6 +129,9 @@ export default class Loans {
       value: client.id,
     })),
   );
+  protected readonly visibleLoans = computed(() =>
+    pageItems(this.store.filteredLoans(), this.pageFirst(), this.pageRows()),
+  );
 
   constructor() {
     void this.store.load();
@@ -129,6 +139,32 @@ export default class Loans {
 
   protected updateSearch(event: Event): void {
     this.store.query.set((event.target as HTMLInputElement).value);
+    this.pageFirst.set(0);
+  }
+
+  protected changeStatusFilter(status: LoanStatusFilter): void {
+    this.store.statusFilter.set(status);
+    this.pageFirst.set(0);
+  }
+
+  protected changeCollectorFilter(collectorId: string | null): void {
+    this.store.collectorFilter.set(collectorId);
+    this.pageFirst.set(0);
+  }
+
+  protected changeFrequencyFilter(frequency: LoanFrequencyFilter): void {
+    this.store.frequencyFilter.set(frequency);
+    this.pageFirst.set(0);
+  }
+
+  protected clearFilters(): void {
+    this.store.clearFilters();
+    this.pageFirst.set(0);
+  }
+
+  protected changePage(event: { first?: number; rows?: number }): void {
+    this.pageFirst.set(event.first ?? 0);
+    this.pageRows.set(event.rows ?? 10);
   }
 
   protected openCreateDialog(): void {

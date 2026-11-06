@@ -4,16 +4,15 @@ import { currentLimaDate } from '../../../core/calculations/date-time';
 import { AppError } from '../../../core/errors/app-error';
 import {
   CollectorCashDay,
-  RegisterCashAllowanceInput,
   RegisterCashOpeningInput,
-  RequestCashExpenseInput,
+  ReviewCashAllowanceRequestInput,
   ReviewCashExpenseInput,
 } from '../../../core/models/cash-closure.model';
 import { CASH_CLOSURE_REPOSITORY } from '../../../core/repositories/cash-closure.repository';
 
 /**
  * Admin/supervisor overview of every active collector's cash closure for a given business date:
- * register opening float/allowances, review expense requests, and validate submitted closures.
+ * register opening float, review allowance/expense requests, and validate submitted closures.
  */
 @Injectable()
 export class CashClosureStore {
@@ -28,7 +27,7 @@ export class CashClosureStore {
 
   readonly selectedDay = computed(() => {
     const id = this.selectedCollectorId();
-    return id ? this.days().find((day) => day.collectorId === id) ?? null : null;
+    return id ? (this.days().find((day) => day.collectorId === id) ?? null) : null;
   });
   readonly selectedExpectedCash = computed(() => {
     const day = this.selectedDay();
@@ -37,6 +36,13 @@ export class CashClosureStore {
   readonly pendingExpenseCount = computed(() =>
     this.days().reduce(
       (total, day) => total + day.expenses.filter((expense) => expense.status === 'pending').length,
+      0,
+    ),
+  );
+  readonly pendingAllowanceCount = computed(() =>
+    this.days().reduce(
+      (total, day) =>
+        total + day.allowanceRequests.filter((request) => request.status === 'pending').length,
       0,
     ),
   );
@@ -74,16 +80,8 @@ export class CashClosureStore {
     );
   }
 
-  async registerAllowance(input: Omit<RegisterCashAllowanceInput, 'businessDate'>): Promise<boolean> {
-    return this.mutate(() =>
-      this.repository.registerAllowance({ ...input, businessDate: this.businessDate() }),
-    );
-  }
-
-  async requestExpense(input: Omit<RequestCashExpenseInput, 'businessDate'>): Promise<boolean> {
-    return this.mutate(() =>
-      this.repository.requestExpense({ ...input, businessDate: this.businessDate() }),
-    );
+  async reviewAllowanceRequest(input: ReviewCashAllowanceRequestInput): Promise<boolean> {
+    return this.mutate(() => this.repository.reviewAllowanceRequest(input));
   }
 
   async reviewExpense(input: ReviewCashExpenseInput): Promise<boolean> {
