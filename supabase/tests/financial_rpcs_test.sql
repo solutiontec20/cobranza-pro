@@ -1,15 +1,5 @@
 begin;
 
-select set_config(
-  'app.test_business_timestamp',
-  (
-    (
-      (now() at time zone 'America/Lima')::date + time '12:00:00'
-    ) at time zone 'America/Lima'
-  )::text,
-  true
-);
-
 create extension if not exists pgtap with schema extensions;
 
 select plan(20);

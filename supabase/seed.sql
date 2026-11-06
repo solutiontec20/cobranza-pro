@@ -65,19 +65,6 @@ select set_config(
   false
 );
 
--- Collector RPCs enforce a 07:00-20:00 access window in Lima. The seed runs
--- as the postgres session, so pin the migration's test-only business clock to
--- noon today; authenticated PostgREST sessions cannot use this override.
-select set_config(
-  'app.test_business_timestamp',
-  (
-    (
-      (now() at time zone 'America/Lima')::date + time '12:00:00'
-    ) at time zone 'America/Lima'
-  )::text,
-  false
-);
-
 
 -- ============================================================
 -- 1. TEST USERS (admin, supervisor, 3 collectors)

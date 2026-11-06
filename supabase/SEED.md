@@ -17,12 +17,6 @@ way `supabase/tests/*.sql` already does (`set local role authenticated; set loca
 request.jwt.claim.sub = '<uuid>';`), so it is consistent with the project's existing
 test conventions.
 
-The seed also pins the test-only `app.test_business_timestamp` to noon on today's
-Lima date. This keeps collector RPCs within their configured 07:00–20:00 access
-window regardless of when CI runs. The database helper only honors this override
-for internal PostgreSQL sessions; authenticated application requests cannot set
-their own business clock.
-
 ## Test logins
 
 Every seeded user can log in through the real `/login` screen (DNI + PIN), because
