@@ -173,21 +173,27 @@ select throws_ok(
 );
 
 -- ------------------------------------------------------------
--- 2. Admin registers allowance (viaticos) = 100
+-- 2. Approved allowance fixture (viaticos) = 100
 -- ------------------------------------------------------------
 
-select lives_ok(
-  $$
-    select * from public.register_cash_allowance(
-      '96000000-0000-0000-0000-000000000001',
-      current_setting('cobranzapro_test.today')::date,
-      100, 'Viaticos del dia'
-    )
-  $$,
-  'Admin registers the allowance for collector A'
+reset role;
+
+insert into public.cash_movements (
+  collector_id, direction, movement_type, amount,
+  occurred_at, business_date, notes, created_by
+)
+values (
+  '96000000-0000-0000-0000-000000000001',
+  'inflow',
+  'allowance',
+  100,
+  now(),
+  current_setting('cobranzapro_test.today')::date,
+  'Approved allowance fixture',
+  '96000000-0000-0000-0000-000000000002'
 );
 
-reset role;
+select pass('The approved allowance fixture is present for collector A');
 
 select is(
   (
@@ -561,9 +567,9 @@ select throws_ok(
       20, null
     )
   $$,
-  '22023',
-  'Cannot register cash movements once the cash closure has been validated',
-  'Cash movements are locked once the closure is validated'
+  '42501',
+  'permission denied for function register_cash_allowance',
+  'Direct allowance registration is retired for authenticated callers'
 );
 
 reset role;

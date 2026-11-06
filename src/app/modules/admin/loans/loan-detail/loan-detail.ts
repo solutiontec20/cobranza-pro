@@ -9,16 +9,27 @@ import {
   submit,
   validate,
 } from '@angular/forms/signals';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { MessageModule } from 'primeng/message';
+import { PaginatorModule } from 'primeng/paginator';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
+import {
+  filterInstallments,
+  filterPayments,
+  InstallmentStatusFilter,
+  pageFirst,
+  pageItems,
+  PaymentMethodFilter,
+  PaymentStatusFilter,
+} from '../../../../core/calculations/loan-detail-filtering';
 import {
   LoanFrequency,
   LoanInstallmentStatus,
@@ -110,8 +121,10 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
     DialogModule,
     EsDate,
     FormField,
+    FormsModule,
     InputNumberModule,
     MessageModule,
+    PaginatorModule,
     PenCurrency,
     RouterLink,
     SelectModule,
@@ -149,6 +162,58 @@ export default class LoanDetailPage {
   protected readonly firstCollectionDate = computed(
     () => this.detail()?.installments[0]?.dueDate ?? null,
   );
+  protected readonly pageSizeOptions = [5, 10, 25];
+  protected readonly installmentStatusOptions: Array<{
+    label: string;
+    value: InstallmentStatusFilter;
+  }> = [
+    { label: 'Todas las cuotas', value: 'all' },
+    { label: 'Pendientes', value: 'pending' },
+    { label: 'Parciales', value: 'partial' },
+    { label: 'Vencidas', value: 'overdue' },
+    { label: 'Pagadas', value: 'paid' },
+  ];
+  protected readonly paymentStatusOptions: Array<{
+    label: string;
+    value: PaymentStatusFilter;
+  }> = [
+    { label: 'Todos los pagos', value: 'all' },
+    { label: 'Registrados', value: 'posted' },
+    { label: 'Anulados', value: 'voided' },
+  ];
+  protected readonly paymentMethodFilterOptions: Array<{
+    label: string;
+    value: PaymentMethodFilter;
+  }> = [{ label: 'Todos los medios', value: 'all' }, ...this.paymentMethodOptions];
+  protected readonly installmentStatusFilter = signal<InstallmentStatusFilter>('all');
+  protected readonly installmentFirst = signal(0);
+  protected readonly installmentRows = signal(10);
+  protected readonly paymentStatusFilter = signal<PaymentStatusFilter>('all');
+  protected readonly paymentMethodFilter = signal<PaymentMethodFilter>('all');
+  protected readonly paymentFirst = signal(0);
+  protected readonly paymentRows = signal(10);
+  protected readonly filteredInstallments = computed(() =>
+    filterInstallments(this.detail()?.installments ?? [], this.installmentStatusFilter()),
+  );
+  protected readonly installmentPageFirst = computed(() =>
+    pageFirst(this.filteredInstallments().length, this.installmentFirst(), this.installmentRows()),
+  );
+  protected readonly visibleInstallments = computed(() =>
+    pageItems(this.filteredInstallments(), this.installmentPageFirst(), this.installmentRows()),
+  );
+  protected readonly filteredPayments = computed(() =>
+    filterPayments(
+      this.detail()?.payments ?? [],
+      this.paymentStatusFilter(),
+      this.paymentMethodFilter(),
+    ),
+  );
+  protected readonly paymentPageFirst = computed(() =>
+    pageFirst(this.filteredPayments().length, this.paymentFirst(), this.paymentRows()),
+  );
+  protected readonly visiblePayments = computed(() =>
+    pageItems(this.filteredPayments(), this.paymentPageFirst(), this.paymentRows()),
+  );
   protected readonly paymentDialogVisible = signal(false);
   protected readonly paymentResult = signal<RegisterLoanPaymentResult | null>(null);
   protected readonly paymentModel = signal<PaymentFormModel>(emptyPaymentModel());
@@ -172,12 +237,10 @@ export default class LoanDetailPage {
     );
   });
   protected readonly editModel = signal<LoanEditModel>(emptyEditModel());
-  private readonly editBaseline = signal<
-    Pick<
-      LoanEditModel,
-      'principal' | 'interestRate' | 'frequency' | 'installmentCount' | 'startedOn'
-    > | null
-  >(null);
+  private readonly editBaseline = signal<Pick<
+    LoanEditModel,
+    'principal' | 'interestRate' | 'frequency' | 'installmentCount' | 'startedOn'
+  > | null>(null);
   protected readonly editForm = form(this.editModel, (path) => {
     min(path.principal, 0.01, { message: 'El capital debe ser mayor que cero.' });
     min(path.interestRate, 0, { message: 'La tasa no puede ser negativa.' });
@@ -345,8 +408,44 @@ export default class LoanDetailPage {
   constructor() {
     effect(() => {
       const loanId = this.loanId();
-      untracked(() => void this.store.loadDetail(loanId));
+      untracked(() => {
+        this.resetDetailFilters();
+        void this.store.loadDetail(loanId);
+      });
     });
+  }
+
+  protected changeInstallmentStatus(status: InstallmentStatusFilter): void {
+    this.installmentStatusFilter.set(status);
+    this.installmentFirst.set(0);
+  }
+
+  protected changeInstallmentPage(event: { first?: number; rows?: number }): void {
+    this.installmentFirst.set(event.first ?? 0);
+    this.installmentRows.set(event.rows ?? this.installmentRows());
+  }
+
+  protected changePaymentStatus(status: PaymentStatusFilter): void {
+    this.paymentStatusFilter.set(status);
+    this.paymentFirst.set(0);
+  }
+
+  protected changePaymentMethod(method: PaymentMethodFilter): void {
+    this.paymentMethodFilter.set(method);
+    this.paymentFirst.set(0);
+  }
+
+  protected changePaymentPage(event: { first?: number; rows?: number }): void {
+    this.paymentFirst.set(event.first ?? 0);
+    this.paymentRows.set(event.rows ?? this.paymentRows());
+  }
+
+  private resetDetailFilters(): void {
+    this.installmentStatusFilter.set('all');
+    this.installmentFirst.set(0);
+    this.paymentStatusFilter.set('all');
+    this.paymentMethodFilter.set('all');
+    this.paymentFirst.set(0);
   }
 
   protected startEditing(): void {

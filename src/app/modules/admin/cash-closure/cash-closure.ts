@@ -1,5 +1,14 @@
 import { Component, computed, inject, linkedSignal, signal } from '@angular/core';
-import { form, FormField, max, maxLength, min, required, submit, validate } from '@angular/forms/signals';
+import {
+  form,
+  FormField,
+  max,
+  maxLength,
+  min,
+  required,
+  submit,
+  validate,
+} from '@angular/forms/signals';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -8,12 +17,19 @@ import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
-import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
-import { calculateExpectedCash, calculateTotalCollected } from '../../../core/calculations/cash-closure-calculations';
+import {
+  calculateExpectedCash,
+  calculateTotalCollected,
+} from '../../../core/calculations/cash-closure-calculations';
 import { parseDateValue, toIsoDateLima } from '../../../core/calculations/date-time';
-import { CashExpense, CashExpenseCategory, CollectorCashDay } from '../../../core/models/cash-closure.model';
+import {
+  CashAllowanceRequest,
+  CashExpense,
+  CashExpenseCategory,
+  CollectorCashDay,
+} from '../../../core/models/cash-closure.model';
 import { EsDate } from '../../../shared/pipes/es-date';
 import { PenCurrency } from '../../../shared/pipes/pen-currency';
 import { CashClosureStore } from './cash-closure.store';
@@ -21,12 +37,6 @@ import { CashClosureStore } from './cash-closure.store';
 interface OpeningFormModel {
   amount: number;
   notes: string;
-}
-
-interface ExpenseFormModel {
-  category: CashExpenseCategory;
-  amount: number;
-  description: string;
 }
 
 interface RejectFormModel {
@@ -38,7 +48,6 @@ interface ValidateFormModel {
 }
 
 const emptyOpeningModel = (): OpeningFormModel => ({ amount: 0, notes: '' });
-const emptyExpenseModel = (): ExpenseFormModel => ({ category: 'fuel', amount: 0, description: '' });
 const emptyRejectModel = (): RejectFormModel => ({ reason: '' });
 const emptyValidateModel = (): ValidateFormModel => ({ observation: '' });
 
@@ -64,7 +73,6 @@ const CATEGORY_OPTIONS: Array<{ label: string; value: CashExpenseCategory }> = [
     InputTextModule,
     MessageModule,
     PenCurrency,
-    SelectModule,
     SkeletonModule,
     TagModule,
   ],
@@ -76,25 +84,14 @@ export default class AdminCashClosure {
   private readonly messageService = inject(MessageService);
 
   protected readonly loadingRows = [1, 2, 3];
-  protected readonly categoryOptions = CATEGORY_OPTIONS;
   protected readonly selectedDate = linkedSignal(() => parseDateValue(this.store.businessDate()));
 
-  // Opening / allowance dialogs share the same form shape.
+  // Opening dialog.
   protected readonly openingDialogVisible = signal(false);
-  protected readonly openingDialogKind = signal<'opening' | 'allowance'>('opening');
   protected readonly openingModel = signal<OpeningFormModel>(emptyOpeningModel());
   protected readonly openingForm = form(this.openingModel, (path) => {
     min(path.amount, 0.01, { message: 'El monto debe ser mayor que cero.' });
     maxLength(path.notes, 300, { message: 'La nota no puede superar 300 caracteres.' });
-  });
-
-  // Request-an-expense-on-behalf-of-a-collector dialog.
-  protected readonly expenseDialogVisible = signal(false);
-  protected readonly expenseModel = signal<ExpenseFormModel>(emptyExpenseModel());
-  protected readonly expenseForm = form(this.expenseModel, (path) => {
-    required(path.category, { message: 'Seleccioná la categoría.' });
-    min(path.amount, 0.01, { message: 'El monto debe ser mayor que cero.' });
-    maxLength(path.description, 300, { message: 'La descripción no puede superar 300 caracteres.' });
   });
 
   // Reject-expense dialog (approve happens directly from the list).
@@ -106,11 +103,22 @@ export default class AdminCashClosure {
     maxLength(path.reason, 300, { message: 'El motivo no puede superar 300 caracteres.' });
   });
 
+  // Reject-allowance dialog (approve happens directly from the list).
+  protected readonly allowanceRejectDialogVisible = signal(false);
+  protected readonly rejectingAllowanceRequest = signal<CashAllowanceRequest | null>(null);
+  protected readonly allowanceRejectModel = signal<RejectFormModel>(emptyRejectModel());
+  protected readonly allowanceRejectForm = form(this.allowanceRejectModel, (path) => {
+    required(path.reason, { message: 'Ingresá el motivo del rechazo.' });
+    maxLength(path.reason, 300, { message: 'El motivo no puede superar 300 caracteres.' });
+  });
+
   // Validate-closure dialog.
   protected readonly validateDialogVisible = signal(false);
   protected readonly validateModel = signal<ValidateFormModel>(emptyValidateModel());
   protected readonly validateForm = form(this.validateModel, (path) => {
-    maxLength(path.observation, 300, { message: 'La observación no puede superar 300 caracteres.' });
+    maxLength(path.observation, 300, {
+      message: 'La observación no puede superar 300 caracteres.',
+    });
     validate(path.observation, ({ valueOf }) => {
       const day = this.store.selectedDay();
       const closure = day?.closure;
@@ -118,7 +126,10 @@ export default class AdminCashClosure {
       const hasDifference = closure.deliveredAmount !== calculateExpectedCash(day.breakdown);
       const hasObservation = !!closure.observation?.trim() || !!valueOf(path.observation).trim();
       return hasDifference && !hasObservation
-        ? { kind: 'required', message: 'Ingresá una observación: el monto entregado no coincide con el esperado.' }
+        ? {
+            kind: 'required',
+            message: 'Ingresá una observación: el monto entregado no coincide con el esperado.',
+          }
         : undefined;
     });
   });
@@ -149,13 +160,16 @@ export default class AdminCashClosure {
     return day.expenses.filter((expense) => expense.status === 'pending').length;
   }
 
+  protected pendingAllowanceCountFor(day: CollectorCashDay): number {
+    return day.allowanceRequests.filter((request) => request.status === 'pending').length;
+  }
+
   // ----------------------------------------------------------------
-  // Opening / allowance
+  // Opening
   // ----------------------------------------------------------------
 
-  protected openOpeningDialog(kind: 'opening' | 'allowance'): void {
+  protected openOpeningDialog(): void {
     this.store.clearError();
-    this.openingDialogKind.set(kind);
     this.openingModel.set(emptyOpeningModel());
     this.openingForm().reset();
     this.openingDialogVisible.set(true);
@@ -167,25 +181,17 @@ export default class AdminCashClosure {
 
     void submit(this.openingForm, async () => {
       const model = this.openingModel();
-      const kind = this.openingDialogKind();
-      const ok =
-        kind === 'opening'
-          ? await this.store.registerOpening({
-              collectorId: day.collectorId,
-              amount: model.amount,
-              notes: model.notes.trim(),
-            })
-          : await this.store.registerAllowance({
-              collectorId: day.collectorId,
-              amount: model.amount,
-              notes: model.notes.trim(),
-            });
+      const ok = await this.store.registerOpening({
+        collectorId: day.collectorId,
+        amount: model.amount,
+        notes: model.notes.trim(),
+      });
 
       if (ok) {
         this.openingDialogVisible.set(false);
         this.messageService.add({
           severity: 'success',
-          summary: kind === 'opening' ? 'Apertura registrada' : 'Viático registrado',
+          summary: 'Apertura registrada',
           detail: `Se registró para ${day.collectorName}.`,
         });
       }
@@ -193,35 +199,49 @@ export default class AdminCashClosure {
   }
 
   // ----------------------------------------------------------------
-  // Expense requested on behalf of a collector
+  // Review allowance requests
   // ----------------------------------------------------------------
 
-  protected openExpenseDialog(): void {
-    this.store.clearError();
-    this.expenseModel.set(emptyExpenseModel());
-    this.expenseForm().reset();
-    this.expenseDialogVisible.set(true);
+  protected async approveAllowanceRequest(request: CashAllowanceRequest): Promise<void> {
+    const ok = await this.store.reviewAllowanceRequest({
+      requestId: request.id,
+      approve: true,
+      reason: '',
+    });
+    if (ok) {
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Viático aprobado',
+        detail: 'El monto se sumó al efectivo esperado del cobrador.',
+      });
+    }
   }
 
-  protected submitExpense(): void {
-    const day = this.store.selectedDay();
-    if (!day) return;
+  protected openAllowanceRejectDialog(request: CashAllowanceRequest): void {
+    this.store.clearError();
+    this.rejectingAllowanceRequest.set(request);
+    this.allowanceRejectModel.set(emptyRejectModel());
+    this.allowanceRejectForm().reset();
+    this.allowanceRejectDialogVisible.set(true);
+  }
 
-    void submit(this.expenseForm, async () => {
-      const model = this.expenseModel();
-      const ok = await this.store.requestExpense({
-        collectorId: day.collectorId,
-        category: model.category,
-        amount: model.amount,
-        description: model.description.trim(),
+  protected submitAllowanceReject(): void {
+    const request = this.rejectingAllowanceRequest();
+    if (!request) return;
+
+    void submit(this.allowanceRejectForm, async () => {
+      const ok = await this.store.reviewAllowanceRequest({
+        requestId: request.id,
+        approve: false,
+        reason: this.allowanceRejectModel().reason.trim(),
       });
 
       if (ok) {
-        this.expenseDialogVisible.set(false);
+        this.allowanceRejectDialogVisible.set(false);
         this.messageService.add({
-          severity: 'success',
-          summary: 'Gasto registrado',
-          detail: 'Quedó pendiente de aprobación.',
+          severity: 'info',
+          summary: 'Viático rechazado',
+          detail: 'La solicitud no modificó el efectivo esperado.',
         });
       }
     });
@@ -234,7 +254,11 @@ export default class AdminCashClosure {
   protected async approveExpense(expense: CashExpense): Promise<void> {
     const ok = await this.store.reviewExpense({ expenseId: expense.id, approve: true, reason: '' });
     if (ok) {
-      this.messageService.add({ severity: 'success', summary: 'Gasto aprobado', detail: 'Se descontó del efectivo esperado.' });
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Gasto aprobado',
+        detail: 'Se descontó del efectivo esperado.',
+      });
     }
   }
 
@@ -259,7 +283,11 @@ export default class AdminCashClosure {
 
       if (ok) {
         this.rejectDialogVisible.set(false);
-        this.messageService.add({ severity: 'info', summary: 'Gasto rechazado', detail: 'No afecta el efectivo esperado.' });
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Gasto rechazado',
+          detail: 'No afecta el efectivo esperado.',
+        });
       }
     });
   }
@@ -280,10 +308,17 @@ export default class AdminCashClosure {
     if (!closure) return;
 
     void submit(this.validateForm, async () => {
-      const ok = await this.store.validateClosure(closure.id, this.validateModel().observation.trim());
+      const ok = await this.store.validateClosure(
+        closure.id,
+        this.validateModel().observation.trim(),
+      );
       if (ok) {
         this.validateDialogVisible.set(false);
-        this.messageService.add({ severity: 'success', summary: 'Cierre validado', detail: 'La caja del día quedó conciliada.' });
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Cierre validado',
+          detail: 'La caja del día quedó conciliada.',
+        });
       }
     });
   }
@@ -301,14 +336,22 @@ export default class AdminCashClosure {
   }
 
   protected expenseStatusSeverity(status: CashExpense['status']): 'warn' | 'success' | 'danger' {
-    return { pending: 'warn' as const, approved: 'success' as const, rejected: 'danger' as const }[status];
+    return { pending: 'warn' as const, approved: 'success' as const, rejected: 'danger' as const }[
+      status
+    ];
   }
 
   protected closureStatusLabel(status: 'draft' | 'submitted' | 'validated'): string {
     return { draft: 'Sin enviar', submitted: 'Enviado', validated: 'Validado' }[status];
   }
 
-  protected closureStatusSeverity(status: 'draft' | 'submitted' | 'validated'): 'secondary' | 'warn' | 'success' {
-    return { draft: 'secondary' as const, submitted: 'warn' as const, validated: 'success' as const }[status];
+  protected closureStatusSeverity(
+    status: 'draft' | 'submitted' | 'validated',
+  ): 'secondary' | 'warn' | 'success' {
+    return {
+      draft: 'secondary' as const,
+      submitted: 'warn' as const,
+      validated: 'success' as const,
+    }[status];
   }
 }

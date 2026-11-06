@@ -15,9 +15,13 @@ import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
+import { PaginatorModule } from 'primeng/paginator';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
+import { pageItems } from '../../../core/calculations/loan-detail-filtering';
+import { normalizeSearchText } from '../../../core/calculations/text';
 
 import {
   CorrectionRequest,
@@ -74,7 +78,9 @@ interface ResolutionTarget {
     ButtonModule,
     DialogModule,
     InputNumberModule,
+    InputTextModule,
     MessageModule,
+    PaginatorModule,
     SelectModule,
     TagModule,
     EsDate,
@@ -97,28 +103,53 @@ interface ResolutionTarget {
           </p>
         </div>
 
-        <div class="flex items-center gap-2">
-          <label for="request-status" class="sr-only">Filtrar por estado</label>
-          <p-select
-            inputId="request-status"
-            [options]="statusOptions"
-            optionLabel="label"
-            optionValue="value"
-            [ngModel]="statusFilter()"
-            (ngModelChange)="changeStatus($event)"
-            styleClass="min-w-40"
-          />
-          <button
-            pButton
-            type="button"
-            severity="secondary"
-            variant="outlined"
-            aria-label="Actualizar solicitudes"
-            [disabled]="store.loading()"
-            (click)="reload()"
-          >
-            <i class="pi pi-refresh" [class.pi-spin]="store.loading()" aria-hidden="true"></i>
-          </button>
+        <div
+          class="grid w-full gap-2 sm:w-auto sm:grid-cols-[minmax(12rem,1fr)_11rem_auto] sm:items-end"
+        >
+          <label class="flex flex-col gap-1 text-sm font-medium">
+            Buscar
+            <input
+              pInputText
+              type="search"
+              placeholder="Cliente, DNI o cobrador"
+              [value]="query()"
+              (input)="changeQuery($event)"
+            />
+          </label>
+          <label class="flex flex-col gap-1 text-sm font-medium">
+            Tipo
+            <p-select
+              [options]="typeOptions"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="typeFilter()"
+              (ngModelChange)="changeType($event)"
+              styleClass="w-full"
+            />
+          </label>
+          <div class="flex items-end gap-2">
+            <label for="request-status" class="sr-only">Filtrar por estado</label>
+            <p-select
+              inputId="request-status"
+              [options]="statusOptions"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="statusFilter()"
+              (ngModelChange)="changeStatus($event)"
+              styleClass="min-w-40"
+            />
+            <button
+              pButton
+              type="button"
+              severity="secondary"
+              variant="outlined"
+              aria-label="Actualizar solicitudes"
+              [disabled]="store.loading()"
+              (click)="reload()"
+            >
+              <i class="pi pi-refresh" [class.pi-spin]="store.loading()" aria-hidden="true"></i>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -138,7 +169,7 @@ interface ResolutionTarget {
             En pantalla
           </p>
           <p class="mt-2 mb-0 text-3xl font-bold text-surface-950 dark:text-surface-0">
-            {{ store.requests().length }}
+            {{ filteredRequests().length }}
           </p>
         </article>
       </div>
@@ -154,7 +185,7 @@ interface ResolutionTarget {
           <i class="pi pi-spin pi-spinner text-2xl text-primary" aria-hidden="true"></i>
           <p class="mt-3 mb-0 text-sm text-surface-500">Cargando solicitudes…</p>
         </div>
-      } @else if (store.requests().length === 0) {
+      } @else if (filteredRequests().length === 0) {
         <div
           class="rounded-xl border border-dashed border-surface-300 bg-surface-0 p-10 text-center dark:border-surface-600 dark:bg-surface-900"
         >
@@ -166,7 +197,7 @@ interface ResolutionTarget {
         </div>
       } @else {
         <div class="grid gap-4 lg:grid-cols-2">
-          @for (request of store.requests(); track request.id) {
+          @for (request of visibleRequests(); track request.id) {
             <article
               class="flex flex-col rounded-xl border border-surface-200 bg-surface-0 shadow-sm dark:border-surface-700 dark:bg-surface-900"
             >
@@ -293,6 +324,15 @@ interface ResolutionTarget {
             </article>
           }
         </div>
+        <p-paginator
+          [first]="pageFirst()"
+          [rows]="pageRows()"
+          [totalRecords]="filteredRequests().length"
+          [rowsPerPageOptions]="pageSizeOptions"
+          [showCurrentPageReport]="true"
+          currentPageReportTemplate="{first}–{last} de {totalRecords} solicitudes"
+          (onPageChange)="changePage($event)"
+        />
       }
     </section>
 
@@ -525,12 +565,26 @@ export default class CorrectionRequests implements OnInit {
   private readonly messageService = inject(MessageService);
 
   protected readonly statusFilter = signal<CorrectionRequestStatus | null>('pending');
+  protected readonly query = signal('');
+  protected readonly typeFilter = signal<CorrectionRequestType | 'all'>('all');
+  protected readonly pageSizeOptions = [6, 12, 24];
+  protected readonly pageFirst = signal(0);
+  protected readonly pageRows = signal(6);
   protected readonly statusOptions: Array<{
     label: string;
     value: CorrectionRequestStatus | null;
   }> = [
     { label: 'Pendientes', value: 'pending' },
     { label: 'Todas', value: null },
+  ];
+  protected readonly typeOptions: Array<{
+    label: string;
+    value: CorrectionRequestType | 'all';
+  }> = [
+    { label: 'Todos los tipos', value: 'all' },
+    { label: 'Edición', value: 'edit_loan' },
+    { label: 'Anular préstamo', value: 'void_loan' },
+    { label: 'Anular pago', value: 'void_payment' },
   ];
   protected readonly frequencyOptions: Array<{ label: string; value: LoanFrequency }> = [
     { label: 'Diaria', value: 'daily' },
@@ -594,6 +648,23 @@ export default class CorrectionRequests implements OnInit {
     if (action === 'void_payment') return 'Anular pago';
     return 'Anular préstamo';
   });
+  protected readonly filteredRequests = computed(() => {
+    const query = normalizeSearchText(this.query());
+    const type = this.typeFilter();
+    return this.store
+      .requests()
+      .filter(
+        (request) =>
+          (type === 'all' || request.requestType === type) &&
+          (!query ||
+            [request.customerName, request.customerDocument, request.collectorName, request.reason]
+              .map(normalizeSearchText)
+              .some((value) => value.includes(query))),
+      );
+  });
+  protected readonly visibleRequests = computed(() =>
+    pageItems(this.filteredRequests(), this.pageFirst(), this.pageRows()),
+  );
 
   constructor() {
     effect(() => {
@@ -613,7 +684,23 @@ export default class CorrectionRequests implements OnInit {
 
   protected changeStatus(status: CorrectionRequestStatus | null): void {
     this.statusFilter.set(status);
+    this.pageFirst.set(0);
     void this.store.load(status);
+  }
+
+  protected changeQuery(event: Event): void {
+    this.query.set((event.target as HTMLInputElement).value);
+    this.pageFirst.set(0);
+  }
+
+  protected changeType(type: CorrectionRequestType | 'all'): void {
+    this.typeFilter.set(type);
+    this.pageFirst.set(0);
+  }
+
+  protected changePage(event: { first?: number; rows?: number }): void {
+    this.pageFirst.set(event.first ?? 0);
+    this.pageRows.set(event.rows ?? 6);
   }
 
   protected openResolution(request: CorrectionRequest, action: ResolutionAction): void {

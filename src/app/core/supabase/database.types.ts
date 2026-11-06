@@ -3,6 +3,83 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      cash_allowance_requests: {
+        Row: {
+          amount: number;
+          business_date: string;
+          cash_movement_id: string | null;
+          collector_id: string;
+          created_at: string;
+          id: string;
+          notes: string | null;
+          rejection_reason: string | null;
+          requested_by: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: Database['public']['Enums']['cash_allowance_request_status'];
+          updated_at: string;
+        };
+        Insert: {
+          amount: number;
+          business_date: string;
+          cash_movement_id?: string | null;
+          collector_id: string;
+          created_at?: string;
+          id?: string;
+          notes?: string | null;
+          rejection_reason?: string | null;
+          requested_by: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database['public']['Enums']['cash_allowance_request_status'];
+          updated_at?: string;
+        };
+        Update: {
+          amount?: number;
+          business_date?: string;
+          cash_movement_id?: string | null;
+          collector_id?: string;
+          created_at?: string;
+          id?: string;
+          notes?: string | null;
+          rejection_reason?: string | null;
+          requested_by?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: Database['public']['Enums']['cash_allowance_request_status'];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'cash_allowance_requests_cash_movement_id_fkey';
+            columns: ['cash_movement_id'];
+            isOneToOne: false;
+            referencedRelation: 'cash_movements';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'cash_allowance_requests_collector_id_fkey';
+            columns: ['collector_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'cash_allowance_requests_requested_by_fkey';
+            columns: ['requested_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'cash_allowance_requests_reviewed_by_fkey';
+            columns: ['reviewed_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       cash_closures: {
         Row: {
           business_date: string;
@@ -263,6 +340,39 @@ export type Database = {
           },
         ];
       };
+      correction_request_reads: {
+        Row: {
+          read_at: string;
+          request_id: string;
+          user_id: string;
+        };
+        Insert: {
+          read_at?: string;
+          request_id: string;
+          user_id: string;
+        };
+        Update: {
+          read_at?: string;
+          request_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'correction_request_reads_request_id_fkey';
+            columns: ['request_id'];
+            isOneToOne: false;
+            referencedRelation: 'correction_requests';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'correction_request_reads_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       correction_requests: {
         Row: {
           created_at: string;
@@ -334,39 +444,6 @@ export type Database = {
           {
             foreignKeyName: 'correction_requests_requested_by_fkey';
             columns: ['requested_by'];
-            isOneToOne: false;
-            referencedRelation: 'profiles';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      correction_request_reads: {
-        Row: {
-          read_at: string;
-          request_id: string;
-          user_id: string;
-        };
-        Insert: {
-          read_at?: string;
-          request_id: string;
-          user_id: string;
-        };
-        Update: {
-          read_at?: string;
-          request_id?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'correction_request_reads_request_id_fkey';
-            columns: ['request_id'];
-            isOneToOne: false;
-            referencedRelation: 'correction_requests';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'correction_request_reads_user_id_fkey';
-            columns: ['user_id'];
             isOneToOne: false;
             referencedRelation: 'profiles';
             referencedColumns: ['id'];
@@ -1046,10 +1123,7 @@ export type Database = {
           total_amount: number;
         }[];
       };
-      count_my_unread_correction_requests: {
-        Args: Record<PropertyKey, never>;
-        Returns: number;
-      };
+      count_my_unread_correction_requests: { Args: Record<PropertyKey, never>; Returns: number };
       count_pending_correction_requests: { Args: Record<PropertyKey, never>; Returns: number };
       create_correction_request: {
         Args: {
@@ -1136,10 +1210,7 @@ export type Database = {
           status: Database['public']['Enums']['correction_request_status'];
         }[];
       };
-      mark_my_correction_requests_read: {
-        Args: Record<PropertyKey, never>;
-        Returns: number;
-      };
+      mark_my_correction_requests_read: { Args: Record<PropertyKey, never>; Returns: number };
       register_cash_allowance: {
         Args: {
           p_amount: number;
@@ -1213,6 +1284,17 @@ export type Database = {
           total_amount: number;
         }[];
       };
+      request_cash_allowance: {
+        Args: { p_amount: number; p_business_date: string; p_notes?: string };
+        Returns: {
+          amount: number;
+          business_date: string;
+          collector_id: string;
+          created_at: string;
+          request_id: string;
+          status: Database['public']['Enums']['cash_allowance_request_status'];
+        }[];
+      };
       request_cash_expense: {
         Args: {
           p_amount: number;
@@ -1260,6 +1342,15 @@ export type Database = {
           handled_at: string;
           id: string;
           status: Database['public']['Enums']['correction_request_status'];
+        }[];
+      };
+      review_cash_allowance_request: {
+        Args: { p_approve: boolean; p_reason?: string; p_request_id: string };
+        Returns: {
+          cash_movement_id: string;
+          expected_cash: number;
+          request_id: string;
+          status: Database['public']['Enums']['cash_allowance_request_status'];
         }[];
       };
       review_cash_expense: {
@@ -1310,6 +1401,7 @@ export type Database = {
     };
     Enums: {
       app_role: 'admin' | 'supervisor' | 'collector';
+      cash_allowance_request_status: 'pending' | 'approved' | 'rejected';
       cash_closure_status: 'draft' | 'submitted' | 'validated';
       cash_direction: 'inflow' | 'outflow';
       cash_expense_category: 'fuel' | 'tolls' | 'fares' | 'parking' | 'meals' | 'other';
@@ -1431,6 +1523,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ['admin', 'supervisor', 'collector'],
+      cash_allowance_request_status: ['pending', 'approved', 'rejected'],
       cash_closure_status: ['draft', 'submitted', 'validated'],
       cash_direction: ['inflow', 'outflow'],
       cash_expense_category: ['fuel', 'tolls', 'fares', 'parking', 'meals', 'other'],

@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, untracked } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -6,6 +6,7 @@ import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
+import { PaginatorModule } from 'primeng/paginator';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -21,12 +22,9 @@ import {
   CorrectionRequestStatus,
   CorrectionRequestType,
 } from '../../../core/models/correction-request.model';
-import {
-  CollectionClient,
-  CollectionFilter,
-  CollectionSort,
-} from '../collection.model';
+import { CollectionClient, CollectionFilter, CollectionSort } from '../collection.model';
 import { CorrectionRequestsStore } from '../../correction-requests/correction-requests.store';
+import { pageItems } from '../../../core/calculations/loan-detail-filtering';
 
 interface FilterOption {
   readonly label: string;
@@ -44,6 +42,7 @@ interface FilterOption {
     InputIconModule,
     InputTextModule,
     MessageModule,
+    PaginatorModule,
     PenCurrency,
     ProgressBarModule,
     SelectModule,
@@ -58,11 +57,17 @@ export default class CollectorDashboard {
   readonly correctionRequestsStore = inject(CorrectionRequestsStore);
   readonly today = currentLimaDate();
   protected readonly loadingRows = [1, 2, 3];
+  protected readonly pageSizeOptions = [6, 12, 24];
+  protected readonly pageFirst = signal(0);
+  protected readonly pageRows = signal(6);
   protected readonly collectorFirstName = computed(
     () => this.authService.currentUser()?.fullName?.split(' ')[0] ?? '',
   );
   protected readonly recentRequests = computed(() =>
     this.correctionRequestsStore.myRequests().slice(0, 3),
+  );
+  protected readonly visibleClients = computed(() =>
+    pageItems(this.store.filteredClients(), this.pageFirst(), this.pageRows()),
   );
 
   readonly sortOptions: { label: string; value: CollectionSort }[] = [
@@ -101,10 +106,27 @@ export default class CollectorDashboard {
 
   updateQuery(event: Event) {
     this.store.setQuery((event.target as HTMLInputElement).value);
+    this.pageFirst.set(0);
   }
 
   selectFilter(filter: CollectionFilter) {
     this.store.setFilter(filter);
+    this.pageFirst.set(0);
+  }
+
+  changeSort(sort: CollectionSort): void {
+    this.store.setSortOrder(sort);
+    this.pageFirst.set(0);
+  }
+
+  clearFilters(): void {
+    this.store.clearFilters();
+    this.pageFirst.set(0);
+  }
+
+  changePage(event: { first?: number; rows?: number }): void {
+    this.pageFirst.set(event.first ?? 0);
+    this.pageRows.set(event.rows ?? 6);
   }
 
   requestPayment(client: CollectionClient) {
@@ -131,4 +153,3 @@ export default class CollectorDashboard {
     return { pending: 'Pendiente', resolved: 'Aprobada', rejected: 'Rechazada' }[status];
   }
 }
-

@@ -1,7 +1,11 @@
 <div class="dashboard-page flex flex-col gap-5">
-  <header class="flex flex-col gap-3 border-b border-surface-200 pb-5 dark:border-surface-700 sm:flex-row sm:items-end sm:justify-between">
+  <header
+    class="flex flex-col gap-3 border-b border-surface-200 pb-5 dark:border-surface-700 sm:flex-row sm:items-end sm:justify-between"
+  >
     <div>
-      <h1 class="dashboard-heading m-0 text-3xl font-extrabold text-surface-950 dark:text-surface-0 sm:text-4xl">
+      <h1
+        class="dashboard-heading m-0 text-3xl font-extrabold text-surface-950 dark:text-surface-0 sm:text-4xl"
+      >
         Dashboard general
       </h1>
       <p class="mt-2 max-w-2xl text-sm text-surface-500 dark:text-surface-400">
@@ -19,103 +23,118 @@
   }
 
   @if (store.loading() && !store.summary()) {
-    <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Cargando indicadores">
+    <section
+      class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+      aria-label="Cargando indicadores"
+    >
       @for (row of loadingRows; track row) {
         <p-skeleton height="8rem" borderRadius="1rem" />
       }
     </section>
   } @else {
+    <section
+      class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+      aria-label="Indicadores principales"
+    >
+      <p-card class="metric-card metric-card--blue">
+        <div class="flex items-center gap-3">
+          <span class="metric-icon"><i class="pi pi-wallet" aria-hidden="true"></i></span>
+          <span class="metric-label">Capital prestado</span>
+        </div>
+        <p class="metric-value">{{ kpis().capitalPrestado | penCurrency }}</p>
+        <p class="metric-caption">Monto base otorgado</p>
+      </p-card>
 
-  <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicadores principales">
-    <p-card class="metric-card metric-card--blue">
-      <div class="flex items-center gap-3">
-        <span class="metric-icon"><i class="pi pi-wallet" aria-hidden="true"></i></span>
-        <span class="metric-label">Capital prestado</span>
-      </div>
-      <p class="metric-value">{{ kpis().capitalPrestado | penCurrency }}</p>
-      <p class="metric-caption">Monto base otorgado</p>
-    </p-card>
+      <p-card class="metric-card metric-card--cyan">
+        <div class="flex items-center gap-3">
+          <span class="metric-icon"><i class="pi pi-money-bill" aria-hidden="true"></i></span>
+          <span class="metric-label">Total a cobrar</span>
+        </div>
+        <p class="metric-value metric-value--accent">{{ kpis().totalEsperado | penCurrency }}</p>
+        <p class="metric-caption">Capital más intereses</p>
+      </p-card>
 
-    <p-card class="metric-card metric-card--cyan">
-      <div class="flex items-center gap-3">
-        <span class="metric-icon"><i class="pi pi-money-bill" aria-hidden="true"></i></span>
-        <span class="metric-label">Total a cobrar</span>
-      </div>
-      <p class="metric-value metric-value--accent">{{ kpis().totalEsperado | penCurrency }}</p>
-      <p class="metric-caption">Capital más intereses</p>
-    </p-card>
+      <p-card class="metric-card metric-card--green">
+        <div class="flex items-center gap-3">
+          <span class="metric-icon"><i class="pi pi-check-circle" aria-hidden="true"></i></span>
+          <span class="metric-label">Total cobrado</span>
+        </div>
+        <p class="metric-value metric-value--accent">{{ kpis().totalCobrado | penCurrency }}</p>
+        <p class="metric-caption">Recuperado a la fecha</p>
+      </p-card>
 
-    <p-card class="metric-card metric-card--green">
-      <div class="flex items-center gap-3">
-        <span class="metric-icon"><i class="pi pi-check-circle" aria-hidden="true"></i></span>
-        <span class="metric-label">Total cobrado</span>
-      </div>
-      <p class="metric-value metric-value--accent">{{ kpis().totalCobrado | penCurrency }}</p>
-      <p class="metric-caption">Recuperado a la fecha</p>
-    </p-card>
+      <p-card class="metric-card metric-card--red">
+        <div class="flex items-center gap-3">
+          <span class="metric-icon"><i class="pi pi-clock" aria-hidden="true"></i></span>
+          <span class="metric-label">Saldo pendiente</span>
+        </div>
+        <p class="metric-value metric-value--accent">{{ kpis().saldoPendiente | penCurrency }}</p>
+        <p class="metric-caption">Por cobrar en campo</p>
+      </p-card>
 
-    <p-card class="metric-card metric-card--red">
-      <div class="flex items-center gap-3">
-        <span class="metric-icon"><i class="pi pi-clock" aria-hidden="true"></i></span>
-        <span class="metric-label">Saldo pendiente</span>
-      </div>
-      <p class="metric-value metric-value--accent">{{ kpis().saldoPendiente | penCurrency }}</p>
-      <p class="metric-caption">Por cobrar en campo</p>
-    </p-card>
+      <p-card class="metric-card metric-card--orange">
+        <div class="flex items-center gap-3">
+          <span class="metric-icon"
+            ><i class="pi pi-exclamation-triangle" aria-hidden="true"></i
+          ></span>
+          <span class="metric-label">Morosidad mayor a 10 días</span>
+        </div>
+        <p class="metric-value metric-value--accent">{{ kpis().morosidad }}</p>
+        <p class="metric-caption">Clientes en riesgo alto</p>
+      </p-card>
 
-    <p-card class="metric-card metric-card--orange">
-      <div class="flex items-center gap-3">
-        <span class="metric-icon"><i class="pi pi-exclamation-triangle" aria-hidden="true"></i></span>
-        <span class="metric-label">Morosidad mayor a 10 días</span>
-      </div>
-      <p class="metric-value metric-value--accent">{{ kpis().morosidad }}</p>
-      <p class="metric-caption">Clientes en riesgo alto</p>
-    </p-card>
+      <p-card class="metric-card metric-card--blue">
+        <div class="flex items-center gap-3">
+          <span class="metric-icon"><i class="pi pi-users" aria-hidden="true"></i></span>
+          <span class="metric-label">Clientes activos</span>
+        </div>
+        <p class="metric-value">{{ kpis().totalClientes }}</p>
+        <p class="metric-caption">Con crédito activo</p>
+      </p-card>
 
-    <p-card class="metric-card metric-card--blue">
-      <div class="flex items-center gap-3">
-        <span class="metric-icon"><i class="pi pi-users" aria-hidden="true"></i></span>
-        <span class="metric-label">Clientes activos</span>
-      </div>
-      <p class="metric-value">{{ kpis().totalClientes }}</p>
-      <p class="metric-caption">Con crédito activo</p>
-    </p-card>
+      <p-card class="metric-card metric-card--green">
+        <div class="flex items-center gap-3">
+          <span class="metric-icon"><i class="pi pi-verified" aria-hidden="true"></i></span>
+          <span class="metric-label">Préstamos pagados</span>
+        </div>
+        <p class="metric-value">{{ kpis().prestamosPagados }}</p>
+        <p class="metric-caption">Créditos finalizados</p>
+      </p-card>
 
-    <p-card class="metric-card metric-card--green">
-      <div class="flex items-center gap-3">
-        <span class="metric-icon"><i class="pi pi-verified" aria-hidden="true"></i></span>
-        <span class="metric-label">Préstamos pagados</span>
-      </div>
-      <p class="metric-value">{{ kpis().prestamosPagados }}</p>
-      <p class="metric-caption">Créditos finalizados</p>
-    </p-card>
-
-    <p-card class="metric-card metric-card--cyan">
-      <div class="flex items-center gap-3">
-        <span class="metric-icon"><i class="pi pi-id-card" aria-hidden="true"></i></span>
-        <span class="metric-label">Cobradores</span>
-      </div>
-      <p class="metric-value">{{ kpis().cobradores }}</p>
-      <p class="metric-caption">Personal activo en campo</p>
-    </p-card>
-  </section>
-
+      <p-card class="metric-card metric-card--cyan">
+        <div class="flex items-center gap-3">
+          <span class="metric-icon"><i class="pi pi-id-card" aria-hidden="true"></i></span>
+          <span class="metric-label">Cobradores</span>
+        </div>
+        <p class="metric-value">{{ kpis().cobradores }}</p>
+        <p class="metric-caption">Personal activo en campo</p>
+      </p-card>
+    </section>
   }
 
   <section class="grid grid-cols-1 gap-4 lg:grid-cols-2" aria-label="Análisis de cartera">
     <p-card class="insight-card h-full" header="Recuperación de cartera">
       @defer (on viewport) {
-        <app-recovery-chart [totalCobrado]="kpis().totalCobrado" [saldoPendiente]="kpis().saldoPendiente" />
+        <app-recovery-chart
+          [totalCobrado]="kpis().totalCobrado"
+          [saldoPendiente]="kpis().saldoPendiente"
+        />
       } @placeholder {
         <div class="mt-3 flex h-[250px] items-center justify-center" aria-hidden="true">
           <p-skeleton shape="circle" size="200px" />
         </div>
       } @loading (minimum 200ms) {
-        <div class="mt-3 flex h-[250px] items-center justify-center text-sm text-surface-500" aria-live="polite">
+        <div
+          class="mt-3 flex h-[250px] items-center justify-center text-sm text-surface-500"
+          aria-live="polite"
+        >
           Cargando gráfico…
         </div>
       } @error {
-        <div class="mt-3 flex h-[250px] items-center justify-center text-sm text-red-600 dark:text-red-400" role="alert">
+        <div
+          class="mt-3 flex h-[250px] items-center justify-center text-sm text-red-600 dark:text-red-400"
+          role="alert"
+        >
           No se pudo cargar el gráfico de recuperación.
         </div>
       }
@@ -128,7 +147,11 @@
             <span class="font-semibold">Al día</span>
             <span class="text-surface-500">{{ riskDistribution().green.count }} clientes</span>
           </div>
-          <p-progressbar [value]="riskDistribution().green.percent" color="#059669" styleClass="h-2 rounded-full" />
+          <p-progressbar
+            [value]="riskDistribution().green.percent"
+            color="#059669"
+            styleClass="h-2 rounded-full"
+          />
         </div>
 
         <div>
@@ -136,7 +159,11 @@
             <span class="font-semibold">Atraso leve</span>
             <span class="text-surface-500">{{ riskDistribution().yellow.count }} clientes</span>
           </div>
-          <p-progressbar [value]="riskDistribution().yellow.percent" color="#EAB308" styleClass="h-2 rounded-full" />
+          <p-progressbar
+            [value]="riskDistribution().yellow.percent"
+            color="#EAB308"
+            styleClass="h-2 rounded-full"
+          />
         </div>
 
         <div>
@@ -144,7 +171,11 @@
             <span class="font-semibold">Atraso moderado</span>
             <span class="text-surface-500">{{ riskDistribution().orange.count }} clientes</span>
           </div>
-          <p-progressbar [value]="riskDistribution().orange.percent" color="#EA580C" styleClass="h-2 rounded-full" />
+          <p-progressbar
+            [value]="riskDistribution().orange.percent"
+            color="#EA580C"
+            styleClass="h-2 rounded-full"
+          />
         </div>
 
         <div>
@@ -152,7 +183,11 @@
             <span class="font-semibold">Moroso</span>
             <span class="text-surface-500">{{ riskDistribution().red.count }} clientes</span>
           </div>
-          <p-progressbar [value]="riskDistribution().red.percent" color="#DC2626" styleClass="h-2 rounded-full" />
+          <p-progressbar
+            [value]="riskDistribution().red.percent"
+            color="#DC2626"
+            styleClass="h-2 rounded-full"
+          />
         </div>
       </div>
     </p-card>
@@ -160,21 +195,53 @@
 
   <p-card class="table-card">
     <ng-template #header>
-      <div class="flex items-center gap-3 border-b border-surface-200 px-5 py-4 dark:border-surface-700">
-        <span class="grid size-9 place-items-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-950/40 dark:text-primary-300">
+      <div
+        class="flex items-center gap-3 border-b border-surface-200 px-5 py-4 dark:border-surface-700"
+      >
+        <span
+          class="grid size-9 place-items-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-950/40 dark:text-primary-300"
+        >
           <i class="pi pi-chart-line" aria-hidden="true"></i>
         </span>
         <div>
-          <h2 class="m-0 text-lg font-bold text-surface-950 dark:text-surface-0">Rendimiento de cobradores</h2>
+          <h2 class="m-0 text-lg font-bold text-surface-950 dark:text-surface-0">
+            Rendimiento de cobradores
+          </h2>
           <p class="mt-0.5 text-xs text-surface-500">Avance operativo de la jornada</p>
         </div>
       </div>
     </ng-template>
 
+    <div
+      class="grid gap-3 border-b border-surface-200 p-4 sm:grid-cols-[minmax(0,1fr)_12rem] dark:border-surface-700"
+    >
+      <label class="flex flex-col gap-1 text-sm font-medium text-surface-700 dark:text-surface-200">
+        Buscar cobrador
+        <input
+          pInputText
+          type="search"
+          placeholder="Nombre o DNI"
+          [value]="performanceQuery()"
+          (input)="changePerformanceQuery($event)"
+        />
+      </label>
+      <label class="flex flex-col gap-1 text-sm font-medium text-surface-700 dark:text-surface-200">
+        Atrasos
+        <p-select
+          [options]="performanceDelayOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="performanceDelayFilter()"
+          (ngModelChange)="changePerformanceDelay($event)"
+          styleClass="w-full"
+        />
+      </label>
+    </div>
+
     @defer (on viewport) {
       @if (isDesktop()) {
         @defer (when isDesktop()) {
-          <app-collector-performance-table [entries]="collectorPerformance()" />
+          <app-collector-performance-table [entries]="visibleCollectorPerformance()" />
         } @placeholder {
           <div class="space-y-3 p-4" aria-hidden="true">
             @for (row of loadingRows; track row) {
@@ -187,52 +254,69 @@
           </div>
         }
       } @else {
-      <div
-        class="divide-y divide-surface-200 dark:divide-surface-700"
-        data-testid="collector-performance-mobile"
-      >
-        @for (col of collectorPerformance(); track col.id) {
-          <article class="flex flex-col gap-3 p-4">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <p class="truncate font-bold text-surface-900 dark:text-surface-0">{{ col.name }}</p>
-                <p class="mt-0.5 text-xs text-surface-500">DNI: {{ col.dni }}</p>
+        <div
+          class="divide-y divide-surface-200 dark:divide-surface-700"
+          data-testid="collector-performance-mobile"
+        >
+          @for (col of visibleCollectorPerformance(); track col.id) {
+            <article class="flex flex-col gap-3 p-4">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="truncate font-bold text-surface-900 dark:text-surface-0">
+                    {{ col.name }}
+                  </p>
+                  <p class="mt-0.5 text-xs text-surface-500">DNI: {{ col.dni }}</p>
+                </div>
+                <span
+                  class="rounded-full px-2.5 py-1 text-sm font-semibold whitespace-nowrap"
+                  [class.bg-green-100]="col.delayedCount === 0"
+                  [class.text-green-700]="col.delayedCount === 0"
+                  [class.bg-yellow-100]="col.delayedCount > 0"
+                  [class.text-yellow-700]="col.delayedCount > 0"
+                >
+                  {{ col.delayedCount }} atrasados
+                </span>
               </div>
-              <span class="rounded-full px-2.5 py-1 text-sm font-semibold whitespace-nowrap" [class.bg-green-100]="col.delayedCount === 0" [class.text-green-700]="col.delayedCount === 0" [class.bg-yellow-100]="col.delayedCount > 0" [class.text-yellow-700]="col.delayedCount > 0">
-                {{ col.delayedCount }} atrasados
-              </span>
-            </div>
-            <dl class="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <dt class="text-xs text-surface-500">Clientes</dt>
-                <dd class="mt-1 font-medium text-surface-900 dark:text-surface-0">{{ col.clientsCount }}</dd>
-              </div>
-              <div>
-                <dt class="text-xs text-surface-500">Esperado hoy</dt>
-                <dd class="mt-1 font-medium text-surface-900 dark:text-surface-0">{{ col.expectedToday | penCurrency }}</dd>
-              </div>
-              <div>
-                <dt class="text-xs text-surface-500">Cobrado hoy</dt>
-                <dd class="mt-1 font-bold text-green-600 dark:text-green-400">{{ col.collectedToday | penCurrency }}</dd>
-              </div>
-              <div>
-                <dt class="text-xs text-surface-500">Pendiente</dt>
-                <dd class="mt-1 font-medium text-surface-500">{{ col.pendingToday | penCurrency }}</dd>
-              </div>
-            </dl>
-            <a
-              pButton
-              fluid
-              variant="outlined"
-              size="small"
-              [routerLink]="['/admin/clientes']"
-              [queryParams]="{ collectorId: col.id }"
-            ><i class="pi pi-eye mr-2" aria-hidden="true"></i>Ver cartera</a>
-          </article>
-        } @empty {
-          <div class="p-8 text-center text-surface-500">No hay datos de cobradores.</div>
-        }
-      </div>
+              <dl class="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <dt class="text-xs text-surface-500">Clientes</dt>
+                  <dd class="mt-1 font-medium text-surface-900 dark:text-surface-0">
+                    {{ col.clientsCount }}
+                  </dd>
+                </div>
+                <div>
+                  <dt class="text-xs text-surface-500">Esperado hoy</dt>
+                  <dd class="mt-1 font-medium text-surface-900 dark:text-surface-0">
+                    {{ col.expectedToday | penCurrency }}
+                  </dd>
+                </div>
+                <div>
+                  <dt class="text-xs text-surface-500">Cobrado hoy</dt>
+                  <dd class="mt-1 font-bold text-green-600 dark:text-green-400">
+                    {{ col.collectedToday | penCurrency }}
+                  </dd>
+                </div>
+                <div>
+                  <dt class="text-xs text-surface-500">Pendiente</dt>
+                  <dd class="mt-1 font-medium text-surface-500">
+                    {{ col.pendingToday | penCurrency }}
+                  </dd>
+                </div>
+              </dl>
+              <a
+                pButton
+                fluid
+                variant="outlined"
+                size="small"
+                [routerLink]="['/admin/clientes']"
+                [queryParams]="{ collectorId: col.id }"
+                ><i class="pi pi-eye mr-2" aria-hidden="true"></i>Ver cartera</a
+              >
+            </article>
+          } @empty {
+            <div class="p-8 text-center text-surface-500">No hay datos de cobradores.</div>
+          }
+        </div>
       }
     } @placeholder {
       <div class="space-y-3 p-4" aria-hidden="true">
@@ -245,6 +329,16 @@
         No se pudo cargar el rendimiento de cobradores.
       </div>
     }
+    @if (filteredCollectorPerformance().length > 0) {
+      <p-paginator
+        [first]="performancePageFirst()"
+        [rows]="performancePageRows()"
+        [totalRecords]="filteredCollectorPerformance().length"
+        [rowsPerPageOptions]="performancePageSizeOptions"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="{first}–{last} de {totalRecords} cobradores"
+        (onPageChange)="changePerformancePage($event)"
+      />
+    }
   </p-card>
 </div>
-

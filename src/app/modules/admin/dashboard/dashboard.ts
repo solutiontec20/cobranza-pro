@@ -1,15 +1,21 @@
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { SkeletonModule } from 'primeng/skeleton';
 import { MessageModule } from 'primeng/message';
+import { InputTextModule } from 'primeng/inputtext';
+import { PaginatorModule } from 'primeng/paginator';
+import { SelectModule } from 'primeng/select';
 import { RouterLink } from '@angular/router';
 import { AdminDashboardStore } from './admin-dashboard.store';
 import { RecoveryChart } from './recovery-chart';
 import { currentLimaDate, formatEsDate } from '../../../core/calculations/date-time';
 import { PenCurrency } from '../../../shared/pipes/pen-currency';
 import { CollectorPerformanceTable } from './collector-performance-table';
+import { pageItems } from '../../../core/calculations/loan-detail-filtering';
+import { normalizeSearchText } from '../../../core/calculations/text';
 
 const EMPTY_BUCKET = { count: 0, percent: 0 };
 
@@ -21,6 +27,10 @@ const EMPTY_BUCKET = { count: 0, percent: 0 };
     ProgressBarModule,
     SkeletonModule,
     MessageModule,
+    FormsModule,
+    InputTextModule,
+    PaginatorModule,
+    SelectModule,
     RouterLink,
     PenCurrency,
     RecoveryChart,
@@ -60,6 +70,36 @@ export default class Dashboard implements OnInit, OnDestroy {
   );
 
   protected readonly collectorPerformance = computed(() => this.store.collectorPerformance());
+  protected readonly performanceQuery = signal('');
+  protected readonly performanceDelayFilter = signal<'all' | 'delayed' | 'current'>('all');
+  protected readonly performanceDelayOptions = [
+    { label: 'Todos', value: 'all' as const },
+    { label: 'Con atrasos', value: 'delayed' as const },
+    { label: 'Sin atrasos', value: 'current' as const },
+  ];
+  protected readonly performancePageSizeOptions = [5, 10, 20];
+  protected readonly performancePageFirst = signal(0);
+  protected readonly performancePageRows = signal(5);
+  protected readonly filteredCollectorPerformance = computed(() => {
+    const query = normalizeSearchText(this.performanceQuery());
+    const delay = this.performanceDelayFilter();
+    return this.collectorPerformance().filter(
+      (entry) =>
+        (!query ||
+          [entry.name, entry.dni]
+            .map(normalizeSearchText)
+            .some((value) => value.includes(query))) &&
+        (delay === 'all' ||
+          (delay === 'delayed' ? entry.delayedCount > 0 : entry.delayedCount === 0)),
+    );
+  });
+  protected readonly visibleCollectorPerformance = computed(() =>
+    pageItems(
+      this.filteredCollectorPerformance(),
+      this.performancePageFirst(),
+      this.performancePageRows(),
+    ),
+  );
   protected readonly isDesktop = signal(
     typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches,
   );
@@ -69,6 +109,21 @@ export default class Dashboard implements OnInit, OnDestroy {
 
   constructor() {
     void this.store.load();
+  }
+
+  protected changePerformanceQuery(event: Event): void {
+    this.performanceQuery.set((event.target as HTMLInputElement).value);
+    this.performancePageFirst.set(0);
+  }
+
+  protected changePerformanceDelay(filter: 'all' | 'delayed' | 'current'): void {
+    this.performanceDelayFilter.set(filter);
+    this.performancePageFirst.set(0);
+  }
+
+  protected changePerformancePage(event: { first?: number; rows?: number }): void {
+    this.performancePageFirst.set(event.first ?? 0);
+    this.performancePageRows.set(event.rows ?? 5);
   }
 
   ngOnInit(): void {

@@ -1,14 +1,10 @@
 export type CashClosureStatus = 'draft' | 'submitted' | 'validated';
 
-export type CashExpenseCategory =
-  | 'fuel'
-  | 'tolls'
-  | 'fares'
-  | 'parking'
-  | 'meals'
-  | 'other';
+export type CashExpenseCategory = 'fuel' | 'tolls' | 'fares' | 'parking' | 'meals' | 'other';
 
 export type CashExpenseStatus = 'pending' | 'approved' | 'rejected';
+
+export type CashAllowanceRequestStatus = 'pending' | 'approved' | 'rejected';
 
 /**
  * Per collector, per business-date aggregate of `cash_movements`, mirroring
@@ -60,6 +56,21 @@ export interface CashExpense {
   createdAt: string;
 }
 
+export interface CashAllowanceRequest {
+  id: string;
+  collectorId: string;
+  businessDate: string;
+  amount: number;
+  notes: string | null;
+  status: CashAllowanceRequestStatus;
+  cashMovementId: string | null;
+  requestedBy: string;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+}
+
 /** Full picture of one collector's day: used by both the admin overview and the collector's own screen. */
 export interface CollectorCashDay {
   collectorId: string;
@@ -68,6 +79,7 @@ export interface CollectorCashDay {
   businessDate: string;
   breakdown: CashDayBreakdown;
   closure: CashClosure | null;
+  allowanceRequests: CashAllowanceRequest[];
   expenses: CashExpense[];
 }
 
@@ -83,11 +95,16 @@ export interface RegisterCashOpeningInput {
   notes: string;
 }
 
-export interface RegisterCashAllowanceInput {
-  collectorId: string;
+export interface RequestCashAllowanceInput {
   businessDate: string;
   amount: number;
   notes: string;
+}
+
+export interface ReviewCashAllowanceRequestInput {
+  requestId: string;
+  approve: boolean;
+  reason: string;
 }
 
 export interface RequestCashExpenseInput {

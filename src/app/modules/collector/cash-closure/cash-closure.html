@@ -5,7 +5,9 @@
     <p class="m-0 text-sm font-medium text-primary-700 dark:text-primary-300">
       {{ today | esDate: 'weekday' }}
     </p>
-    <h1 class="mt-1 mb-0 text-2xl font-semibold tracking-tight text-surface-950 sm:text-3xl dark:text-surface-0">
+    <h1
+      class="mt-1 mb-0 text-2xl font-semibold tracking-tight text-surface-950 sm:text-3xl dark:text-surface-0"
+    >
       Cierre de caja
     </h1>
     <p class="mt-1 mb-0 text-sm text-surface-500 dark:text-surface-400">
@@ -25,117 +27,375 @@
     </div>
   } @else if (store.day(); as day) {
     <!-- Expected cash highlight -->
-    <section class="overflow-hidden rounded-2xl bg-primary-950 p-5 text-white shadow-sm sm:p-6 dark:bg-surface-900 dark:ring-1 dark:ring-surface-700">
+    <section
+      class="overflow-hidden rounded-2xl bg-primary-950 p-5 text-white shadow-sm sm:p-6 dark:bg-surface-900 dark:ring-1 dark:ring-surface-700"
+    >
       <p class="m-0 text-sm text-primary-200">Efectivo que debés entregar hoy</p>
       <p class="mt-2 mb-0 text-3xl font-semibold tabular-nums sm:text-4xl">
         {{ store.expectedCash() | penCurrency }}
       </p>
       @if (day.closure) {
         <p class="mt-3 mb-0 text-sm text-primary-200">
-          <p-tag [severity]="closureStatusSeverity(day.closure.status)" [value]="closureStatusLabel(day.closure.status)" />
+          <p-tag
+            [severity]="closureStatusSeverity(day.closure.status)"
+            [value]="closureStatusLabel(day.closure.status)"
+          />
         </p>
       } @else {
-        <button pButton severity="success" class="mt-4 w-full justify-center text-lg font-bold sm:w-auto" (click)="openSubmitDialog()">
+        <button
+          pButton
+          severity="success"
+          class="mt-4 w-full justify-center text-lg font-bold sm:w-auto"
+          (click)="openSubmitDialog()"
+        >
           <i class="pi pi-send"></i> Enviar mi cierre
         </button>
       }
     </section>
 
     <!-- Breakdown -->
-    <section class="rounded-xl border border-surface-200 bg-surface-0 p-4 shadow-sm dark:border-surface-700 dark:bg-surface-900">
-      <h2 class="m-0 mb-3 text-lg font-semibold text-surface-950 dark:text-surface-0">Detalle del día</h2>
+    <section
+      class="rounded-xl border border-surface-200 bg-surface-0 p-4 shadow-sm dark:border-surface-700 dark:bg-surface-900"
+    >
+      <h2 class="m-0 mb-3 text-lg font-semibold text-surface-950 dark:text-surface-0">
+        Detalle del día
+      </h2>
       <dl class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
         <div>
           <dt class="text-xs text-surface-500 dark:text-surface-400">Apertura</dt>
-          <dd class="mt-1 font-semibold text-surface-950 dark:text-surface-0">{{ day.breakdown.openingAmount | penCurrency }}</dd>
+          <dd class="mt-1 font-semibold text-surface-950 dark:text-surface-0">
+            {{ day.breakdown.openingAmount | penCurrency }}
+          </dd>
         </div>
         <div>
           <dt class="text-xs text-surface-500 dark:text-surface-400">Viáticos entregados</dt>
-          <dd class="mt-1 font-semibold text-surface-950 dark:text-surface-0">{{ day.breakdown.allowanceAmount | penCurrency }}</dd>
+          <dd class="mt-1 font-semibold text-surface-950 dark:text-surface-0">
+            {{ day.breakdown.allowanceAmount | penCurrency }}
+          </dd>
         </div>
         <div>
           <dt class="text-xs text-surface-500 dark:text-surface-400">Cobrado en efectivo</dt>
-          <dd class="mt-1 font-semibold text-green-600 dark:text-green-400">{{ day.breakdown.cashCollectedAmount | penCurrency }}</dd>
+          <dd class="mt-1 font-semibold text-green-600 dark:text-green-400">
+            {{ day.breakdown.cashCollectedAmount | penCurrency }}
+          </dd>
         </div>
         <div>
-          <dt class="text-xs text-surface-500 dark:text-surface-400">Cobrado por Yape/Plin/Transf.</dt>
-          <dd class="mt-1 font-semibold text-surface-950 dark:text-surface-0">{{ digitalCollected() | penCurrency }}</dd>
+          <dt class="text-xs text-surface-500 dark:text-surface-400">
+            Cobrado por Yape/Plin/Transf.
+          </dt>
+          <dd class="mt-1 font-semibold text-surface-950 dark:text-surface-0">
+            {{ digitalCollected() | penCurrency }}
+          </dd>
         </div>
         <div>
           <dt class="text-xs text-surface-500 dark:text-surface-400">Préstamos entregados</dt>
-          <dd class="mt-1 font-semibold text-red-600 dark:text-red-400">− {{ day.breakdown.loanDisbursementAmount | penCurrency }}</dd>
+          <dd class="mt-1 font-semibold text-red-600 dark:text-red-400">
+            − {{ day.breakdown.loanDisbursementAmount | penCurrency }}
+          </dd>
         </div>
         <div>
           <dt class="text-xs text-surface-500 dark:text-surface-400">Gastos aprobados</dt>
-          <dd class="mt-1 font-semibold text-red-600 dark:text-red-400">− {{ day.breakdown.operatingExpenseAmount | penCurrency }}</dd>
+          <dd class="mt-1 font-semibold text-red-600 dark:text-red-400">
+            − {{ day.breakdown.operatingExpenseAmount | penCurrency }}
+          </dd>
         </div>
       </dl>
-      <p class="mt-4 rounded-lg bg-surface-50 p-3 text-xs text-surface-500 dark:bg-surface-800 dark:text-surface-400">
+      <p
+        class="mt-4 rounded-lg bg-surface-50 p-3 text-xs text-surface-500 dark:bg-surface-800 dark:text-surface-400"
+      >
         <i class="pi pi-info-circle mr-1" aria-hidden="true"></i>
         Total cobrado hoy (todo medio de pago): {{ totalCollected() | penCurrency }}
       </p>
     </section>
 
     @if (day.closure) {
-      <section class="rounded-xl border border-surface-200 bg-surface-0 p-4 shadow-sm dark:border-surface-700 dark:bg-surface-900">
-        <h2 class="m-0 mb-3 text-lg font-semibold text-surface-950 dark:text-surface-0">Mi cierre</h2>
+      <section
+        class="rounded-xl border border-surface-200 bg-surface-0 p-4 shadow-sm dark:border-surface-700 dark:bg-surface-900"
+      >
+        <h2 class="m-0 mb-3 text-lg font-semibold text-surface-950 dark:text-surface-0">
+          Mi cierre
+        </h2>
         <dl class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
           <div>
             <dt class="text-xs text-surface-500 dark:text-surface-400">Entregado</dt>
-            <dd class="mt-1 font-semibold text-surface-950 dark:text-surface-0">{{ day.closure.deliveredAmount | penCurrency }}</dd>
+            <dd class="mt-1 font-semibold text-surface-950 dark:text-surface-0">
+              {{ day.closure.deliveredAmount | penCurrency }}
+            </dd>
           </div>
           <div>
             <dt class="text-xs text-surface-500 dark:text-surface-400">Diferencia</dt>
-            <dd class="mt-1 font-bold" [class.text-red-600]="day.closure.differenceAmount < 0" [class.text-green-600]="day.closure.differenceAmount > 0">
+            <dd
+              class="mt-1 font-bold"
+              [class.text-red-600]="day.closure.differenceAmount < 0"
+              [class.text-green-600]="day.closure.differenceAmount > 0"
+            >
               {{ day.closure.differenceAmount | penCurrency }}
             </dd>
           </div>
           <div class="col-span-2 sm:col-span-1">
             <dt class="text-xs text-surface-500 dark:text-surface-400">Observación</dt>
-            <dd class="mt-1 text-surface-950 dark:text-surface-0">{{ day.closure.observation || '—' }}</dd>
+            <dd class="mt-1 text-surface-950 dark:text-surface-0">
+              {{ day.closure.observation || '—' }}
+            </dd>
           </div>
         </dl>
         @if (day.closure.status === 'validated') {
           <p class="mt-3 text-xs text-surface-500 dark:text-surface-400">
-            Validado el {{ day.closure.validatedAt | esDate:'datetime' }}
+            Validado el {{ day.closure.validatedAt | esDate: 'datetime' }}
           </p>
         }
       </section>
     }
 
-    <!-- Expenses -->
-    <section class="rounded-xl border border-surface-200 bg-surface-0 p-4 shadow-sm dark:border-surface-700 dark:bg-surface-900">
-      <div class="flex items-center justify-between gap-2">
-        <h2 class="m-0 text-lg font-semibold text-surface-950 dark:text-surface-0">Mis gastos</h2>
-        @if (!day.closure) {
-          <button pButton size="small" severity="secondary" variant="outlined" (click)="openExpenseDialog()">
-            <i class="pi pi-receipt"></i> Solicitar gasto
+    <!-- Allowance requests -->
+    <section
+      class="rounded-xl border border-surface-200 bg-surface-0 p-4 shadow-sm dark:border-surface-700 dark:bg-surface-900"
+    >
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 class="m-0 text-lg font-semibold text-surface-950 dark:text-surface-0">
+            Mis solicitudes de viático
+          </h2>
+          <p class="mt-1 mb-0 text-sm text-surface-500 dark:text-surface-400">
+            Cuando se aprueba, el monto se suma automáticamente a tu efectivo esperado.
+          </p>
+        </div>
+        @if (!day.closure && !pendingAllowanceRequest()) {
+          <button
+            pButton
+            size="small"
+            severity="secondary"
+            variant="outlined"
+            class="w-full sm:w-auto"
+            (click)="openAllowanceDialog()"
+          >
+            <i class="pi pi-car"></i> Solicitar viático
           </button>
         }
       </div>
-      @if (day.expenses.length === 0) {
-        <p class="mt-3 text-sm text-surface-500 dark:text-surface-400">Todavía no solicitaste ningún gasto hoy.</p>
+
+      @if (pendingAllowanceRequest()) {
+        <p
+          class="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+        >
+          <i class="pi pi-clock mr-1" aria-hidden="true"></i>
+          Ya tenés una solicitud pendiente. Podrás crear otra cuando sea revisada.
+        </p>
+      }
+
+      @if (day.allowanceRequests.length === 0) {
+        <p class="mt-3 text-sm text-surface-500 dark:text-surface-400">
+          Todavía no solicitaste viáticos hoy.
+        </p>
       } @else {
         <ul class="mt-3 divide-y divide-surface-200 dark:divide-surface-700">
-          @for (expense of day.expenses; track expense.id) {
+          @for (request of day.allowanceRequests; track request.id) {
             <li class="flex flex-wrap items-center justify-between gap-2 py-3">
               <div class="min-w-0">
                 <p class="m-0 font-medium text-surface-950 dark:text-surface-0">
-                  {{ categoryLabel(expense.category) }} — {{ expense.amount | penCurrency }}
+                  {{ request.amount | penCurrency }}
                 </p>
-                <p class="mt-0.5 mb-0 text-xs text-surface-500 dark:text-surface-400">{{ expense.description || 'Sin descripción' }}</p>
-                @if (expense.status === 'rejected') {
-                  <p class="mt-1 mb-0 text-xs text-red-600 dark:text-red-400">Motivo: {{ expense.rejectionReason }}</p>
+                <p class="mt-0.5 mb-0 text-xs text-surface-500 dark:text-surface-400">
+                  {{ request.notes || 'Sin justificación' }}
+                </p>
+                @if (request.status === 'rejected') {
+                  <p class="mt-1 mb-0 text-xs text-red-600 dark:text-red-400">
+                    Motivo: {{ request.rejectionReason }}
+                  </p>
                 }
               </div>
-              <p-tag [severity]="expenseStatusSeverity(expense.status)" [value]="expenseStatusLabel(expense.status)" />
+              <p-tag
+                [severity]="allowanceStatusSeverity(request.status)"
+                [value]="allowanceStatusLabel(request.status)"
+              />
             </li>
           }
         </ul>
       }
     </section>
+
+    <!-- Expenses -->
+    <section
+      class="rounded-xl border border-surface-200 bg-surface-0 p-4 shadow-sm dark:border-surface-700 dark:bg-surface-900"
+    >
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 class="m-0 text-lg font-semibold text-surface-950 dark:text-surface-0">Mis gastos</h2>
+          <p class="mt-1 mb-0 text-sm text-surface-500">
+            {{ filteredExpenses().length }} de {{ day.expenses.length }} solicitudes
+          </p>
+        </div>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+          @if (day.expenses.length > 0) {
+            <label
+              class="flex flex-col gap-1 text-sm font-medium text-surface-700 dark:text-surface-200"
+            >
+              Estado
+              <p-select
+                [options]="expenseStatusOptions"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="expenseStatusFilter()"
+                (ngModelChange)="changeExpenseStatus($event)"
+                styleClass="w-full sm:min-w-40"
+              />
+            </label>
+          }
+          @if (!day.closure) {
+            <button
+              pButton
+              size="small"
+              severity="secondary"
+              variant="outlined"
+              (click)="openExpenseDialog()"
+            >
+              <i class="pi pi-receipt"></i> Solicitar gasto
+            </button>
+          }
+        </div>
+      </div>
+      @if (day.expenses.length === 0) {
+        <p class="mt-3 text-sm text-surface-500 dark:text-surface-400">
+          Todavía no solicitaste ningún gasto hoy.
+        </p>
+      } @else if (filteredExpenses().length === 0) {
+        <div
+          class="mt-3 rounded-lg border border-dashed border-surface-300 p-5 text-center dark:border-surface-600"
+        >
+          <p class="m-0 text-sm text-surface-500">No hay gastos con este estado.</p>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            variant="text"
+            class="mt-2"
+            (click)="changeExpenseStatus('all')"
+          >
+            Ver todos
+          </button>
+        </div>
+      } @else {
+        <ul class="mt-3 divide-y divide-surface-200 dark:divide-surface-700">
+          @for (expense of visibleExpenses(); track expense.id) {
+            <li class="flex flex-wrap items-center justify-between gap-2 py-3">
+              <div class="min-w-0">
+                <p class="m-0 font-medium text-surface-950 dark:text-surface-0">
+                  {{ categoryLabel(expense.category) }} — {{ expense.amount | penCurrency }}
+                </p>
+                <p class="mt-0.5 mb-0 text-xs text-surface-500 dark:text-surface-400">
+                  {{ expense.description || 'Sin descripción' }}
+                </p>
+                @if (expense.status === 'rejected') {
+                  <p class="mt-1 mb-0 text-xs text-red-600 dark:text-red-400">
+                    Motivo: {{ expense.rejectionReason }}
+                  </p>
+                }
+              </div>
+              <p-tag
+                [severity]="expenseStatusSeverity(expense.status)"
+                [value]="expenseStatusLabel(expense.status)"
+              />
+            </li>
+          }
+        </ul>
+        <p-paginator
+          [first]="expensePageFirst()"
+          [rows]="expensePageRows()"
+          [totalRecords]="filteredExpenses().length"
+          [rowsPerPageOptions]="expensePageSizeOptions"
+          [showCurrentPageReport]="true"
+          currentPageReportTemplate="{first}–{last} de {totalRecords} gastos"
+          (onPageChange)="changeExpensePage($event)"
+        />
+      }
+    </section>
   }
 </div>
+
+<!-- Request allowance dialog -->
+@defer (when allowanceDialogVisible()) {
+  <p-dialog
+    header="Solicitar viático"
+    [modal]="true"
+    [draggable]="false"
+    [visible]="allowanceDialogVisible()"
+    (visibleChange)="allowanceDialogVisible.set($event)"
+    [breakpoints]="{ '640px': '100vw' }"
+    styleClass="w-[calc(100vw-1.5rem)] max-w-md"
+  >
+    <form class="flex flex-col gap-4" (submit)="submitAllowance(); $event.preventDefault()">
+      <p class="m-0 text-sm text-surface-600 dark:text-surface-400">
+        El administrador o supervisor revisará tu solicitud antes de que el monto se sume a caja.
+      </p>
+      <div>
+        <label
+          for="allowance-amount"
+          class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200"
+        >
+          Monto
+        </label>
+        <p-inputnumber
+          inputId="allowance-amount"
+          [formField]="allowanceForm.amount"
+          mode="currency"
+          currency="PEN"
+          locale="es-PE"
+          styleClass="w-full"
+        />
+        @if (allowanceForm.amount().touched() && allowanceForm.amount().invalid()) {
+          <small class="mt-1 block text-red-600">{{
+            allowanceForm.amount().errors()[0]?.message
+          }}</small>
+        }
+      </div>
+      <div>
+        <label
+          for="allowance-notes"
+          class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200"
+        >
+          Justificación
+        </label>
+        <textarea
+          id="allowance-notes"
+          rows="3"
+          [formField]="allowanceForm.notes"
+          class="w-full resize-y rounded-md border border-surface-300 bg-surface-0 px-3 py-2.5 text-surface-950 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-surface-600 dark:bg-surface-950 dark:text-surface-0"
+          placeholder="Ej: combustible para la ruta del día"
+        ></textarea>
+        @if (allowanceForm.notes().touched() && allowanceForm.notes().invalid()) {
+          <small class="mt-1 block text-red-600">{{
+            allowanceForm.notes().errors()[0]?.message
+          }}</small>
+        }
+      </div>
+      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          variant="outlined"
+          class="min-h-11 w-full sm:w-auto"
+          (click)="allowanceDialogVisible.set(false)"
+        >
+          Cancelar
+        </button>
+        <button
+          pButton
+          type="submit"
+          class="min-h-11 w-full sm:w-auto"
+          [disabled]="store.saving() || allowanceForm().invalid()"
+        >
+          @if (store.saving()) {
+            <i class="pi pi-spin pi-spinner"></i>
+          } @else {
+            <i class="pi pi-send"></i>
+          }
+          Enviar solicitud
+        </button>
+      </div>
+    </form>
+  </p-dialog>
+}
 
 <!-- Request expense dialog -->
 @defer (when expenseDialogVisible()) {
@@ -153,24 +413,76 @@
         Solo se descuenta de tu caja cuando el administrador lo aprueba.
       </p>
       <div>
-        <label for="expense-category" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Categoría</label>
-        <p-select inputId="expense-category" [formField]="expenseForm.category" [options]="categoryOptions" optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full" />
+        <label
+          for="expense-category"
+          class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200"
+          >Categoría</label
+        >
+        <p-select
+          inputId="expense-category"
+          [formField]="expenseForm.category"
+          [options]="categoryOptions"
+          optionLabel="label"
+          optionValue="value"
+          appendTo="body"
+          styleClass="w-full"
+        />
       </div>
       <div>
-        <label for="expense-amount" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Monto</label>
-        <p-inputnumber inputId="expense-amount" [formField]="expenseForm.amount" mode="currency" currency="PEN" locale="es-PE" styleClass="w-full" />
+        <label
+          for="expense-amount"
+          class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200"
+          >Monto</label
+        >
+        <p-inputnumber
+          inputId="expense-amount"
+          [formField]="expenseForm.amount"
+          mode="currency"
+          currency="PEN"
+          locale="es-PE"
+          styleClass="w-full"
+        />
         @if (expenseForm.amount().touched() && expenseForm.amount().invalid()) {
-          <small class="mt-1 block text-red-600">{{ expenseForm.amount().errors()[0]?.message }}</small>
+          <small class="mt-1 block text-red-600">{{
+            expenseForm.amount().errors()[0]?.message
+          }}</small>
         }
       </div>
       <div>
-        <label for="expense-description" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">Descripción</label>
-        <input id="expense-description" pInputText [formField]="expenseForm.description" class="w-full" />
+        <label
+          for="expense-description"
+          class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200"
+          >Descripción</label
+        >
+        <input
+          id="expense-description"
+          pInputText
+          [formField]="expenseForm.description"
+          class="w-full"
+        />
       </div>
       <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <button pButton type="button" severity="secondary" variant="outlined" class="min-h-11 w-full sm:w-auto" (click)="expenseDialogVisible.set(false)">Cancelar</button>
-        <button pButton type="submit" class="min-h-11 w-full sm:w-auto" [disabled]="store.saving() || expenseForm().invalid()">
-          @if (store.saving()) { <i class="pi pi-spin pi-spinner"></i> } @else { <i class="pi pi-check"></i> }
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          variant="outlined"
+          class="min-h-11 w-full sm:w-auto"
+          (click)="expenseDialogVisible.set(false)"
+        >
+          Cancelar
+        </button>
+        <button
+          pButton
+          type="submit"
+          class="min-h-11 w-full sm:w-auto"
+          [disabled]="store.saving() || expenseForm().invalid()"
+        >
+          @if (store.saving()) {
+            <i class="pi pi-spin pi-spinner"></i>
+          } @else {
+            <i class="pi pi-check"></i>
+          }
           Solicitar
         </button>
       </div>
@@ -196,39 +508,94 @@
       <div class="rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800">
         <div class="flex items-center justify-between">
           <span class="text-surface-600 dark:text-surface-400">Efectivo esperado</span>
-          <strong class="tabular-nums text-surface-950 dark:text-surface-0">{{ store.expectedCash() | penCurrency }}</strong>
+          <strong class="tabular-nums text-surface-950 dark:text-surface-0">{{
+            store.expectedCash() | penCurrency
+          }}</strong>
         </div>
       </div>
       <div>
-        <label for="delivered-amount" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">¿Cuánto efectivo entregás?</label>
-        <p-inputnumber inputId="delivered-amount" [formField]="submitForm.deliveredAmount" mode="currency" currency="PEN" locale="es-PE" styleClass="w-full" inputStyleClass="w-full text-xl font-bold tabular-nums" />
+        <label
+          for="delivered-amount"
+          class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200"
+          >¿Cuánto efectivo entregás?</label
+        >
+        <p-inputnumber
+          inputId="delivered-amount"
+          [formField]="submitForm.deliveredAmount"
+          mode="currency"
+          currency="PEN"
+          locale="es-PE"
+          styleClass="w-full"
+          inputStyleClass="w-full text-xl font-bold tabular-nums"
+        />
         @if (submitForm.deliveredAmount().touched() && submitForm.deliveredAmount().invalid()) {
-          <small class="mt-1 block text-red-600">{{ submitForm.deliveredAmount().errors()[0]?.message }}</small>
+          <small class="mt-1 block text-red-600">{{
+            submitForm.deliveredAmount().errors()[0]?.message
+          }}</small>
         }
       </div>
       @if (submitDifference() !== 0) {
-        <div class="flex items-center justify-between rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700">
-          <span class="text-surface-600 dark:text-surface-400">{{ submitDifference() > 0 ? 'Sobrante' : 'Faltante' }}</span>
-          <strong class="tabular-nums" [class.text-green-600]="submitDifference() > 0" [class.text-red-600]="submitDifference() < 0">
+        <div
+          class="flex items-center justify-between rounded-lg border border-surface-200 p-3 text-sm dark:border-surface-700"
+        >
+          <span class="text-surface-600 dark:text-surface-400">{{
+            submitDifference() > 0 ? 'Sobrante' : 'Faltante'
+          }}</span>
+          <strong
+            class="tabular-nums"
+            [class.text-green-600]="submitDifference() > 0"
+            [class.text-red-600]="submitDifference() < 0"
+          >
             {{ submitDifference() | penCurrency }}
           </strong>
         </div>
       }
       <div>
-        <label for="submit-observation" class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200">
-          Observación @if (submitDifference() !== 0) { <span class="text-red-500" aria-hidden="true">*</span> }
+        <label
+          for="submit-observation"
+          class="mb-2 block text-sm font-medium text-surface-700 dark:text-surface-200"
+        >
+          Observación
+          @if (submitDifference() !== 0) {
+            <span class="text-red-500" aria-hidden="true">*</span>
+          }
         </label>
-        <textarea id="submit-observation" rows="3" [formField]="submitForm.observation"
+        <textarea
+          id="submit-observation"
+          rows="3"
+          [formField]="submitForm.observation"
           class="w-full resize-none rounded-md border border-surface-300 bg-surface-0 px-3 py-2 text-surface-950 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-surface-600 dark:bg-surface-950 dark:text-surface-0"
-          placeholder="Ej: Me faltaron 5 soles, cliente pagó con billete roto…"></textarea>
+          placeholder="Ej: Me faltaron 5 soles, cliente pagó con billete roto…"
+        ></textarea>
         @if (submitForm.observation().touched() && submitForm.observation().invalid()) {
-          <small class="mt-1 block text-red-600">{{ submitForm.observation().errors()[0]?.message }}</small>
+          <small class="mt-1 block text-red-600">{{
+            submitForm.observation().errors()[0]?.message
+          }}</small>
         }
       </div>
       <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <button pButton type="button" severity="secondary" variant="outlined" class="min-h-11 w-full sm:w-auto" (click)="submitDialogVisible.set(false)">Cancelar</button>
-        <button pButton type="submit" severity="success" class="min-h-11 w-full sm:w-auto" [disabled]="store.saving() || submitForm().invalid()">
-          @if (store.saving()) { <i class="pi pi-spin pi-spinner"></i> } @else { <i class="pi pi-send"></i> }
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          variant="outlined"
+          class="min-h-11 w-full sm:w-auto"
+          (click)="submitDialogVisible.set(false)"
+        >
+          Cancelar
+        </button>
+        <button
+          pButton
+          type="submit"
+          severity="success"
+          class="min-h-11 w-full sm:w-auto"
+          [disabled]="store.saving() || submitForm().invalid()"
+        >
+          @if (store.saving()) {
+            <i class="pi pi-spin pi-spinner"></i>
+          } @else {
+            <i class="pi pi-send"></i>
+          }
           Enviar cierre
         </button>
       </div>
