@@ -1,5 +1,20 @@
 begin;
 
+select set_config(
+  'app.test_business_timestamp',
+  (
+    (
+      (now() at time zone 'America/Lima')::date + time '12:00:00'
+    ) at time zone 'America/Lima'
+  )::text,
+  true
+);
+select set_config(
+  'cobranzapro_test.today',
+  (now() at time zone 'America/Lima')::date::text,
+  true
+);
+
 create extension if not exists pgtap with schema extensions;
 
 select plan(77);
@@ -97,23 +112,43 @@ set local role authenticated;
 set local request.jwt.claim.sub = '91000000-0000-0000-0000-000000000004';
 
 select lives_ok(
-  $$ select * from public.admin_create_loan('92000000-0000-0000-0000-000000000001', 100, 20, 'daily', 6, '2026-10-31', '2026-10-31') $$,
+  $$ select * from public.admin_create_loan(
+    '92000000-0000-0000-0000-000000000001', 100, 20, 'daily', 6,
+    current_setting('cobranzapro_test.today')::date,
+    current_setting('cobranzapro_test.today')::date
+  ) $$,
   'Edit-request loan fixture is created'
 );
 select lives_ok(
-  $$ select * from public.admin_create_loan('92000000-0000-0000-0000-000000000002', 120, 20, 'daily', 6, '2026-10-31', '2026-10-31') $$,
+  $$ select * from public.admin_create_loan(
+    '92000000-0000-0000-0000-000000000002', 120, 20, 'daily', 6,
+    current_setting('cobranzapro_test.today')::date,
+    current_setting('cobranzapro_test.today')::date
+  ) $$,
   'Payment-request loan fixture is created'
 );
 select lives_ok(
-  $$ select * from public.admin_create_loan('92000000-0000-0000-0000-000000000003', 80, 10, 'weekly', 4, '2026-10-31', '2026-10-31') $$,
+  $$ select * from public.admin_create_loan(
+    '92000000-0000-0000-0000-000000000003', 80, 10, 'weekly', 4,
+    current_setting('cobranzapro_test.today')::date,
+    current_setting('cobranzapro_test.today')::date
+  ) $$,
   'Loan-void fixture is created'
 );
 select lives_ok(
-  $$ select * from public.admin_create_loan('92000000-0000-0000-0000-000000000004', 60, 0, 'monthly', 3, '2026-10-31', '2026-10-31') $$,
+  $$ select * from public.admin_create_loan(
+    '92000000-0000-0000-0000-000000000004', 60, 0, 'monthly', 3,
+    current_setting('cobranzapro_test.today')::date,
+    current_setting('cobranzapro_test.today')::date
+  ) $$,
   'Posted-payment loan fixture is created'
 );
 select lives_ok(
-  $$ select * from public.admin_create_loan('92000000-0000-0000-0000-000000000005', 70, 10, 'daily', 5, '2026-10-31', '2026-10-31') $$,
+  $$ select * from public.admin_create_loan(
+    '92000000-0000-0000-0000-000000000005', 70, 10, 'daily', 5,
+    current_setting('cobranzapro_test.today')::date,
+    current_setting('cobranzapro_test.today')::date
+  ) $$,
   'Other-portfolio loan fixture is created'
 );
 
@@ -315,7 +350,9 @@ select lives_ok(
   $$
     select * from public.resolve_edit_loan_request(
       (select id from public.correction_requests where request_type = 'edit_loan' and status = 'pending'),
-      105, 15, 'daily', 7, '2026-10-31', 'Approved correction of principal and terms'
+      105, 15, 'daily', 7,
+      current_setting('cobranzapro_test.today')::date,
+      'Approved correction of principal and terms'
     )
   $$,
   'Edit resolution reuses the audited administrative loan update atomically'
@@ -328,7 +365,17 @@ select results_eq(
     select principal_amount, interest_rate_percent, installment_count::integer, first_due_on
     from public.loans where customer_id = '92000000-0000-0000-0000-000000000001'
   $$,
-  $$ values (105.00::numeric, 15.0000::numeric, 7, '2026-11-02'::date) $$,
+  $$
+    select
+      105.00::numeric,
+      15.0000::numeric,
+      7,
+      case
+        when extract(isodow from current_setting('cobranzapro_test.today')::date + 1) = 7
+          then current_setting('cobranzapro_test.today')::date + 2
+        else current_setting('cobranzapro_test.today')::date + 1
+      end
+  $$,
   'Edit resolution changes loan terms and derives the first due date centrally'
 );
 select is(
@@ -354,7 +401,10 @@ select lives_ok(
   $$
     select * from public.register_payment(
       (select id from public.loans where customer_id = '92000000-0000-0000-0000-000000000002'),
-      20, 'cash', '2026-10-31 15:00:00-05', 'Payment void fixture'
+      20,
+      'cash',
+      (current_setting('cobranzapro_test.today')::date + time '11:00:00') at time zone 'America/Lima',
+      'Payment void fixture'
     )
   $$,
   'Payment fixture is registered through the production RPC'
@@ -500,7 +550,10 @@ select lives_ok(
   $$
     select * from public.register_payment(
       (select id from public.loans where customer_id = '92000000-0000-0000-0000-000000000004'),
-      10, 'cash', '2026-10-31 16:00:00-05', 'Posted payment blocks loan void'
+      10,
+      'cash',
+      (current_setting('cobranzapro_test.today')::date + time '11:30:00') at time zone 'America/Lima',
+      'Posted payment blocks loan void'
     )
   $$,
   'Posted payment fixture is registered'

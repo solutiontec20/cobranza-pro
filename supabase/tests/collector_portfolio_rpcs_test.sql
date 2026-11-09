@@ -1,5 +1,65 @@
 begin;
 
+select set_config(
+  'app.test_business_timestamp',
+  (
+    (
+      (now() at time zone 'America/Lima')::date + time '12:00:00'
+    ) at time zone 'America/Lima'
+  )::text,
+  true
+);
+
+select set_config(
+  'cobranzapro_test.today',
+  ((now() at time zone 'America/Lima')::date)::text,
+  true
+);
+
+select set_config(
+  'cobranzapro_test.started_on',
+  (current_setting('cobranzapro_test.today')::date - 3)::text,
+  true
+);
+
+select set_config(
+  'cobranzapro_test.due_1',
+  (
+    case
+      when extract(
+        isodow from current_setting('cobranzapro_test.started_on')::date + 1
+      ) = 7
+        then current_setting('cobranzapro_test.started_on')::date + 2
+      else current_setting('cobranzapro_test.started_on')::date + 1
+    end
+  )::text,
+  true
+);
+
+select set_config(
+  'cobranzapro_test.due_2',
+  (
+    case
+      when extract(isodow from current_setting('cobranzapro_test.due_1')::date + 1) = 7
+        then current_setting('cobranzapro_test.due_1')::date + 2
+      else current_setting('cobranzapro_test.due_1')::date + 1
+    end
+  )::text,
+  true
+);
+
+select set_config(
+  'cobranzapro_test.due_3',
+  (
+    case
+      when extract(isodow from current_setting('cobranzapro_test.due_2')::date + 1) = 7
+        then current_setting('cobranzapro_test.due_2')::date + 2
+      else current_setting('cobranzapro_test.due_2')::date + 1
+    end
+  )::text,
+  true
+);
+
 create extension if not exists pgtap with schema extensions;
 
 select plan(23);
@@ -104,7 +164,7 @@ select throws_ok(
   $$
     select * from public.collector_create_customer_loan(
       '82000003', 'Admin Attempt', null, 'Test address', null,
-      100, 10, 'daily', 3, '2026-10-17'
+      100, 10, 'daily', 3, current_setting('cobranzapro_test.started_on')::date
     )
   $$,
   '42501',
@@ -118,7 +178,7 @@ select throws_ok(
   $$
     select * from public.collector_create_customer_loan(
       '82000003', 'Inactive Attempt', null, 'Test address', null,
-      100, 10, 'daily', 3, '2026-10-17'
+      100, 10, 'daily', 3, current_setting('cobranzapro_test.started_on')::date
     )
   $$,
   '42501',
@@ -132,7 +192,7 @@ select throws_ok(
   $$
     select * from public.collector_create_customer_loan(
       'invalid', 'Invalid Customer', null, 'Test address', null,
-      100, 10, 'daily', 3, '2026-10-17'
+      100, 10, 'daily', 3, current_setting('cobranzapro_test.started_on')::date
     )
   $$,
   '22023',
@@ -155,7 +215,7 @@ select lives_ok(
   $$
     select * from public.collector_create_customer_loan(
       '82000003', 'Collector A New Customer', '999888777', 'Test address', 'Created in field',
-      100, 10, 'daily', 3, '2026-10-17'
+      100, 10, 'daily', 3, current_setting('cobranzapro_test.started_on')::date
     )
   $$,
   'An active collector creates a customer and first loan atomically'
@@ -186,7 +246,7 @@ select results_eq(
   $$ values (
     '71000000-0000-0000-0000-000000000001'::uuid,
     110.00::numeric,
-    '2026-10-19'::date
+    current_setting('cobranzapro_test.due_1')::date
   ) $$,
   'The loan uses the collector identity and admin-aligned calculation'
 );
@@ -200,7 +260,11 @@ select results_eq(
     where c.document_number = '82000003'
     order by i.installment_number
   $$,
-  array['2026-10-19'::date, '2026-10-20'::date, '2026-10-21'::date],
+  array[
+    current_setting('cobranzapro_test.due_1')::date,
+    current_setting('cobranzapro_test.due_2')::date,
+    current_setting('cobranzapro_test.due_3')::date
+  ],
   'Daily schedules start after disbursement and skip Sunday only'
 );
 
@@ -245,8 +309,12 @@ select
   c.collector_id,
   10.00,
   'cash',
-  '2026-10-19 15:00:00+00'::timestamptz,
-  '2026-10-19'::date,
+  (
+    (
+      current_setting('cobranzapro_test.due_1')::date::text || ' 15:00:00'
+    )::timestamp at time zone 'America/Lima'
+  ),
+  current_setting('cobranzapro_test.due_1')::date,
   'posted',
   c.collector_id
 from public.loans l
@@ -257,7 +325,10 @@ set local role authenticated;
 set local request.jwt.claim.sub = '71000000-0000-0000-0000-000000000001';
 
 select is(
-  (select count(*) from public.collector_list_portfolio('2026-10-17')),
+  (
+    select count(*)
+    from public.collector_list_portfolio(current_setting('cobranzapro_test.today')::date)
+  ),
   2::bigint,
   'Collector A portfolio includes active customers with and without loans'
 );
@@ -266,7 +337,7 @@ select results_eq(
   $$
     select remaining_balance, today_scheduled_amount, today_outstanding_amount,
       today_collected_amount
-    from public.collector_list_portfolio('2026-10-19')
+    from public.collector_list_portfolio(current_setting('cobranzapro_test.due_1')::date)
     where document_number = '82000003'
   $$,
   $$ values (100.00::numeric, 36.67::numeric, 36.67::numeric, 10.00::numeric) $$,
@@ -276,7 +347,7 @@ select results_eq(
 select results_eq(
   $$
     select loan_id, remaining_balance, today_scheduled_amount, today_collected_amount
-    from public.collector_list_portfolio('2026-10-19')
+    from public.collector_list_portfolio(current_setting('cobranzapro_test.due_1')::date)
     where document_number = '82000001'
   $$,
   $$ values (null::uuid, 0.00::numeric, 0.00::numeric, 0.00::numeric) $$,
@@ -286,7 +357,7 @@ select results_eq(
 select ok(
   (
     select overdue_days > 0
-    from public.collector_list_portfolio('2026-10-17')
+    from public.collector_list_portfolio(current_setting('cobranzapro_test.today')::date)
     where document_number = '82000003'
   ),
   'Portfolio exposes overdue days for outstanding past installments'
@@ -295,7 +366,7 @@ select ok(
 select is(
   (
     select count(*)
-    from public.collector_list_portfolio('2026-10-17')
+    from public.collector_list_portfolio(current_setting('cobranzapro_test.today')::date)
     where document_number = '82000002'
   ),
   0::bigint,
@@ -307,7 +378,7 @@ set local request.jwt.claim.sub = '71000000-0000-0000-0000-000000000002';
 select results_eq(
   $$
     select document_number
-    from public.collector_list_portfolio('2026-10-17')
+    from public.collector_list_portfolio(current_setting('cobranzapro_test.today')::date)
   $$,
   array['82000002'::text],
   'Collector B receives only their own portfolio'
@@ -316,7 +387,10 @@ select results_eq(
 set local request.jwt.claim.sub = '71000000-0000-0000-0000-000000000004';
 
 select throws_ok(
-  $$ select * from public.collector_list_portfolio('2026-10-17') $$,
+  $$
+    select *
+    from public.collector_list_portfolio(current_setting('cobranzapro_test.today')::date)
+  $$,
   '42501',
   'Only active collectors may list a portfolio',
   'Non-collectors cannot call the collector portfolio RPC'
