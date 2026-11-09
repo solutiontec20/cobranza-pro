@@ -106,7 +106,8 @@ local-only and would recreate fictional users and financial fixtures, so it must
   clean-state verification passed.
 - DEV-RESET-04 rollback boundary: delete the administrator or restore the pre-reset logical backup,
   depending on whether only bootstrap or the full reset must be reversed.
-- Running authored line count: 117.
+- DEV-RESET-04 commit: `bfdfe67` (`chore(ops): verify clean DEV bootstrap`).
+- Running authored line count: 138.
 - Review outcome: disabled/unmanaged.
 
 ## Next Step
