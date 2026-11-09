@@ -74,7 +74,7 @@ the Edge Function and completion RPC were implemented as collector-only operatio
   - Call the generic completion RPC after the Auth password update.
   - Check: local database tests, frontend tests, and production build pass.
 
-- [ ] **PIN-FIX-03 — Deploy and verify the repaired admin flow in DEV**
+- [x] **PIN-FIX-03 — Deploy and verify the repaired admin flow in DEV**
   - Deploy the new migration and `change-pin` Edge Function only to authorized DEV.
   - Exercise Edwin's real forced PIN-change flow and confirm post-change administrator access.
   - Check: login succeeds with the new PIN, `must_change_pin` clears, old PIN fails, and DEV data
@@ -82,7 +82,7 @@ the Edge Function and completion RPC were implemented as collector-only operatio
 
 ## Progress and Evidence
 
-- Status: PIN-change defect accepted for implementation; preparing database regression coverage.
+- Status: completed in DEV; PRD remains untouched and DEV-to-PRD transfer remains deferred.
 - DEV-RESET-01 evidence:
   - `pnpm supabase projects list` resolved the linked project to Cobranza Pro Dev
     (`idwbhwfyfvyaqsefvlnc`); production was present but not linked.
@@ -159,9 +159,32 @@ the Edge Function and completion RPC were implemented as collector-only operatio
 - PIN-FIX-02 runtime check: SQL tests, frontend tests, and the production build passed.
 - PIN-FIX-02 rollback boundary: redeploy the previous Edge Function while the legacy collector RPC
   remains available; active non-collector profiles would return to the prior forced-PIN dead end.
-- Running authored line count before Slice B commit: 542.
+- PIN-FIX-02 commit: `c5bdffd` (`fix(auth): allow active roles to change PIN`).
+- PIN-FIX-03 evidence:
+  - The linked target was rechecked as Cobranza Pro Dev (`idwbhwfyfvyaqsefvlnc`); PRD remained
+    unlinked and was never targeted.
+  - The remote dry-run listed only `20261109182103_generalize_self_service_pin_change.sql` and no
+    seed, role, or unrelated migration changes.
+  - Applied the migration and deployed only `change-pin`; the deployed function is active as
+    version 2.
+  - Edwin's real change-PIN request returned success, rejected the original temporary PIN, and
+    accepted a newly generated secure PIN. The final profile is active `admin`, unlocked, with
+    `must_change_pin = false` and zero failed attempts.
+  - A local verification script failed after the successful change because Windows PowerShell
+    rejects a raw `Range` header. Access was recovered through the authorized Admin Auth API with
+    another securely generated final PIN, then login and profile state were reverified.
+  - A temporary read-only public-data dump verified all 11 operational tables remain empty; the
+    dump was deleted immediately after the check.
+  - Local and DEV migration histories match through `20261109182103`; remote database lint returned
+    zero findings.
+- PIN-FIX-03 runtime check: deployment, real authentication, old-PIN rejection, final login,
+  profile state, empty operational data, migration parity, function status, and remote lint passed.
+- PIN-FIX-03 rollback boundary: redeploy the previous Edge Function and reverse the generic RPC in
+  a new migration if required; the legacy collector completion function remains available.
+- Running authored line count before Slice C evidence commit: 608.
 - Review outcome: disabled/unmanaged.
 
 ## Next Step
 
-Commit Slice B, then deploy and verify the repaired flow only in authorized DEV.
+The team can continue testing in DEV. DEV-to-PRD transfer requires a separate explicit
+authorization after acceptance.
