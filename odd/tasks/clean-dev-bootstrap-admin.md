@@ -40,7 +40,7 @@ local-only and would recreate fictional users and financial fixtures, so it must
   - Export recovery artifacts before deletion and record their location.
   - Check: backup commands complete successfully and artifacts are non-empty.
 
-- [ ] **DEV-RESET-02 — Rebuild DEV without fixtures**
+- [x] **DEV-RESET-02 — Rebuild DEV without fixtures**
   - Reset the authorized remote database from repository migrations with seed disabled.
   - Check: migration history matches the repository and operational tables contain zero rows.
 
@@ -55,7 +55,7 @@ local-only and would recreate fictional users and financial fixtures, so it must
 
 ## Progress and Evidence
 
-- Status: DEV target verified and recovery backup completed; preparing the seed-free rebuild.
+- Status: DEV rebuilt without seed and verified empty; preparing the administrator bootstrap.
 - DEV-RESET-01 evidence:
   - `pnpm supabase projects list` resolved the linked project to Cobranza Pro Dev
     (`idwbhwfyfvyaqsefvlnc`); production was present but not linked.
@@ -68,9 +68,22 @@ local-only and would recreate fictional users and financial fixtures, so it must
 - DEV-RESET-01 runtime check: remote target and backup artifacts observed successfully.
 - DEV-RESET-01 rollback boundary: no remote state changed; the backup directory can be removed
   independently after the DEV reset is accepted.
-- Running authored line count: 0.
+- DEV-RESET-01 commit: `6765b07` (`docs(ops): record DEV recovery backup`).
+- DEV-RESET-02 evidence:
+  - Local seed-free migration replay completed successfully.
+  - `pnpm supabase db lint --local --level error` returned zero findings.
+  - `pnpm supabase test db` passed 20 files and 436 tests.
+  - Remote reset completed against `idwbhwfyfvyaqsefvlnc` with `--no-seed`; production was not
+    targeted.
+  - All 30 local and remote migration versions match.
+  - Exact post-reset counts are zero for Auth users, profiles, customers, loans, installments,
+    payments, cash movements, cash closures, correction requests, and allowance requests.
+- DEV-RESET-02 runtime check: remote reset and zero-data verification observed successfully.
+- DEV-RESET-02 rollback boundary: restore the validated logical backup into the rebuilt DEV schema
+  if the reset must be reversed.
+- Running authored line count: 76.
 - Review outcome: disabled/unmanaged.
 
 ## Next Step
 
-Validate migration replay without seed, then reset only the authorized DEV project.
+Bootstrap the sole administrator through Supabase Auth and the matching profile row.
