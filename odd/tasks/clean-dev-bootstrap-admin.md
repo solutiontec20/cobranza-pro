@@ -181,7 +181,8 @@ the Edge Function and completion RPC were implemented as collector-only operatio
   profile state, empty operational data, migration parity, function status, and remote lint passed.
 - PIN-FIX-03 rollback boundary: redeploy the previous Edge Function and reverse the generic RPC in
   a new migration if required; the legacy collector completion function remains available.
-- Running authored line count before Slice C evidence commit: 608.
+- PIN-FIX-03 commit: `d0582da` (`chore(ops): verify admin PIN change in DEV`).
+- Running authored line count through Slice C: 639.
 - Review outcome: disabled/unmanaged.
 
 ## Next Step
