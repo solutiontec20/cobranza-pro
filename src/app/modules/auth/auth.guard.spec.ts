@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { CanMatchFn, provideRouter, Route, UrlSegment, UrlTree } from '@angular/router';
 import { AuthService } from './auth.service';
-import { adminCanMatch, collectorCanMatch } from './auth.guard';
+import { adminCanMatch, authGuard, collectorCanMatch, publicGuard } from './auth.guard';
 
 describe('role CanMatch guards', () => {
   const auth = {
@@ -11,6 +11,8 @@ describe('role CanMatch guards', () => {
     isAdmin: signal(false),
     isSupervisor: signal(false),
     isCollector: signal(false),
+    collectorAccessClosed: signal(false),
+    ensureCurrentAccess: vi.fn().mockResolvedValue(true),
   };
 
   beforeEach(() => {
@@ -19,6 +21,8 @@ describe('role CanMatch guards', () => {
     auth.isAdmin.set(false);
     auth.isSupervisor.set(false);
     auth.isCollector.set(false);
+    auth.collectorAccessClosed.set(false);
+    auth.ensureCurrentAccess.mockReset().mockResolvedValue(true);
 
     TestBed.configureTestingModule({
       providers: [provideRouter([]), { provide: AuthService, useValue: auth }],
@@ -69,6 +73,33 @@ describe('role CanMatch guards', () => {
     expectGuardRedirect(adminCanMatch, '/login');
   });
 
+  it('prevents a collector with a restored session from activating the shell outside access hours', async () => {
+    auth.isAuthenticated.set(true);
+    auth.isCollector.set(true);
+    auth.collectorAccessClosed.set(true);
+    auth.ensureCurrentAccess.mockResolvedValue(false);
+
+    const result = await runActivateGuard(authGuard);
+
+    expect(result).toBeInstanceOf(UrlTree);
+    expect(result.toString()).toBe('/login?accessClosed=1');
+  });
+
+  it('allows the login route after an expired collector access window clears the session', async () => {
+    auth.isAuthenticated.set(true);
+    auth.isCollector.set(true);
+    auth.collectorAccessClosed.set(true);
+    auth.ensureCurrentAccess.mockImplementation(async () => {
+      auth.isAuthenticated.set(false);
+      return false;
+    });
+
+    const result = await runActivateGuard(publicGuard);
+
+    expect(result).toBeInstanceOf(UrlTree);
+    expect(result.toString()).toBe('/login?accessClosed=1');
+  });
+
   function runGuard(guard: CanMatchFn): boolean | UrlTree {
     const result = TestBed.runInInjectionContext(() =>
       guard({} as Route, [] as UrlSegment[], {} as Parameters<CanMatchFn>[2]),
@@ -85,5 +116,13 @@ describe('role CanMatch guards', () => {
     const result = runGuard(guard);
     expect(result).toBeInstanceOf(UrlTree);
     expect(result.toString()).toBe(expectedUrl);
+  }
+
+  async function runActivateGuard(guard: typeof authGuard): Promise<boolean | UrlTree> {
+    const result = TestBed.runInInjectionContext(() => guard({} as never, {} as never));
+    const resolved = await Promise.resolve(result as boolean | UrlTree | Promise<boolean | UrlTree>);
+
+    if (typeof resolved === 'boolean' || resolved instanceof UrlTree) return resolved;
+    throw new Error('The activation guard returned an unsupported result');
   }
 });

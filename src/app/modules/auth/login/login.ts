@@ -23,7 +23,11 @@ export default class Login {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
-  errorMessage = signal<string | null>(null);
+  errorMessage = signal<string | null>(
+    this.route.snapshot.queryParamMap.get('accessClosed') === '1'
+      ? 'El acceso para cobradores está disponible de 7:00 a. m. a 8:00 p. m.'
+      : null,
+  );
   successMessage = signal<string | null>(
     this.route.snapshot.queryParamMap.get('pinChanged') === '1'
       ? 'Tu PIN fue actualizado. Ingresá nuevamente con el PIN nuevo.'

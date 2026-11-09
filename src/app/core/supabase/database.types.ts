@@ -1363,6 +1363,16 @@ export type Database = {
         }[];
       };
       service_complete_collector_pin_change: { Args: { p_user_id: string }; Returns: undefined };
+      current_access_status: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          allowed: boolean;
+          closes_at: string;
+          opens_at: string;
+          role: Database['public']['Enums']['app_role'];
+          server_now: string;
+        }[];
+      };
       service_record_login_attempt: {
         Args: { p_profile_id: string; p_success: boolean };
         Returns: {
