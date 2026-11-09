@@ -1,12 +1,14 @@
 import { InjectionToken } from '@angular/core';
 import {
   CashClosure,
+  CashAllowanceRequest,
   CashCollectorOption,
   CashExpense,
   CollectorCashDay,
-  RegisterCashAllowanceInput,
   RegisterCashOpeningInput,
+  RequestCashAllowanceInput,
   RequestCashExpenseInput,
+  ReviewCashAllowanceRequestInput,
   ReviewCashExpenseInput,
   SubmitCashClosureInput,
   ValidateCashClosureInput,
@@ -22,7 +24,8 @@ export interface CashClosureRepository {
   listDay(businessDate: string): Promise<CollectorCashDay[]>;
 
   registerOpening(input: RegisterCashOpeningInput): Promise<void>;
-  registerAllowance(input: RegisterCashAllowanceInput): Promise<void>;
+  requestAllowance(input: RequestCashAllowanceInput): Promise<CashAllowanceRequest>;
+  reviewAllowanceRequest(input: ReviewCashAllowanceRequestInput): Promise<void>;
 
   requestExpense(input: RequestCashExpenseInput): Promise<CashExpense>;
   reviewExpense(input: ReviewCashExpenseInput): Promise<void>;

@@ -1,6 +1,14 @@
 begin;
 
-set local app.test_business_timestamp = '2026-11-05 12:00:00-05';
+select set_config(
+  'app.test_business_timestamp',
+  (
+    (
+      (now() at time zone 'America/Lima')::date + time '12:00:00'
+    ) at time zone 'America/Lima'
+  )::text,
+  true
+);
 
 set local timezone to 'America/Lima';
 

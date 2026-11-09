@@ -1,5 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { CashDayBreakdown, CashExpense, CollectorCashDay } from '../../../core/models/cash-closure.model';
+import {
+  CashDayBreakdown,
+  CashExpense,
+  CollectorCashDay,
+} from '../../../core/models/cash-closure.model';
 import {
   CASH_CLOSURE_REPOSITORY,
   CashClosureRepository,
@@ -26,6 +30,7 @@ const day: CollectorCashDay = {
   businessDate: '2026-10-25',
   breakdown,
   closure: null,
+  allowanceRequests: [],
   expenses: [],
 };
 
@@ -36,7 +41,10 @@ describe('CollectorCashClosureStore', () => {
     getOwnDay: ReturnType<typeof vi.fn<CashClosureRepository['getOwnDay']>>;
     listDay: ReturnType<typeof vi.fn<CashClosureRepository['listDay']>>;
     registerOpening: ReturnType<typeof vi.fn<CashClosureRepository['registerOpening']>>;
-    registerAllowance: ReturnType<typeof vi.fn<CashClosureRepository['registerAllowance']>>;
+    requestAllowance: ReturnType<typeof vi.fn<CashClosureRepository['requestAllowance']>>;
+    reviewAllowanceRequest: ReturnType<
+      typeof vi.fn<CashClosureRepository['reviewAllowanceRequest']>
+    >;
     requestExpense: ReturnType<typeof vi.fn<CashClosureRepository['requestExpense']>>;
     reviewExpense: ReturnType<typeof vi.fn<CashClosureRepository['reviewExpense']>>;
     submitClosure: ReturnType<typeof vi.fn<CashClosureRepository['submitClosure']>>;
@@ -49,7 +57,8 @@ describe('CollectorCashClosureStore', () => {
       getOwnDay: vi.fn().mockResolvedValue(day),
       listDay: vi.fn(),
       registerOpening: vi.fn(),
-      registerAllowance: vi.fn(),
+      requestAllowance: vi.fn(),
+      reviewAllowanceRequest: vi.fn(),
       requestExpense: vi.fn(),
       reviewExpense: vi.fn(),
       submitClosure: vi.fn(),
@@ -100,7 +109,11 @@ describe('CollectorCashClosureStore', () => {
     };
     repository.requestExpense.mockResolvedValue(expense);
 
-    const result = await store.requestExpense({ category: 'fuel', amount: 50, description: 'Combustible' });
+    const result = await store.requestExpense({
+      category: 'fuel',
+      amount: 50,
+      description: 'Combustible',
+    });
 
     expect(result).toBe(true);
     expect(repository.requestExpense).toHaveBeenCalledWith({
@@ -112,8 +125,36 @@ describe('CollectorCashClosureStore', () => {
     expect(repository.getOwnDay).toHaveBeenCalledTimes(1);
   });
 
+  it('requests an allowance and reloads the day', async () => {
+    repository.requestAllowance.mockResolvedValue({
+      id: 'allowance-request-1',
+      collectorId: 'collector-1',
+      businessDate: '2026-10-25',
+      amount: 35,
+      notes: 'Movilidad',
+      status: 'pending',
+      cashMovementId: null,
+      requestedBy: 'collector-1',
+      reviewedBy: null,
+      reviewedAt: null,
+      rejectionReason: null,
+      createdAt: '2026-10-25T08:00:00Z',
+    });
+
+    const result = await store.requestAllowance({ amount: 35, notes: 'Movilidad' });
+
+    expect(result).toBe(true);
+    expect(repository.requestAllowance).toHaveBeenCalledWith({
+      amount: 35,
+      notes: 'Movilidad',
+      businessDate: store.businessDate(),
+    });
+  });
+
   it('sets an error when requesting an expense fails', async () => {
-    repository.requestExpense.mockRejectedValue(new Error('El monto del gasto debe ser mayor que cero.'));
+    repository.requestExpense.mockRejectedValue(
+      new Error('El monto del gasto debe ser mayor que cero.'),
+    );
 
     const result = await store.requestExpense({ category: 'fuel', amount: 0, description: '' });
 

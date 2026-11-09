@@ -1,12 +1,16 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { form, FormField, minLength, pattern, required, submit } from '@angular/forms/signals';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
+import { PaginatorModule } from 'primeng/paginator';
+import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
+import { pageItems } from '../../../core/calculations/loan-detail-filtering';
 import { Collector } from '../../../core/models/collector.model';
 import { DigitsOnly } from '../../../shared/directives/digits-only';
 import { EsDate } from '../../../shared/pipes/es-date';
@@ -25,8 +29,11 @@ const EMPTY_EDIT_MODEL = { fullName: '', phone: '', reason: '' };
     DigitsOnly,
     EsDate,
     FormField,
+    FormsModule,
     InputTextModule,
     MessageModule,
+    PaginatorModule,
+    SelectModule,
     SkeletonModule,
     TagModule,
   ],
@@ -37,11 +44,22 @@ export default class Collectors {
   protected readonly authService = inject(AuthService);
   private readonly messageService = inject(MessageService);
   protected readonly loadingRows = [1, 2, 3];
+  protected readonly pageSizeOptions = [5, 10, 25];
+  protected readonly pageFirst = signal(0);
+  protected readonly pageRows = signal(10);
+  protected readonly statusFilter = signal<'all' | 'active' | 'inactive'>('all');
+  protected readonly statusOptions = [
+    { label: 'Todos los estados', value: 'all' as const },
+    { label: 'Activos', value: 'active' as const },
+    { label: 'Inactivos', value: 'inactive' as const },
+  ];
   protected readonly createVisible = signal(false);
   protected readonly statusVisible = signal(false);
   protected readonly resetVisible = signal(false);
   protected readonly editVisible = signal(false);
-  protected readonly resetResult = signal<{ collectorName: string; temporaryPin: string } | null>(null);
+  protected readonly resetResult = signal<{ collectorName: string; temporaryPin: string } | null>(
+    null,
+  );
   protected readonly selectedCollector = signal<Collector | null>(null);
   private readonly editBaseline = signal<{ fullName: string; phone: string | null } | null>(null);
 
@@ -82,10 +100,18 @@ export default class Collectors {
     if (!baseline) return false;
     const value = this.editModel();
     return (
-      baseline.fullName !== value.fullName.trim() ||
-      baseline.phone !== (value.phone.trim() || null)
+      baseline.fullName !== value.fullName.trim() || baseline.phone !== (value.phone.trim() || null)
     );
   });
+  protected readonly filteredCollectors = computed(() => {
+    const status = this.statusFilter();
+    return this.store
+      .filteredCollectors()
+      .filter((collector) => status === 'all' || collector.active === (status === 'active'));
+  });
+  protected readonly visibleCollectors = computed(() =>
+    pageItems(this.filteredCollectors(), this.pageFirst(), this.pageRows()),
+  );
 
   constructor() {
     void this.store.load();
@@ -93,6 +119,27 @@ export default class Collectors {
 
   protected searchValue(event: Event): string {
     return (event.target as HTMLInputElement).value;
+  }
+
+  protected updateSearch(event: Event): void {
+    this.store.setQuery(this.searchValue(event));
+    this.pageFirst.set(0);
+  }
+
+  protected changeStatusFilter(status: 'all' | 'active' | 'inactive'): void {
+    this.statusFilter.set(status);
+    this.pageFirst.set(0);
+  }
+
+  protected clearFilters(): void {
+    this.store.setQuery('');
+    this.statusFilter.set('all');
+    this.pageFirst.set(0);
+  }
+
+  protected changePage(event: { first?: number; rows?: number }): void {
+    this.pageFirst.set(event.first ?? 0);
+    this.pageRows.set(event.rows ?? 10);
   }
 
   protected openCreateDialog(): void {

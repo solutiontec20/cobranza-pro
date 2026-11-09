@@ -4,13 +4,14 @@ import { currentLimaDate } from '../../../core/calculations/date-time';
 import { AppError } from '../../../core/errors/app-error';
 import {
   CollectorCashDay,
+  RequestCashAllowanceInput,
   RequestCashExpenseInput,
 } from '../../../core/models/cash-closure.model';
 import { CASH_CLOSURE_REPOSITORY } from '../../../core/repositories/cash-closure.repository';
 
 /**
- * The collector's own daily cash closure screen: view today's breakdown, request expenses,
- * and submit the closure. Registering the opening float/allowance and reviewing expenses are
+ * The collector's own daily cash closure screen: view today's breakdown, request allowances or
+ * expenses, and submit the closure. Registering the opening float and reviewing requests are
  * admin/supervisor-only actions (see `modules/admin/cash-closure/cash-closure.store.ts`).
  */
 @Injectable()
@@ -41,7 +42,9 @@ export class CollectorCashClosureStore {
     }
   }
 
-  async requestExpense(input: Omit<RequestCashExpenseInput, 'collectorId' | 'businessDate'>): Promise<boolean> {
+  async requestExpense(
+    input: Omit<RequestCashExpenseInput, 'collectorId' | 'businessDate'>,
+  ): Promise<boolean> {
     this.saving.set(true);
     this.error.set(null);
 
@@ -51,6 +54,22 @@ export class CollectorCashClosureStore {
       return this.error() === null;
     } catch (error) {
       this.error.set(this.messageFrom(error, 'No se pudo registrar el gasto.'));
+      return false;
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  async requestAllowance(input: Omit<RequestCashAllowanceInput, 'businessDate'>): Promise<boolean> {
+    this.saving.set(true);
+    this.error.set(null);
+
+    try {
+      await this.repository.requestAllowance({ ...input, businessDate: this.businessDate() });
+      await this.load();
+      return this.error() === null;
+    } catch (error) {
+      this.error.set(this.messageFrom(error, 'No se pudo solicitar el viático.'));
       return false;
     } finally {
       this.saving.set(false);

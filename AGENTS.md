@@ -215,7 +215,7 @@ Per-route export services (provided alongside the feature's store, e.g. `DailyCo
 ### Audited edit reasons (`loan-edit-reasons.ts`)
 
 Admin/supervisor-only loan edits use a small predefined-reason-code pattern: a `LoanEditReasonCode` union (`'amount_error' | 'rate_error' | 'installment_count_error' | 'other'`), a `LOAN_EDIT_REASON_OPTIONS` array of `{ label, value }` for the UI `p-select`, and a pure `resolveLoanEditReason(code, customReason)` helper that returns the label for predefined codes or the trimmed custom text for `'other'` (empty/whitespace-only custom reason resolves to `null`, which the caller must treat as invalid). Reuse this pattern for any other feature that needs an auditable "reason for change" input instead of a free-text-only field.
-
+ 
 ## Supabase and Database
 
 - All schema changes must be versioned as Supabase migrations.
@@ -390,4 +390,4 @@ When choosing between a more sophisticated solution and a simpler one, choose th
 2. financial integrity
 3. auditability
 4. maintainability
-5. future growth without unnecessary rewrites
+5. future growth without unnecessary rewrites 

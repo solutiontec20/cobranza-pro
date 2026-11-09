@@ -27,8 +27,30 @@ const dayA: CollectorCashDay = {
   collectorId: 'collector-1',
   collectorName: 'Pedro Castillo',
   businessDate: '2026-10-25',
-  breakdown: makeBreakdown({ openingAmount: 1000, allowanceAmount: 100, cashCollectedAmount: 650, loanDisbursementAmount: 600, operatingExpenseAmount: 50 }),
+  breakdown: makeBreakdown({
+    openingAmount: 1000,
+    allowanceAmount: 100,
+    cashCollectedAmount: 650,
+    loanDisbursementAmount: 600,
+    operatingExpenseAmount: 50,
+  }),
   closure: null,
+  allowanceRequests: [
+    {
+      id: 'allowance-request-1',
+      collectorId: 'collector-1',
+      businessDate: '2026-10-25',
+      amount: 35,
+      notes: 'Movilidad',
+      status: 'pending',
+      cashMovementId: null,
+      requestedBy: 'collector-1',
+      reviewedBy: null,
+      reviewedAt: null,
+      rejectionReason: null,
+      createdAt: '2026-10-25T17:00:00Z',
+    },
+  ],
   expenses: [
     {
       id: 'expense-1',
@@ -54,6 +76,7 @@ const dayB: CollectorCashDay = {
   businessDate: '2026-10-25',
   breakdown: makeBreakdown({ collectorId: 'collector-2' }),
   closure: null,
+  allowanceRequests: [],
   expenses: [],
 };
 
@@ -64,7 +87,10 @@ describe('CashClosureStore', () => {
     getOwnDay: ReturnType<typeof vi.fn<CashClosureRepository['getOwnDay']>>;
     listDay: ReturnType<typeof vi.fn<CashClosureRepository['listDay']>>;
     registerOpening: ReturnType<typeof vi.fn<CashClosureRepository['registerOpening']>>;
-    registerAllowance: ReturnType<typeof vi.fn<CashClosureRepository['registerAllowance']>>;
+    requestAllowance: ReturnType<typeof vi.fn<CashClosureRepository['requestAllowance']>>;
+    reviewAllowanceRequest: ReturnType<
+      typeof vi.fn<CashClosureRepository['reviewAllowanceRequest']>
+    >;
     requestExpense: ReturnType<typeof vi.fn<CashClosureRepository['requestExpense']>>;
     reviewExpense: ReturnType<typeof vi.fn<CashClosureRepository['reviewExpense']>>;
     submitClosure: ReturnType<typeof vi.fn<CashClosureRepository['submitClosure']>>;
@@ -77,7 +103,8 @@ describe('CashClosureStore', () => {
       getOwnDay: vi.fn(),
       listDay: vi.fn().mockResolvedValue([dayA, dayB]),
       registerOpening: vi.fn(),
-      registerAllowance: vi.fn(),
+      requestAllowance: vi.fn(),
+      reviewAllowanceRequest: vi.fn(),
       requestExpense: vi.fn(),
       reviewExpense: vi.fn(),
       submitClosure: vi.fn(),
@@ -105,6 +132,11 @@ describe('CashClosureStore', () => {
     expect(store.pendingExpenseCount()).toBe(1);
   });
 
+  it('counts pending allowance requests across every collector', async () => {
+    await store.load();
+    expect(store.pendingAllowanceCount()).toBe(1);
+  });
+
   it('switches the selected collector', async () => {
     await store.load();
     store.selectCollector('collector-2');
@@ -120,7 +152,11 @@ describe('CashClosureStore', () => {
   it('registers an opening float and reloads', async () => {
     repository.registerOpening.mockResolvedValue(undefined);
 
-    const result = await store.registerOpening({ collectorId: 'collector-1', amount: 1000, notes: '' });
+    const result = await store.registerOpening({
+      collectorId: 'collector-1',
+      amount: 1000,
+      notes: '',
+    });
 
     expect(result).toBe(true);
     expect(repository.registerOpening).toHaveBeenCalledWith({
@@ -136,7 +172,11 @@ describe('CashClosureStore', () => {
       new Error('Ya se registró la apertura de este cobrador para esta fecha.'),
     );
 
-    const result = await store.registerOpening({ collectorId: 'collector-1', amount: 1000, notes: '' });
+    const result = await store.registerOpening({
+      collectorId: 'collector-1',
+      amount: 1000,
+      notes: '',
+    });
 
     expect(result).toBe(false);
     expect(store.error()).toBe('Ya se registró la apertura de este cobrador para esta fecha.');
@@ -150,6 +190,23 @@ describe('CashClosureStore', () => {
     expect(result).toBe(true);
     expect(repository.reviewExpense).toHaveBeenCalledWith({
       expenseId: 'expense-1',
+      approve: true,
+      reason: '',
+    });
+  });
+
+  it('reviews an allowance request and reloads', async () => {
+    repository.reviewAllowanceRequest.mockResolvedValue(undefined);
+
+    const result = await store.reviewAllowanceRequest({
+      requestId: 'allowance-request-1',
+      approve: true,
+      reason: '',
+    });
+
+    expect(result).toBe(true);
+    expect(repository.reviewAllowanceRequest).toHaveBeenCalledWith({
+      requestId: 'allowance-request-1',
       approve: true,
       reason: '',
     });
