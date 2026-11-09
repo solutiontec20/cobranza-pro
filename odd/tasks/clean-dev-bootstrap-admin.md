@@ -49,13 +49,13 @@ local-only and would recreate fictional users and financial fixtures, so it must
   - Require replacement of the generated temporary PIN.
   - Check: exactly one Auth user and one active admin profile exist.
 
-- [ ] **DEV-RESET-04 — Verify clean operational state and authentication**
+- [x] **DEV-RESET-04 — Verify clean operational state and authentication**
   - Verify login/change-PIN routing, RLS-sensitive access, schema health, and empty business data.
   - Check: all applicable diagnostics pass; record failures or unavailable checks explicitly.
 
 ## Progress and Evidence
 
-- Status: sole administrator created and verified; preparing final authentication and health checks.
+- Status: complete; DEV is clean, healthy, and ready for administrator-led validation.
 - DEV-RESET-01 evidence:
   - `pnpm supabase projects list` resolved the linked project to Cobranza Pro Dev
     (`idwbhwfyfvyaqsefvlnc`); production was present but not linked.
@@ -93,9 +93,22 @@ local-only and would recreate fictional users and financial fixtures, so it must
 - DEV-RESET-03 runtime check: Auth and profile identity/count checks passed.
 - DEV-RESET-03 rollback boundary: delete the single Auth user; the profile is protected by the
   Auth foreign key and contains no dependent operational data.
-- Running authored line count: 97.
+- DEV-RESET-03 commit: `bd89ad7` (`chore(auth): bootstrap DEV administrator`).
+- DEV-RESET-04 evidence:
+  - The deployed `login` Edge Function authenticated DNI `40326721` with the generated temporary
+    PIN and returned a valid session.
+  - Authenticated profile retrieval returned exactly one active admin with
+    `must_change_pin = true`; the smoke-test session was revoked immediately.
+  - Remote database lint returned zero error-level findings.
+  - A dynamic exact-count check verified every public table except `profiles` is empty, with
+    exactly one Auth user and the requested active admin profile.
+- DEV-RESET-04 runtime check: login, profile access, session revocation, remote lint, and complete
+  clean-state verification passed.
+- DEV-RESET-04 rollback boundary: delete the administrator or restore the pre-reset logical backup,
+  depending on whether only bootstrap or the full reset must be reversed.
+- Running authored line count: 117.
 - Review outcome: disabled/unmanaged.
 
 ## Next Step
 
-Run the remote authentication smoke test and final database health checks.
+Hand the temporary credentials to the user securely and begin the planned DEV validation cycle.
