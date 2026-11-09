@@ -1140,6 +1140,16 @@ export type Database = {
           request_type: Database['public']['Enums']['correction_request_type'];
         }[];
       };
+      current_access_status: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          allowed: boolean;
+          closes_at: string;
+          opens_at: string;
+          role: Database['public']['Enums']['app_role'];
+          server_now: string;
+        }[];
+      };
       list_correction_requests: {
         Args: {
           p_limit?: number;
@@ -1363,16 +1373,7 @@ export type Database = {
         }[];
       };
       service_complete_collector_pin_change: { Args: { p_user_id: string }; Returns: undefined };
-      current_access_status: {
-        Args: Record<PropertyKey, never>;
-        Returns: {
-          allowed: boolean;
-          closes_at: string;
-          opens_at: string;
-          role: Database['public']['Enums']['app_role'];
-          server_now: string;
-        }[];
-      };
+      service_complete_pin_change: { Args: { p_user_id: string }; Returns: undefined };
       service_record_login_attempt: {
         Args: { p_profile_id: string; p_success: boolean };
         Returns: {

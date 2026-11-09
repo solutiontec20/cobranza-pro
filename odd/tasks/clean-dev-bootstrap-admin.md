@@ -10,6 +10,10 @@ without operational data, and bootstrap exactly one administrator.
 DEV contains data that must be removed before the team starts validation. The repository seed is
 local-only and would recreate fictional users and financial fixtures, so it must not run remotely.
 
+After bootstrap, the administrator was correctly redirected to the mandatory PIN-change screen,
+but the backend rejected every non-collector. The shared route and UI support all roles while both
+the Edge Function and completion RPC were implemented as collector-only operations.
+
 ## Authorized Scope
 
 - Remote target: Cobranza Pro Dev (`idwbhwfyfvyaqsefvlnc`).
@@ -25,12 +29,19 @@ local-only and would recreate fictional users and financial fixtures, so it must
 - Never expose or commit privileged credentials or the temporary PIN.
 - Preserve the migration-defined schema, RLS, RPCs, and audit behavior.
 - Stop if the resolved remote target differs from the authorized project reference.
+- Allow every active profile to change its own PIN; collector access hours remain collector-only.
 
 ## Delivery and Testing
 
 - Delivery strategy: `ask-on-risk`.
-- Forecast authored change: approximately 70 lines, excluding operational output.
-- TDD: not applicable; this is an environment operation with backup and runtime verification.
+- Chain strategy: `feature-branch-chain` selected by the user after the forecast exceeded the
+  review budget.
+- Planned slices:
+  - Slice A: generic PostgreSQL PIN completion, generated types, and SQL regression coverage.
+  - Slice B: role-aware Edge Function behavior and application verification.
+  - Slice C: DEV migration/function deployment and live forced-PIN-change verification.
+- Forecast authored change: approximately 300 total lines, excluding operational output.
+- TDD: not configured; regression tests and runtime verification are required before deployment.
 - Receipt-driven development: disabled (`clone_local`); ordinary verification applies.
 
 ## Tasks
@@ -53,9 +64,25 @@ local-only and would recreate fictional users and financial fixtures, so it must
   - Verify login/change-PIN routing, RLS-sensitive access, schema health, and empty business data.
   - Check: all applicable diagnostics pass; record failures or unavailable checks explicitly.
 
+- [x] **PIN-FIX-01 — Generalize PIN-change completion in PostgreSQL**
+  - Add a new migration with a service-role-only completion RPC for every active profile role.
+  - Preserve lockout reset, credential invalidation, audit actor, and audit reason behavior.
+  - Check: SQL regression tests cover admin, supervisor, collector, inactive profile, and grants.
+
+- [ ] **PIN-FIX-02 — Generalize the change-pin Edge Function**
+  - Accept every active profile and enforce access hours only for collectors.
+  - Call the generic completion RPC after the Auth password update.
+  - Check: local database tests, frontend tests, and production build pass.
+
+- [ ] **PIN-FIX-03 — Deploy and verify the repaired admin flow in DEV**
+  - Deploy the new migration and `change-pin` Edge Function only to authorized DEV.
+  - Exercise Edwin's real forced PIN-change flow and confirm post-change administrator access.
+  - Check: login succeeds with the new PIN, `must_change_pin` clears, old PIN fails, and DEV data
+    remains clean.
+
 ## Progress and Evidence
 
-- Status: complete; DEV is clean, healthy, and ready for administrator-led validation.
+- Status: PIN-change defect accepted for implementation; preparing database regression coverage.
 - DEV-RESET-01 evidence:
   - `pnpm supabase projects list` resolved the linked project to Cobranza Pro Dev
     (`idwbhwfyfvyaqsefvlnc`); production was present but not linked.
@@ -107,9 +134,23 @@ local-only and would recreate fictional users and financial fixtures, so it must
 - DEV-RESET-04 rollback boundary: delete the administrator or restore the pre-reset logical backup,
   depending on whether only bootstrap or the full reset must be reversed.
 - DEV-RESET-04 commit: `bfdfe67` (`chore(ops): verify clean DEV bootstrap`).
-- Running authored line count: 138.
+- PIN-FIX-01 evidence:
+  - Added `service_complete_pin_change(uuid)` for every active profile while restricting execution
+    to `service_role`.
+  - Preserved the collector-only compatibility function and its historical audit reason for safe
+    rolling deployment.
+  - Added 15 regression assertions covering grants, unknown/inactive profiles, every active role,
+    audit attribution, lockout reset, and compatibility behavior.
+  - A first full run exposed the changed legacy audit reason; the compatibility function was
+    corrected and the complete suite then passed: 21 files and 451 tests.
+  - Local migration replay and database lint completed with zero errors; generated database types
+    include the generic completion function.
+- PIN-FIX-01 runtime check: local migration replay, SQL lint, and all pgTAP tests passed.
+- PIN-FIX-01 rollback boundary: remove the new migration, regression file, and generated generic
+  function type before deployment; the legacy collector function remains independently usable.
+- Running authored line count: 542.
 - Review outcome: disabled/unmanaged.
 
 ## Next Step
 
-Hand the temporary credentials to the user securely and begin the planned DEV validation cycle.
+Commit Slice A, then close and verify the role-aware Edge Function work unit.
