@@ -390,4 +390,4 @@ When choosing between a more sophisticated solution and a simpler one, choose th
 2. financial integrity
 3. auditability
 4. maintainability
-5. future growth without unnecessary rewrites
+5. future growth without unnecessary rewrites 
