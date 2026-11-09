@@ -44,7 +44,7 @@ local-only and would recreate fictional users and financial fixtures, so it must
   - Reset the authorized remote database from repository migrations with seed disabled.
   - Check: migration history matches the repository and operational tables contain zero rows.
 
-- [ ] **DEV-RESET-03 — Bootstrap the sole administrator**
+- [x] **DEV-RESET-03 — Bootstrap the sole administrator**
   - Create the Auth user safely and the matching `public.profiles` row.
   - Require replacement of the generated temporary PIN.
   - Check: exactly one Auth user and one active admin profile exist.
@@ -55,7 +55,7 @@ local-only and would recreate fictional users and financial fixtures, so it must
 
 ## Progress and Evidence
 
-- Status: DEV rebuilt without seed and verified empty; preparing the administrator bootstrap.
+- Status: sole administrator created and verified; preparing final authentication and health checks.
 - DEV-RESET-01 evidence:
   - `pnpm supabase projects list` resolved the linked project to Cobranza Pro Dev
     (`idwbhwfyfvyaqsefvlnc`); production was present but not linked.
@@ -81,9 +81,21 @@ local-only and would recreate fictional users and financial fixtures, so it must
 - DEV-RESET-02 runtime check: remote reset and zero-data verification observed successfully.
 - DEV-RESET-02 rollback boundary: restore the validated logical backup into the rebuilt DEV schema
   if the reset must be reversed.
-- Running authored line count: 76.
+- DEV-RESET-02 commit: `6cba70d` (`chore(db): rebuild DEV without seed`).
+- DEV-RESET-03 evidence:
+  - Created one confirmed Auth user with the application email derived from DNI `40326721`.
+  - Created the matching active `admin` profile for Edwin Enríquez Nizama.
+  - Generated the temporary PIN with `node:crypto`; it was not written to the repository or memory
+    artifacts.
+  - Set `must_change_pin = true` so operational access requires replacement of the temporary PIN.
+  - Exact verification returned one Auth user, one matching admin profile, and zero customers,
+    loans, and payments.
+- DEV-RESET-03 runtime check: Auth and profile identity/count checks passed.
+- DEV-RESET-03 rollback boundary: delete the single Auth user; the profile is protected by the
+  Auth foreign key and contains no dependent operational data.
+- Running authored line count: 97.
 - Review outcome: disabled/unmanaged.
 
 ## Next Step
 
-Bootstrap the sole administrator through Supabase Auth and the matching profile row.
+Run the remote authentication smoke test and final database health checks.
