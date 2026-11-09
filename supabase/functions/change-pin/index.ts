@@ -45,35 +45,32 @@ export default {
       .eq('id', userId)
       .single();
 
-    if (
-      profileError ||
-      !profile ||
-      !profile.active ||
-      profile.role !== 'collector'
-    ) {
+    if (profileError || !profile || !profile.active) {
       return jsonResponse(403, {
-        error: 'ACTIVE_COLLECTOR_REQUIRED',
-        message: 'Solo un cobrador activo puede cambiar su PIN.',
+        error: 'ACTIVE_PROFILE_REQUIRED',
+        message: 'Solo un usuario activo puede cambiar su PIN.',
       });
     }
 
-    const { data: accessRows, error: accessError } = await ctx.supabase.rpc(
-      'current_access_status',
-    );
-    const accessStatus = accessRows?.[0];
+    if (profile.role === 'collector') {
+      const { data: accessRows, error: accessError } = await ctx.supabase.rpc(
+        'current_access_status',
+      );
+      const accessStatus = accessRows?.[0];
 
-    if (accessError || !accessStatus) {
-      return jsonResponse(503, {
-        error: 'ACCESS_STATUS_UNAVAILABLE',
-        message: 'No se pudo verificar el horario de acceso. Intentá nuevamente.',
-      });
-    }
+      if (accessError || !accessStatus) {
+        return jsonResponse(503, {
+          error: 'ACCESS_STATUS_UNAVAILABLE',
+          message: 'No se pudo verificar el horario de acceso. Intentá nuevamente.',
+        });
+      }
 
-    if (!accessStatus.allowed) {
-      return jsonResponse(403, {
-        error: 'COLLECTOR_ACCESS_CLOSED',
-        message: 'El acceso para cobradores está disponible de 7:00 a. m. a 8:00 p. m.',
-      });
+      if (!accessStatus.allowed) {
+        return jsonResponse(403, {
+          error: 'COLLECTOR_ACCESS_CLOSED',
+          message: 'El acceso para cobradores está disponible de 7:00 a. m. a 8:00 p. m.',
+        });
+      }
     }
 
     if (isWeakPin(body.newPin, profile.dni)) {
@@ -128,7 +125,7 @@ export default {
     }
 
     const { error: completionError } = await ctx.supabaseAdmin.rpc(
-      'service_complete_collector_pin_change',
+      'service_complete_pin_change',
       { p_user_id: userId },
     );
 

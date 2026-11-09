@@ -69,7 +69,7 @@ the Edge Function and completion RPC were implemented as collector-only operatio
   - Preserve lockout reset, credential invalidation, audit actor, and audit reason behavior.
   - Check: SQL regression tests cover admin, supervisor, collector, inactive profile, and grants.
 
-- [ ] **PIN-FIX-02 — Generalize the change-pin Edge Function**
+- [x] **PIN-FIX-02 — Generalize the change-pin Edge Function**
   - Accept every active profile and enforce access hours only for collectors.
   - Call the generic completion RPC after the Auth password update.
   - Check: local database tests, frontend tests, and production build pass.
@@ -148,9 +148,20 @@ the Edge Function and completion RPC were implemented as collector-only operatio
 - PIN-FIX-01 runtime check: local migration replay, SQL lint, and all pgTAP tests passed.
 - PIN-FIX-01 rollback boundary: remove the new migration, regression file, and generated generic
   function type before deployment; the legacy collector function remains independently usable.
-- Running authored line count: 542.
+- PIN-FIX-01 commit: `7a0f22a` (`fix(auth): generalize PIN change completion`).
+- PIN-FIX-02 evidence:
+  - The Edge Function now accepts every active profile instead of requiring the collector role.
+  - Collector access-hour enforcement remains inside the collector-only branch.
+  - Successful Auth password updates now call `service_complete_pin_change`.
+  - The complete local database suite passed: 21 files and 451 tests.
+  - `pnpm test:ci` passed 26 files and 189 tests.
+  - `pnpm build` passed with only the existing bundle-budget and CommonJS warnings.
+- PIN-FIX-02 runtime check: SQL tests, frontend tests, and the production build passed.
+- PIN-FIX-02 rollback boundary: redeploy the previous Edge Function while the legacy collector RPC
+  remains available; active non-collector profiles would return to the prior forced-PIN dead end.
+- Running authored line count before Slice B commit: 542.
 - Review outcome: disabled/unmanaged.
 
 ## Next Step
 
-Commit Slice A, then close and verify the role-aware Edge Function work unit.
+Commit Slice B, then deploy and verify the repaired flow only in authorized DEV.
