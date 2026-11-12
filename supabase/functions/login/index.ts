@@ -48,23 +48,18 @@ export default {
     const pin = body.pin;
     const email = `${dni}@auth.cobranzapro.local`;
 
-    // Look up the profile with the admin client (bypasses RLS, since there is
-    // no session yet) purely to check the lockout state before spending a
-    // GoTrue password check. If the DNI does not exist we fall through to a
-    // real signInWithPassword attempt below, which fails with the same
-    // generic message GoTrue would give anyway -- no extra branching that
-    // could leak whether the DNI exists.
+    // The cooldown response is deliberately indistinguishable from an unknown
+    // DNI or a wrong PIN so this lookup cannot become an enumeration oracle.
     const { data: profile } = await ctx.supabaseAdmin
       .from('profiles')
-      .select('id, active, pin_locked_at')
+      .select('id, active, pin_locked_until')
       .eq('dni', dni)
       .maybeSingle();
 
-    if (profile?.pin_locked_at) {
-      return jsonResponse(423, {
-        error: 'ACCOUNT_LOCKED',
-        message:
-          'Tu cuenta fue bloqueada por varios intentos fallidos. Contactá al administrador para que te asigne un PIN nuevo.',
+    if (profile?.pin_locked_until && new Date(profile.pin_locked_until).getTime() > Date.now()) {
+      return jsonResponse(401, {
+        error: 'INVALID_CREDENTIALS',
+        message: INVALID_CREDENTIALS_MESSAGE,
       });
     }
 
@@ -78,32 +73,21 @@ export default {
     // Only count attempts for a profile we actually know about and that is
     // not already excluded from the lockout machinery (e.g. inactive
     // accounts are rejected downstream by the frontend, not here).
-    let justLocked = false;
     if (profile?.active) {
-      const { data: attemptRows, error: recordError } = await ctx.supabaseAdmin.rpc(
-        'service_record_login_attempt',
-        { p_profile_id: profile.id, p_success: loginSucceeded },
-      );
+      const { error: recordError } = await ctx.supabaseAdmin.rpc('service_record_login_attempt', {
+        p_profile_id: profile.id,
+        p_success: loginSucceeded,
+      });
 
       if (recordError) {
         console.error('login: failed to record login attempt', {
           profileId: profile.id,
           code: recordError.code,
         });
-      } else {
-        justLocked = attemptRows?.[0]?.locked === true;
       }
     }
 
     if (!loginSucceeded) {
-      if (justLocked) {
-        return jsonResponse(423, {
-          error: 'ACCOUNT_LOCKED',
-          message:
-            'Tu cuenta fue bloqueada por varios intentos fallidos. Contactá al administrador para que te asigne un PIN nuevo.',
-        });
-      }
-
       return jsonResponse(401, {
         error: 'INVALID_CREDENTIALS',
         message: INVALID_CREDENTIALS_MESSAGE,
@@ -113,9 +97,8 @@ export default {
     // Credentials are valid at this point. Check the database-owned access
     // policy only now so this endpoint cannot reveal a profile's role before
     // authentication succeeds.
-    const { data: accessRows, error: accessError } = await ctx.supabase.rpc(
-      'current_access_status',
-    );
+    const { data: accessRows, error: accessError } =
+      await ctx.supabase.rpc('current_access_status');
     const accessStatus = accessRows?.[0];
 
     if (accessError || !accessStatus) {

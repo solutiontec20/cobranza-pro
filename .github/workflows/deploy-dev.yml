@@ -23,22 +23,14 @@ jobs:
     environment:
       name: Development
 
-    env:
-      NG_APP_PRIMENG_UI_KEY: ${{ secrets.NG_APP_PRIMENG_UI_KEY }}
-      NG_APP_SUPABASE_URL: ${{ vars.NG_APP_SUPABASE_URL }}
-      NG_APP_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NG_APP_SUPABASE_PUBLISHABLE_KEY }}
-
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
       - name: Setup pnpm and Node
-        uses: pnpm/setup@v3
+        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
         with:
           runtime: node@24.15.0
           cache: true
@@ -49,6 +41,13 @@ jobs:
 
       - name: Build Angular DEV
         run: pnpm build
+        env:
+          NG_APP_PRIMENG_UI_KEY: ${{ secrets.NG_APP_PRIMENG_UI_KEY }}
+          NG_APP_SUPABASE_URL: ${{ vars.NG_APP_SUPABASE_URL }}
+          NG_APP_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NG_APP_SUPABASE_PUBLISHABLE_KEY }}
 
       - name: Deploy DEV Preview
         run: pnpm wrangler preview --name dev
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

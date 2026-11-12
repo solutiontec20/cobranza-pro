@@ -3,31 +3,15 @@ begin;
 select set_config(
   'app.test_business_timestamp',
   (
-    (
-      (now() at time zone 'America/Lima')::date + time '12:00:00'
-    ) at time zone 'America/Lima'
+    (((now() at time zone 'America/Lima')::date + time '12:00:00')
+      at time zone 'America/Lima')
   )::text,
   true
 );
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(14);
-
--- ============================================================
--- REQUERIMIENTO.md sections 2 and 13: "Si alguien se equivoca
--- varias veces seguidas, el sistema lo bloquea por seguridad, y
--- el administrador puede darle una clave nueva."
---
--- service_record_login_attempt is only called by the `login`
--- Edge Function via the service-role/admin client -- there is no
--- HTTP/auth flow to exercise here, so this file tests the SQL
--- layer directly: the counter, the lock threshold, the resulting
--- loss of business access via private.current_app_role() (the
--- same function every RLS policy and financial RPC already
--- depends on), and that an administrator issuing a new PIN is
--- the only way to clear the lock.
--- ============================================================
+select plan(17);
 
 insert into auth.users (id, email)
 values
@@ -40,23 +24,14 @@ values
   ('a1000000-0000-0000-0000-000000000002', '91000002', 'Lockout Collector', 'collector', true);
 
 insert into public.customers (id, document_number, full_name, collector_id, created_by, active)
-values
-  (
-    'a2000000-0000-0000-0000-000000000001',
-    '91000003',
-    'Lockout Test Customer',
-    'a1000000-0000-0000-0000-000000000002',
-    'a1000000-0000-0000-0000-000000000001',
-    true
-  );
-
--- ============================================================
--- TEST 1-2
--- Only service_role (the Edge Function's admin client) may call
--- this -- never anon or an already-authenticated user, since it
--- would otherwise let anyone reset or inflate anyone else's
--- failed-attempt counter.
--- ============================================================
+values (
+  'a2000000-0000-0000-0000-000000000001',
+  '91000003',
+  'Lockout Test Customer',
+  'a1000000-0000-0000-0000-000000000002',
+  'a1000000-0000-0000-0000-000000000001',
+  true
+);
 
 select ok(
   not has_function_privilege(
@@ -64,7 +39,7 @@ select ok(
     'public.service_record_login_attempt(uuid,boolean)',
     'EXECUTE'
   ),
-  'Anonymous callers cannot execute service_record_login_attempt'
+  'Anonymous callers cannot change the per-account PIN attempt state'
 );
 
 select ok(
@@ -73,17 +48,8 @@ select ok(
     'public.service_record_login_attempt(uuid,boolean)',
     'EXECUTE'
   ),
-  'Authenticated callers cannot execute service_record_login_attempt'
+  'Authenticated callers cannot change the per-account PIN attempt state'
 );
-
--- ============================================================
--- TEST 3
--- Four consecutive failures stay below the lockout threshold.
--- Uses a sequential DO block (same pattern as
--- financial_rpcs_test.sql) instead of UNION ALL, since the order
--- of execution of a volatile, side-effecting function across
--- UNION ALL branches is not guaranteed by Postgres.
--- ============================================================
 
 create temporary table failed_attempt_results (
   attempt_number integer primary key,
@@ -98,18 +64,17 @@ select lives_ok(
       attempt_number integer;
     begin
       for attempt_number in 1..4 loop
-        insert into failed_attempt_results (
-          attempt_number, locked, failed_attempts
-        )
+        insert into failed_attempt_results
         select attempt_number, result.locked, result.failed_attempts
         from public.service_record_login_attempt(
-          'a1000000-0000-0000-0000-000000000002'::uuid, false
+          'a1000000-0000-0000-0000-000000000002'::uuid,
+          false
         ) as result;
       end loop;
     end
     $block$
   $$,
-  'Four consecutive failed attempts can be recorded sequentially'
+  'Four consecutive failed PIN verifications are recorded sequentially'
 );
 
 select results_eq(
@@ -124,14 +89,8 @@ select results_eq(
     (false, 3::smallint),
     (false, 4::smallint)
   $$,
-  'Four consecutive failed attempts increment the counter without locking the account'
+  'Four failures remain below the cooldown threshold'
 );
-
--- ============================================================
--- TEST 4
--- The account is still usable (not locked) before the 5th
--- failure -- current_app_role() still resolves.
--- ============================================================
 
 set local role authenticated;
 set local request.jwt.claim.sub = 'a1000000-0000-0000-0000-000000000002';
@@ -139,50 +98,43 @@ set local request.jwt.claim.sub = 'a1000000-0000-0000-0000-000000000002';
 select is(
   (select private.current_app_role()),
   'collector'::public.app_role,
-  'A collector with 4 failed attempts can still authenticate for business access'
+  'Four failed attempts do not alter an authenticated collector session'
 );
 
 reset role;
-
--- ============================================================
--- TEST 5
--- The 5th consecutive failure crosses the threshold and locks
--- the account.
--- ============================================================
 
 select results_eq(
   $$
     select locked, failed_attempts
     from public.service_record_login_attempt(
-      'a1000000-0000-0000-0000-000000000002'::uuid, false
+      'a1000000-0000-0000-0000-000000000002'::uuid,
+      false
     )
   $$,
   $$ values (true, 5::smallint) $$,
-  'The fifth consecutive failed attempt locks the account'
+  'The fifth failure starts a temporary PIN cooldown'
 );
 
--- ============================================================
--- TEST 6
--- Once locked, private.current_app_role() returns null -- every
--- RLS policy and financial RPC that depends on it now denies
--- access, exactly like an inactive account or a forced PIN
--- change already do.
--- ============================================================
+select results_eq(
+  $$
+    select
+      pin_locked_until is not null,
+      round(extract(epoch from (pin_locked_until - pin_locked_at)))::bigint
+    from public.profiles
+    where id = 'a1000000-0000-0000-0000-000000000002'
+  $$,
+  $$ values (true, 900::bigint) $$,
+  'The first cooldown lasts fifteen minutes instead of being permanent'
+);
 
 set local role authenticated;
 set local request.jwt.claim.sub = 'a1000000-0000-0000-0000-000000000002';
 
 select is(
   (select private.current_app_role()),
-  null::public.app_role,
-  'A locked account resolves no application role at all'
+  'collector'::public.app_role,
+  'A PIN cooldown does not revoke an already-valid application role'
 );
-
--- ============================================================
--- TEST 7
--- As a direct business consequence, a locked collector can no
--- longer see even their own portfolio.
--- ============================================================
 
 select results_eq(
   $$
@@ -190,35 +142,72 @@ select results_eq(
     from public.customers
     where id = 'a2000000-0000-0000-0000-000000000001'
   $$,
-  array[0::bigint],
-  'A locked collector loses access to their own portfolio'
+  array[1::bigint],
+  'A PIN cooldown does not interrupt an authenticated collector portfolio'
+);
+
+select results_eq(
+  $$ select allowed from public.current_access_status() $$,
+  array[true],
+  'The access-status RPC does not treat a login cooldown as session revocation'
 );
 
 reset role;
 
--- ============================================================
--- TEST 8
--- Further failed attempts on an already-locked account do not
--- raise an error and keep reporting locked = true (idempotent).
--- ============================================================
+update public.profiles
+set pin_locked_until = clock_timestamp() - interval '1 second'
+where id = 'a1000000-0000-0000-0000-000000000002';
 
 select results_eq(
   $$
-    select locked
+    select locked, failed_attempts
     from public.service_record_login_attempt(
-      'a1000000-0000-0000-0000-000000000002'::uuid, false
+      'a1000000-0000-0000-0000-000000000002'::uuid,
+      false
     )
   $$,
-  array[true],
-  'Recording another failure on an already-locked account stays locked without error'
+  $$ values (true, 6::smallint) $$,
+  'A failure after cooldown expiry starts the next progressive cooldown'
 );
 
--- ============================================================
--- TEST 9
--- Giving the collector a new PIN (the documented unlock path:
--- "el administrador puede darle una clave nueva") clears both
--- the lock and the failed-attempt counter.
--- ============================================================
+select results_eq(
+  $$
+    select round(extract(epoch from (pin_locked_until - pin_locked_at)))::bigint
+    from public.profiles
+    where id = 'a1000000-0000-0000-0000-000000000002'
+  $$,
+  array[1800::bigint],
+  'The second cooldown grows to thirty minutes'
+);
+
+select results_eq(
+  $$
+    with attempt as (
+      select *
+      from public.service_record_login_attempt(
+        'a1000000-0000-0000-0000-000000000002'::uuid,
+        true
+      )
+    )
+    select
+      attempt.locked,
+      attempt.failed_attempts,
+      p.pin_locked_at is null,
+      p.pin_locked_until is null
+    from attempt
+    join public.profiles p
+      on p.id = 'a1000000-0000-0000-0000-000000000002'
+  $$,
+  $$ values (false, 0::smallint, true, true) $$,
+  'A successful PIN verification clears counters and cooldown timestamps'
+);
+
+update public.profiles
+set
+  failed_pin_attempts = 5,
+  pin_locked_at = clock_timestamp(),
+  pin_locked_until = clock_timestamp() + interval '15 minutes'
+where id = 'a1000000-0000-0000-0000-000000000002';
 
 set local role authenticated;
 set local request.jwt.claim.sub = 'a1000000-0000-0000-0000-000000000001';
@@ -227,67 +216,48 @@ select lives_ok(
   $$
     select * from public.admin_prepare_collector_pin_reset(
       'a1000000-0000-0000-0000-000000000002'::uuid,
-      'Cuenta bloqueada, se entrega PIN nuevo'
+      'Se entrega un PIN nuevo al cobrador'
     )
   $$,
-  'An administrator can reset the PIN of a locked collector'
+  'An administrator PIN reset also clears the temporary cooldown'
 );
 
 reset role;
 
 select results_eq(
   $$
-    select failed_pin_attempts, pin_locked_at is null
+    select failed_pin_attempts, pin_locked_at is null, pin_locked_until is null
     from public.profiles
     where id = 'a1000000-0000-0000-0000-000000000002'
   $$,
-  $$ values (0::smallint, true) $$,
-  'Resetting the PIN clears the failed-attempt counter and the lock'
-);
-
--- ============================================================
--- TEST 10-11
--- A successful login resets the counter back to zero, and
--- completing a normal PIN change does the same (defensive reset,
--- mirrors the admin-reset path for the self-service change-pin
--- flow). These are two separate top-level statements (not
--- combined with UNION ALL) so their side effects are guaranteed
--- to apply in textual order.
--- ============================================================
-
-select results_eq(
-  $$
-    select locked, failed_attempts
-    from public.service_record_login_attempt(
-      'a1000000-0000-0000-0000-000000000002'::uuid, false
-    )
-  $$,
-  $$ values (false, 1::smallint) $$,
-  'A failed attempt right after an admin PIN reset starts the counter at one'
-);
-
-select results_eq(
-  $$
-    select locked, failed_attempts
-    from public.service_record_login_attempt(
-      'a1000000-0000-0000-0000-000000000002'::uuid, true
-    )
-  $$,
-  $$ values (false, 0::smallint) $$,
-  'A successful attempt resets the failed-attempt counter to zero'
+  $$ values (0::smallint, true, true) $$,
+  'An administrator PIN reset clears every cooldown field'
 );
 
 update public.profiles
-set failed_pin_attempts = 3
+set
+  failed_pin_attempts = 3,
+  pin_locked_at = clock_timestamp(),
+  pin_locked_until = clock_timestamp() + interval '15 minutes'
 where id = 'a1000000-0000-0000-0000-000000000002';
 
 select lives_ok(
   $$
-    select public.service_complete_collector_pin_change(
+    select public.service_complete_pin_change(
       'a1000000-0000-0000-0000-000000000002'::uuid
     )
   $$,
-  'Completing a self-service PIN change also resets the failed-attempt counter'
+  'Completing a verified self-service PIN change clears its attempt state'
+);
+
+select results_eq(
+  $$
+    select failed_pin_attempts, pin_locked_at is null, pin_locked_until is null
+    from public.profiles
+    where id = 'a1000000-0000-0000-0000-000000000002'
+  $$,
+  $$ values (0::smallint, true, true) $$,
+  'Self-service PIN completion clears every cooldown field'
 );
 
 select * from finish();

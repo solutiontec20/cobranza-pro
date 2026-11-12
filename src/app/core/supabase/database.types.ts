@@ -805,6 +805,7 @@ export type Database = {
           phone: string | null;
           pin_changed_at: string | null;
           pin_locked_at: string | null;
+          pin_locked_until: string | null;
           role: Database['public']['Enums']['app_role'];
           updated_at: string;
         };
@@ -820,6 +821,7 @@ export type Database = {
           phone?: string | null;
           pin_changed_at?: string | null;
           pin_locked_at?: string | null;
+          pin_locked_until?: string | null;
           role: Database['public']['Enums']['app_role'];
           updated_at?: string;
         };
@@ -835,6 +837,7 @@ export type Database = {
           phone?: string | null;
           pin_changed_at?: string | null;
           pin_locked_at?: string | null;
+          pin_locked_until?: string | null;
           role?: Database['public']['Enums']['app_role'];
           updated_at?: string;
         };
