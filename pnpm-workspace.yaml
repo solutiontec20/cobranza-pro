@@ -7,7 +7,10 @@ allowBuilds:
   msgpackr-extract: true
   supabase: true
   workerd: true
+minimumReleaseAgeExclude:
+  - '@primeuix/mcp'
 overrides:
+  '@primeuix/mcp': 2.0.1
   vite: 8.3.3
-  "zod@<4.6.6": 4.6.6
+  "zod@>=4.0.0 <4.6.6": 4.6.6
   "undici@>=7.18.0 <7.30.1": 7.30.1

@@ -5,8 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
+  '@primeuix/mcp': 2.0.1
   vite: 8.3.3
-  zod@<4.6.6: 4.6.6
+  zod@>=4.0.0 <4.6.6: 4.6.6
   undici@>=7.18.0 <7.30.1: 7.30.1
 
 importers:
@@ -1513,8 +1514,8 @@ packages:
   '@primeui/license-manager@1.1.0':
     resolution: {integrity: sha512-irjhOGs6Xjwh1JhMyXtdUsYCsve6kBySZzDUhS/mWxsjwQm/wSN7oulyP/f5huJKdhZSzaN6rVApwpp4nDWE1g==}
 
-  '@primeuix/mcp@2.0.0':
-    resolution: {integrity: sha512-3uZaHbjilhhqIMlClP/Kf63WBqhgf4so3J5BRw6CfEpImXN0tewgMaH9IthGffEJqODaXEoadEvwktcjVhan+g==}
+  '@primeuix/mcp@2.0.1':
+    resolution: {integrity: sha512-rChuX8QOFIg3Skr4uUHh0DXkkwbJGyBUZmEKNd/x90SuLgjjvuQE87Xb9wcByNVolERNYRojo8p86VnSoiaohA==}
     engines: {node: '>=22.0.0'}
 
   '@primeuix/motion@1.0.0':
@@ -5521,14 +5522,14 @@ snapshots:
 
   '@primeng/mcp@22.1.4(supports-color@10.2.2)':
     dependencies:
-      '@primeuix/mcp': 2.0.0(supports-color@10.2.2)
+      '@primeuix/mcp': 2.0.1(supports-color@10.2.2)
     transitivePeerDependencies:
       - '@cfworker/json-schema'
       - supports-color
 
   '@primeui/license-manager@1.1.0': {}
 
-  '@primeuix/mcp@2.0.0(supports-color@10.2.2)':
+  '@primeuix/mcp@2.0.1(supports-color@10.2.2)':
     dependencies:
       '@modelcontextprotocol/sdk': 1.32.2(supports-color@10.2.2)(zod@4.6.6)
       zod: 4.6.6
