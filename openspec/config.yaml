@@ -1,0 +1,79 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Angular 22, TypeScript 6, PrimeNG 22, Tailwind CSS 4, Supabase, Deno, and pnpm.
+  Architecture: SPA/CSR with lazy feature routes and a repository-adapter-store pattern.
+  Data: PostgreSQL migrations, RLS, transactional RPCs, Edge Functions, and generated Supabase types.
+  Testing: Angular/Vitest unit tests, Supabase pgTAP integration tests, and Playwright E2E tests.
+  Quality: strict TypeScript and Angular templates, Prettier, production builds, and database linting.
+  Domain: financial operations require security, auditability, transactional integrity, and America/Lima dates.
+
+strict_tdd: true
+
+testing:
+  detected: 2026-11-11
+  runner:
+    framework: Angular unit-test builder with Vitest
+    command: pnpm test:ci
+  layers:
+    unit:
+      available: true
+      tool: Vitest through Angular CLI
+      command: pnpm test:ci
+    integration:
+      available: true
+      tool: Supabase CLI and pgTAP-style SQL tests
+      command: pnpm supabase test db
+    e2e:
+      available: true
+      tool: Playwright
+      command: pnpm e2e
+  coverage:
+    available: false
+    command: null
+    note: No coverage provider, script, or threshold is configured.
+  quality:
+    linter:
+      available: false
+      command: null
+      note: No application ESLint configuration is present; database linting is available separately.
+    database_linter:
+      available: true
+      command: pnpm supabase db lint --local --level error
+    type_checker:
+      available: true
+      command: pnpm build
+    formatter:
+      available: true
+      command: pnpm exec prettier --check .
+
+rules:
+  proposal:
+    - Include rollback and migration impact for financial, authentication, or schema changes.
+    - Treat REQUERIMIENTO.md as the authoritative source for confirmed business rules.
+  specs:
+    - Use Given/When/Then scenarios and RFC 2119 keywords.
+    - Cover role boundaries, auditability, data consistency, and America/Lima business dates when relevant.
+  design:
+    - Follow the existing repository-adapter-store architecture and lazy route-level providers.
+    - Put financial invariants and authorization at the trusted PostgreSQL or Edge Function boundary.
+    - Document transactional boundaries and rationale for security-sensitive decisions.
+  tasks:
+    - Group work by phase with hierarchical numbering and reviewable units.
+    - Include focused tests with the implementation task that changes behavior.
+  apply:
+    guidelines:
+      - Use pnpm exclusively and follow existing Angular 22 and Supabase conventions.
+      - Add new schema behavior through additive timestamped migrations; never rewrite applied migrations.
+      - Do not expose privileged Supabase credentials to frontend code.
+    tdd: true
+    test_command: pnpm test:ci
+  verify:
+    test_command: pnpm test:ci
+    integration_command: pnpm supabase test db
+    e2e_command: pnpm e2e
+    build_command: pnpm build
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive specification deltas.
+    - Preserve archived changes as an immutable audit trail.

@@ -1,4 +1,4 @@
-import { withSupabase } from 'npm:@supabase/server@1';
+import { withSupabase } from '@supabase/server';
 import { isWeakPin } from '../_shared/pin.ts';
 
 type CreateCollectorBody = {

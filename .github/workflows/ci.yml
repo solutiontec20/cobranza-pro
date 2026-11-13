@@ -29,19 +29,14 @@ jobs:
       name: Development
       deployment: false
 
-    env:
-      NG_APP_PRIMENG_UI_KEY: ${{ secrets.NG_APP_PRIMENG_UI_KEY }}
-      NG_APP_SUPABASE_URL: ${{ vars.NG_APP_SUPABASE_URL }}
-      NG_APP_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NG_APP_SUPABASE_PUBLISHABLE_KEY }}
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
       - name: Setup pnpm and Node
-        uses: pnpm/setup@v3
+        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
         with:
           runtime: node@24.15.0
           cache: true
@@ -53,21 +48,36 @@ jobs:
       - name: Security audit
         run: pnpm audit --audit-level=high
 
+      - name: Verify Edge Function lockfiles
+        run: pnpm functions:check
+
       - name: Unit tests
         run: pnpm test:ci
+        env:
+          NG_APP_PRIMENG_UI_KEY: ${{ secrets.NG_APP_PRIMENG_UI_KEY }}
+          NG_APP_SUPABASE_URL: ${{ vars.NG_APP_SUPABASE_URL }}
+          NG_APP_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NG_APP_SUPABASE_PUBLISHABLE_KEY }}
 
       - name: Build Angular
         run: pnpm build
+        env:
+          NG_APP_PRIMENG_UI_KEY: ${{ secrets.NG_APP_PRIMENG_UI_KEY }}
+          NG_APP_SUPABASE_URL: ${{ vars.NG_APP_SUPABASE_URL }}
+          NG_APP_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NG_APP_SUPABASE_PUBLISHABLE_KEY }}
 
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
 
       - name: E2E
         run: pnpm e2e
+        env:
+          NG_APP_PRIMENG_UI_KEY: ${{ secrets.NG_APP_PRIMENG_UI_KEY }}
+          NG_APP_SUPABASE_URL: ${{ vars.NG_APP_SUPABASE_URL }}
+          NG_APP_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NG_APP_SUPABASE_PUBLISHABLE_KEY }}
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: playwright-report
           path: playwright-report/
@@ -85,12 +95,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
       - name: Setup pnpm and Node
-        uses: pnpm/setup@v3
+        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
         with:
           runtime: node@24.15.0
           cache: true

@@ -53,6 +53,7 @@ testem.log
 !.vscode/mcp.json
 
 # Miscellaneous local files
+/.atl/
 /connect.lock
 /typings/
 *.log

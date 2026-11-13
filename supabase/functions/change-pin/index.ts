@@ -41,7 +41,7 @@ export default {
     const userId = ctx.userClaims!.id;
     const { data: profile, error: profileError } = await ctx.supabase
       .from('profiles')
-      .select('dni, role, active')
+      .select('dni, role, active, pin_locked_until')
       .eq('id', userId)
       .single();
 
@@ -53,9 +53,8 @@ export default {
     }
 
     if (profile.role === 'collector') {
-      const { data: accessRows, error: accessError } = await ctx.supabase.rpc(
-        'current_access_status',
-      );
+      const { data: accessRows, error: accessError } =
+        await ctx.supabase.rpc('current_access_status');
       const accessStatus = accessRows?.[0];
 
       if (accessError || !accessStatus) {
@@ -80,6 +79,13 @@ export default {
       });
     }
 
+    if (profile.pin_locked_until && new Date(profile.pin_locked_until).getTime() > Date.now()) {
+      return jsonResponse(400, {
+        error: 'CURRENT_PIN_INVALID',
+        message: 'El PIN actual no es correcto.',
+      });
+    }
+
     // Supabase CLI does not currently expose the hosted setting that makes
     // current_password mandatory. A fresh password sign-in enforces the
     // current PIN server-side and also benefits from Auth rate limiting.
@@ -89,9 +95,39 @@ export default {
     });
 
     if (verificationError) {
+      const { error: recordError } = await ctx.supabaseAdmin.rpc('service_record_login_attempt', {
+        p_profile_id: userId,
+        p_success: false,
+      });
+
+      if (recordError) {
+        console.error('change-pin: failed to record PIN verification', {
+          userId,
+          code: recordError.code,
+        });
+      }
+
       return jsonResponse(400, {
         error: 'CURRENT_PIN_INVALID',
         message: 'El PIN actual no es correcto.',
+      });
+    }
+
+    const { error: resetAttemptsError } = await ctx.supabaseAdmin.rpc(
+      'service_record_login_attempt',
+      { p_profile_id: userId, p_success: true },
+    );
+
+    if (resetAttemptsError) {
+      console.error('change-pin: failed to reset PIN attempts', {
+        userId,
+        code: resetAttemptsError.code,
+      });
+
+      await ctx.supabase.auth.signOut({ scope: 'local' });
+      return jsonResponse(503, {
+        error: 'PIN_ATTEMPT_STATE_UNAVAILABLE',
+        message: 'No se pudo verificar el estado del PIN. Intentá nuevamente.',
       });
     }
 
@@ -124,10 +160,9 @@ export default {
       });
     }
 
-    const { error: completionError } = await ctx.supabaseAdmin.rpc(
-      'service_complete_pin_change',
-      { p_user_id: userId },
-    );
+    const { error: completionError } = await ctx.supabaseAdmin.rpc('service_complete_pin_change', {
+      p_user_id: userId,
+    });
 
     if (completionError) {
       console.error('change-pin: profile completion failed', {
@@ -144,4 +179,3 @@ export default {
     return jsonResponse(200, { changed: true });
   }),
 };
-
