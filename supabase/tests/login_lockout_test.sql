@@ -180,21 +180,24 @@ select results_eq(
   'The second cooldown grows to thirty minutes'
 );
 
+-- The function must run in its own statement: a join against public.profiles in
+-- the same statement would use the statement's snapshot and still see the
+-- pre-update row, hiding the cleared counters.
+create temporary table success_attempt_result on commit drop as
+select locked, failed_attempts
+from public.service_record_login_attempt(
+  'a1000000-0000-0000-0000-000000000002'::uuid,
+  true
+);
+
 select results_eq(
   $$
-    with attempt as (
-      select *
-      from public.service_record_login_attempt(
-        'a1000000-0000-0000-0000-000000000002'::uuid,
-        true
-      )
-    )
     select
-      attempt.locked,
-      attempt.failed_attempts,
+      r.locked,
+      r.failed_attempts,
       p.pin_locked_at is null,
       p.pin_locked_until is null
-    from attempt
+    from success_attempt_result r
     join public.profiles p
       on p.id = 'a1000000-0000-0000-0000-000000000002'
   $$,
