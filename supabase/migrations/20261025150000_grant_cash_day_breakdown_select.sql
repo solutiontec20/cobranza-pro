@@ -1,0 +1,41 @@
+-- ============================================================
+-- COBRANZAPRO - CASH CLOSURE: MISSING VIEW GRANT
+--
+-- Bug found: `public.collector_cash_day_breakdown` (created in
+-- `20261025130000_cash_closure_operations.sql`) was never explicitly
+-- granted SELECT to `authenticated`. A bare `CREATE VIEW` in PostgreSQL
+-- does not grant SELECT to any role other than the owner — unlike
+-- `cash_movements`/`cash_closures`/`cash_expenses`, which all received
+-- an explicit `grant select ... to authenticated` right after their
+-- `create policy`/`enable row level security` blocks, this view's
+-- `create view ... with (security_invoker = true)` statement was the
+-- only thing emitted for it, with no matching GRANT.
+--
+-- Effect: every load of either cash-closure screen (admin's
+-- `/admin/cierre-caja` and collector's `/cobrador/cierre-caja`) calls
+-- `SupabaseCashClosureRepository.fetchDays()`, which queries this view
+-- FIRST via `supabase.from('collector_cash_day_breakdown').select('*')`.
+-- That query failed with "permission denied for view
+-- collector_cash_day_breakdown" (errcode 42501) for EVERY authenticated
+-- user regardless of role — admin and collector alike — because the
+-- query never reached any RLS/role logic at all; it was rejected at the
+-- GRANT level before RLS was even evaluated. The frontend adapter has
+-- no specific translation for that message, so it fell back to the
+-- generic "No tenés permisos para realizar esta acción.", exactly what
+-- both admin and collector reported seeing as soon as they opened the
+-- screen (not just on a specific action).
+--
+-- This explains why the pgTAP suite did not catch it: section 7 of
+-- `cash_closure_operations_test.sql` queries the view directly with
+-- `results_eq`, but without `set local role authenticated` first, so it
+-- ran as the superuser `postgres` role used by `psql`/pgTAP, which
+-- bypasses GRANT checks entirely.
+--
+-- Fix: grant SELECT on the view to `authenticated`, matching the base
+-- tables it reads from (`security_invoker = true` means the view then
+-- defers to the caller's own RLS on `cash_movements`, same as before).
+-- ============================================================
+
+grant select
+on public.collector_cash_day_breakdown
+to authenticated;

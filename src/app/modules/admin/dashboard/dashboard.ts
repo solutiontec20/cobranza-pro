@@ -1,162 +1,143 @@
-import { Component, computed, inject, ViewChild, ElementRef, AfterViewInit, OnDestroy, effect } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
 import { ProgressBarModule } from 'primeng/progressbar';
-import { CurrencyPipe, DatePipe } from '@angular/common';
-import { AppStoreService, SYSTEM_DATE } from '../../../core/services/app-store.service';
-import { AuthService } from '../../auth/auth.service';
-import Chart from 'chart.js/auto';
+import { SkeletonModule } from 'primeng/skeleton';
+import { MessageModule } from 'primeng/message';
+import { InputTextModule } from 'primeng/inputtext';
+import { PaginatorModule } from 'primeng/paginator';
+import { SelectModule } from 'primeng/select';
+import { RouterLink } from '@angular/router';
+import { AdminDashboardStore } from './admin-dashboard.store';
+import { RecoveryChart } from './recovery-chart';
+import { currentLimaDate, formatEsDate } from '../../../core/calculations/date-time';
+import { PenCurrency } from '../../../shared/pipes/pen-currency';
+import { CollectorPerformanceTable } from './collector-performance-table';
+import { pageItems } from '../../../core/calculations/loan-detail-filtering';
+import { normalizeSearchText } from '../../../core/calculations/text';
+
+const EMPTY_BUCKET = { count: 0, percent: 0 };
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CardModule, ButtonModule, TableModule, ProgressBarModule, CurrencyPipe, DatePipe],
-  templateUrl: './dashboard.html'
+  imports: [
+    CardModule,
+    ButtonModule,
+    ProgressBarModule,
+    SkeletonModule,
+    MessageModule,
+    FormsModule,
+    InputTextModule,
+    PaginatorModule,
+    SelectModule,
+    RouterLink,
+    PenCurrency,
+    RecoveryChart,
+    CollectorPerformanceTable,
+  ],
+  templateUrl: './dashboard.html',
 })
-export default class Dashboard implements AfterViewInit, OnDestroy {
-  appStore = inject(AppStoreService);
-  authService = inject(AuthService);
-  
-  today = SYSTEM_DATE;
+export default class Dashboard implements OnInit, OnDestroy {
+  protected readonly store = inject(AdminDashboardStore);
 
-  @ViewChild('donutChart') donutChartRef!: ElementRef<HTMLCanvasElement>;
-  private chartInstance: Chart | null = null;
+  protected readonly today = formatEsDate(currentLimaDate(), 'long');
 
-  readonly kpis = computed(() => {
-    const loans = this.appStore.loans();
-    const activeLoans = loans.filter(l => l.status === 'ACTIVE');
-    const paidLoans = loans.filter(l => l.status === 'PAID');
-    const clients = this.appStore.clients().filter(c => c.active);
-    const collectors = this.appStore.profiles().filter(p => p.role === 'COBRADOR' && p.active);
-    const payments = this.appStore.payments();
+  protected readonly loadingRows = [1, 2, 3, 4, 5];
 
-    const capitalPrestado = activeLoans.reduce((sum, l) => sum + l.principal, 0);
-    const totalEsperado = activeLoans.reduce((sum, l) => sum + l.totalAmount, 0);
-    const totalCobrado = activeLoans.reduce((sum, l) => {
-        const loanPayments = payments.filter(p => p.loanId === l.id);
-        return sum + loanPayments.reduce((ps, p) => ps + p.amount, 0);
-    }, 0);
-    const saldoPendiente = activeLoans.reduce((sum, l) => sum + l.balance, 0);
-    
-    // Morosidad
-    let morososCount = 0;
-    for (const client of clients) {
-        const risk = this.appStore.getClientRiskStatus(client);
-        if (risk.isMoroso) morososCount++;
-    }
-
+  protected readonly kpis = computed(() => {
+    const summary = this.store.summary();
     return {
-      capitalPrestado,
-      totalEsperado,
-      totalCobrado,
-      saldoPendiente,
-      morosidad: morososCount,
-      totalClientes: clients.length,
-      prestamosPagados: paidLoans.length,
-      cobradores: collectors.length
+      capitalPrestado: summary?.capitalPrestado ?? 0,
+      totalEsperado: summary?.totalEsperado ?? 0,
+      totalCobrado: summary?.totalCobrado ?? 0,
+      saldoPendiente: summary?.saldoPendiente ?? 0,
+      morosidad: summary?.morosidad ?? 0,
+      totalClientes: summary?.totalClientes ?? 0,
+      prestamosPagados: summary?.prestamosPagados ?? 0,
+      cobradores: summary?.cobradores ?? 0,
     };
   });
 
-  readonly riskDistribution = computed(() => {
-    const clients = this.appStore.clients().filter(c => c.active);
-    let green = 0, yellow = 0, orange = 0, red = 0;
-    
-    for (const client of clients) {
-        const risk = this.appStore.getClientRiskStatus(client);
-        if (risk.level === 'green' && !risk.isPaid) green++;
-        else if (risk.level === 'yellow') yellow++;
-        else if (risk.level === 'orange') orange++;
-        else if (risk.level === 'red') red++;
-    }
-    
-    const total = green + yellow + orange + red || 1; // avoid division by zero
-    
-    return {
-      green: { count: green, percent: Math.round((green / total) * 100) },
-      yellow: { count: yellow, percent: Math.round((yellow / total) * 100) },
-      orange: { count: orange, percent: Math.round((orange / total) * 100) },
-      red: { count: red, percent: Math.round((red / total) * 100) }
-    };
-  });
+  protected readonly riskDistribution = computed(
+    () =>
+      this.store.summary()?.riskDistribution ?? {
+        green: EMPTY_BUCKET,
+        yellow: EMPTY_BUCKET,
+        orange: EMPTY_BUCKET,
+        red: EMPTY_BUCKET,
+      },
+  );
 
-  readonly collectorPerformance = computed(() => {
-    const collectors = this.appStore.profiles().filter(p => p.role === 'COBRADOR');
-    return collectors.map(c => {
-      const cClients = this.appStore.clients().filter(cl => cl.collectorId === c.id);
-      
-      let expectedToday = 0;
-      for (const cl of cClients) {
-        const activeLoan = this.appStore.loans().find(l => l.clientId === cl.id && l.status === 'ACTIVE');
-        if (activeLoan) {
-          const inst = this.appStore.getClientTodayInstallment(activeLoan.id);
-          if (inst) expectedToday += inst.expectedAmount;
-        }
-      }
-      
-      const collectedToday = this.appStore.payments()
-        .filter(p => p.collectorId === c.id && p.date === this.today)
-        .reduce((sum, p) => sum + p.amount, 0);
-        
-      const pendingToday = Math.max(0, expectedToday - collectedToday);
-
-      let delayedCount = 0;
-      for (const cl of cClients) {
-          const risk = this.appStore.getClientRiskStatus(cl);
-          if (risk.days > 0) delayedCount++;
-      }
-      
-      return {
-        id: c.id,
-        name: c.fullName,
-        dni: c.dni,
-        clientsCount: cClients.length,
-        expectedToday,
-        collectedToday,
-        pendingToday,
-        delayedCount
-      };
-    });
+  protected readonly collectorPerformance = computed(() => this.store.collectorPerformance());
+  protected readonly performanceQuery = signal('');
+  protected readonly performanceDelayFilter = signal<'all' | 'delayed' | 'current'>('all');
+  protected readonly performanceDelayOptions = [
+    { label: 'Todos', value: 'all' as const },
+    { label: 'Con atrasos', value: 'delayed' as const },
+    { label: 'Sin atrasos', value: 'current' as const },
+  ];
+  protected readonly performancePageSizeOptions = [5, 10, 20];
+  protected readonly performancePageFirst = signal(0);
+  protected readonly performancePageRows = signal(5);
+  protected readonly filteredCollectorPerformance = computed(() => {
+    const query = normalizeSearchText(this.performanceQuery());
+    const delay = this.performanceDelayFilter();
+    return this.collectorPerformance().filter(
+      (entry) =>
+        (!query ||
+          [entry.name, entry.dni]
+            .map(normalizeSearchText)
+            .some((value) => value.includes(query))) &&
+        (delay === 'all' ||
+          (delay === 'delayed' ? entry.delayedCount > 0 : entry.delayedCount === 0)),
+    );
   });
+  protected readonly visibleCollectorPerformance = computed(() =>
+    pageItems(
+      this.filteredCollectorPerformance(),
+      this.performancePageFirst(),
+      this.performancePageRows(),
+    ),
+  );
+  protected readonly isDesktop = signal(
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches,
+  );
+
+  private desktopQuery?: MediaQueryList;
+  private desktopQueryListener?: (event: MediaQueryListEvent) => void;
 
   constructor() {
-    // Reactively update chart when KPIs change
-    effect(() => {
-      const kpis = this.kpis();
-      if (this.chartInstance) {
-        this.chartInstance.data.datasets[0].data = [kpis.totalCobrado, kpis.saldoPendiente];
-        this.chartInstance.update();
-      }
-    });
+    void this.store.load();
   }
 
-  ngAfterViewInit() {
-    if (this.donutChartRef?.nativeElement) {
-      const kpis = this.kpis();
-      this.chartInstance = new Chart(this.donutChartRef.nativeElement, {
-        type: 'doughnut',
-        data: {
-          labels: ['Cobrado', 'Pendiente'],
-          datasets: [{
-            data: [kpis.totalCobrado, kpis.saldoPendiente],
-            backgroundColor: ['#10B981', '#E2E8F0'],
-            hoverBackgroundColor: ['#059669', '#CBD5E1']
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: '70%',
-          plugins: {
-            legend: { position: 'bottom' }
-          }
-        }
-      });
-    }
+  protected changePerformanceQuery(event: Event): void {
+    this.performanceQuery.set((event.target as HTMLInputElement).value);
+    this.performancePageFirst.set(0);
   }
 
-  ngOnDestroy() {
-    if (this.chartInstance) {
-      this.chartInstance.destroy();
+  protected changePerformanceDelay(filter: 'all' | 'delayed' | 'current'): void {
+    this.performanceDelayFilter.set(filter);
+    this.performancePageFirst.set(0);
+  }
+
+  protected changePerformancePage(event: { first?: number; rows?: number }): void {
+    this.performancePageFirst.set(event.first ?? 0);
+    this.performancePageRows.set(event.rows ?? 5);
+  }
+
+  ngOnInit(): void {
+    if (typeof window === 'undefined') return;
+
+    this.desktopQuery = window.matchMedia('(min-width: 1024px)');
+    this.isDesktop.set(this.desktopQuery.matches);
+    this.desktopQueryListener = (event) => this.isDesktop.set(event.matches);
+    this.desktopQuery.addEventListener('change', this.desktopQueryListener);
+  }
+
+  ngOnDestroy(): void {
+    if (this.desktopQueryListener) {
+      this.desktopQuery?.removeEventListener('change', this.desktopQueryListener);
     }
   }
 }

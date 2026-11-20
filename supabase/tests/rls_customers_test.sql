@@ -1,8 +1,18 @@
 begin;
 
+select set_config(
+  'app.test_business_timestamp',
+  (
+    (
+      (now() at time zone 'America/Lima')::date + time '12:00:00'
+    ) at time zone 'America/Lima'
+  )::text,
+  true
+);
+
 create extension if not exists pgtap with schema extensions;
 
-select plan(7);
+select plan(9);
 
 -- ============================================================
 -- USUARIOS DE PRUEBA
@@ -25,28 +35,28 @@ insert into public.profiles (
 values
   (
     '11111111-1111-1111-1111-111111111111',
-    '10000001',
+    '92000001',
     'Cobrador A',
     'collector',
     true
   ),
   (
     '22222222-2222-2222-2222-222222222222',
-    '10000002',
+    '92000002',
     'Cobrador B',
     'collector',
     true
   ),
   (
     '33333333-3333-3333-3333-333333333333',
-    '10000003',
+    '92000003',
     'Supervisor',
     'supervisor',
     true
   ),
   (
     '44444444-4444-4444-4444-444444444444',
-    '10000004',
+    '92000004',
     'Administrador',
     'admin',
     true
@@ -75,6 +85,33 @@ values
     '44444444-4444-4444-4444-444444444444'
   );
 
+insert into public.loans (
+  id,
+  customer_id,
+  principal_amount,
+  interest_rate_percent,
+  total_amount,
+  disbursed_amount,
+  installment_count,
+  frequency,
+  started_on,
+  first_due_on,
+  created_by
+)
+values (
+  'cccccccc-cccc-cccc-cccc-cccccccccccc',
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  100,
+  10,
+  110,
+  100,
+  2,
+  'weekly',
+  '2026-10-20',
+  '2026-10-20',
+  '44444444-4444-4444-4444-444444444444'
+);
+
 -- ============================================================
 -- COBRADOR A
 -- ============================================================
@@ -85,7 +122,14 @@ set local request.jwt.claim.sub =
   '11111111-1111-1111-1111-111111111111';
 
 select results_eq(
-  'select count(*) from public.customers',
+  $$
+    select count(*)
+    from public.customers
+    where id in (
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid
+    )
+  $$,
   array[1::bigint],
   'El cobrador A solo puede ver los clientes de su propia cartera'
 );
@@ -118,7 +162,14 @@ set local request.jwt.claim.sub =
   '22222222-2222-2222-2222-222222222222';
 
 select results_eq(
-  'select count(*) from public.customers',
+  $$
+    select count(*)
+    from public.customers
+    where id in (
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid
+    )
+  $$,
   array[1::bigint],
   'El cobrador B solo puede ver los clientes de su propia cartera'
 );
@@ -131,7 +182,14 @@ set local request.jwt.claim.sub =
   '33333333-3333-3333-3333-333333333333';
 
 select results_eq(
-  'select count(*) from public.customers',
+  $$
+    select count(*)
+    from public.customers
+    where id in (
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid
+    )
+  $$,
   array[2::bigint],
   'El supervisor puede ver los clientes de todas las carteras'
 );
@@ -144,7 +202,14 @@ set local request.jwt.claim.sub =
   '44444444-4444-4444-4444-444444444444';
 
 select results_eq(
-  'select count(*) from public.customers',
+  $$
+    select count(*)
+    from public.customers
+    where id in (
+      'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+      'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid
+    )
+  $$,
   array[2::bigint],
   'El administrador puede ver todos los clientes'
 );
@@ -156,6 +221,26 @@ select lives_ok(
     where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
   $$,
   'El administrador puede modificar clientes'
+);
+
+select throws_ok(
+  $$
+    update public.customers
+    set active = false
+    where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+  $$,
+  '23514',
+  'CUSTOMER_HAS_ACTIVE_LOAN',
+  'No se puede desactivar un cliente con un préstamo activo'
+);
+
+select lives_ok(
+  $$
+    update public.customers
+    set active = false
+    where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+  $$,
+  'El administrador puede desactivar un cliente sin préstamo activo'
 );
 
 select * from finish();

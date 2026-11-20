@@ -1,12 +1,12 @@
-import { CurrencyPipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import { ButtonDirective } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { CollectionClient } from '../../../modules/collector/collection.model';
+import { PenCurrency } from '../../pipes/pen-currency';
 
 @Component({
   selector: 'app-collection-client-card',
-  imports: [ButtonDirective, CurrencyPipe, TagModule],
+  imports: [ButtonDirective, PenCurrency, TagModule],
   host: { class: 'block' },
   template: `
     <article
@@ -42,13 +42,13 @@ import { CollectionClient } from '../../../modules/collector/collection.model';
           <div class="px-3">
             <dt class="text-xs text-surface-500 dark:text-surface-400">Cuota</dt>
             <dd class="mt-1 mb-0 font-semibold tabular-nums text-surface-950 dark:text-surface-0">
-              {{ client().installmentAmount | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              {{ client().installmentAmount | penCurrency }}
             </dd>
           </div>
           <div class="px-3">
             <dt class="text-xs text-surface-500 dark:text-surface-400">Saldo</dt>
             <dd class="mt-1 mb-0 font-semibold tabular-nums text-surface-950 dark:text-surface-0">
-              {{ client().balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}
+              {{ client().balance | penCurrency }}
             </dd>
           </div>
           <div class="px-3">
@@ -85,12 +85,12 @@ import { CollectionClient } from '../../../modules/collector/collection.model';
           <button
             pButton
             type="button"
-            icon="pi pi-wallet"
-            label="Registrar pago"
             class="ml-auto min-h-10 flex-1 sm:flex-none"
-            [disabled]="client().loanStatus !== 'ACTIVE' || client().balance === 0"
             (click)="paymentRequested.emit(client())"
-          ></button>
+          >
+            <i [class]="actionIcon()" aria-hidden="true"></i>
+            {{ actionLabel() }}
+          </button>
         </footer>
       </div>
     </article>
@@ -132,4 +132,18 @@ export class CollectionClientCard {
         return `Moroso: ${client.overdueDays} d`;
     }
   });
+  /**
+   * The card's single action always navigates to the client detail screen (see
+   * `CollectorDashboard.requestPayment` / `CollectorClients.goToDetail`) — it must never be
+   * disabled, because clients without an active loan with balance are exactly the ones who need
+   * to reach the detail screen to renew or create a loan.
+   */
+  readonly actionLabel = computed(() =>
+    this.client().loanStatus === 'ACTIVE' && this.client().balance > 0 ? 'Cobrar' : 'Ver detalle',
+  );
+  readonly actionIcon = computed(() =>
+    this.client().loanStatus === 'ACTIVE' && this.client().balance > 0
+      ? 'pi pi-wallet'
+      : 'pi pi-arrow-right',
+  );
 }

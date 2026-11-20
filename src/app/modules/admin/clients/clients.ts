@@ -1,228 +1,222 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { TableModule } from 'primeng/table';
+import { Component, computed, effect, inject, linkedSignal, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
+import {
+  form,
+  FormField,
+  maxLength,
+  pattern,
+  required,
+  submit,
+} from '@angular/forms/signals';
+import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
-import { TagModule } from 'primeng/tag';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
+import { MessageModule } from 'primeng/message';
+import { PaginatorModule } from 'primeng/paginator';
 import { SelectModule } from 'primeng/select';
-import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { CurrencyPipe } from '@angular/common';
-import { AppStoreService, SYSTEM_DATE } from '../../../core/services/app-store.service';
-import { MessageService } from 'primeng/api';
+import { SkeletonModule } from 'primeng/skeleton';
+import { TableModule } from 'primeng/table';
+import { TagModule } from 'primeng/tag';
+import { map } from 'rxjs';
+import { ClientListItem } from '../../../core/models/client.model';
+import { DigitsOnly } from '../../../shared/directives/digits-only';
+import { PenCurrency } from '../../../shared/pipes/pen-currency';
+import { ClientsStore } from './clients.store';
+
+interface ClientFormModel {
+  dni: string;
+  fullName: string;
+  phone: string;
+  collectorId: string;
+  address: string;
+  notes: string;
+  active: boolean;
+}
+
+const emptyModel = (): ClientFormModel => ({
+  dni: '',
+  fullName: '',
+  phone: '',
+  collectorId: '',
+  address: '',
+  notes: '',
+  active: true,
+});
 
 @Component({
   selector: 'app-admin-clients',
   imports: [
-    TableModule, ButtonModule, TagModule, DialogModule, InputTextModule,
-    IconFieldModule, InputIconModule, SelectModule, FormsModule, ReactiveFormsModule, CurrencyPipe
+    ButtonModule,
+    DigitsOnly,
+    DialogModule,
+    FormField,
+    InputTextModule,
+    MessageModule,
+    PaginatorModule,
+    PenCurrency,
+    SelectModule,
+    SkeletonModule,
+    TableModule,
+    TagModule,
   ],
-  providers: [MessageService],
-  template: `
-    <div class="p-4 max-w-7xl mx-auto flex flex-col gap-4">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 class="text-2xl font-bold text-surface-900 dark:text-surface-0 m-0">Mantenedor de Clientes</h1>
-          <p class="text-sm text-surface-500 mt-1">Administra el padrón de clientes y su asignación a cobradores.</p>
-        </div>
-        <p-button (click)="openNewDialog()"><i class="pi pi-plus mr-2"></i>Nuevo Cliente</p-button>
-      </div>
-
-      <div class="card bg-surface-0 dark:bg-surface-900 p-4 border-round-xl shadow-sm">
-        <div class="flex flex-wrap gap-3 mb-4">
-          <p-iconfield styleClass="w-full md:w-auto flex-1 md:flex-none md:w-64">
-            <p-inputicon styleClass="pi pi-search" />
-            <input pInputText type="text" placeholder="Buscar cliente o DNI..." [(ngModel)]="searchQuery" class="w-full" />
-          </p-iconfield>
-          <p-select 
-            [options]="collectorOptions()" 
-            [(ngModel)]="selectedCollector" 
-            placeholder="Todos los cobradores"
-            optionLabel="label" 
-            optionValue="value"
-            showClear="true"
-            class="w-full md:w-56"
-          ></p-select>
-        </div>
-
-        <p-table [value]="filteredClients()" [rows]="10" [paginator]="true" responsiveLayout="scroll" styleClass="p-datatable-sm">
-          <ng-template #header>
-            <tr>
-              <th>DNI</th>
-              <th>Nombre</th>
-              <th>Teléfono</th>
-              <th>Cobrador asignado</th>
-              <th>Estado Riesgo</th>
-              <th>Saldo</th>
-              <th>Días Atraso</th>
-              <th class="text-center">Acciones</th>
-            </tr>
-          </ng-template>
-          <ng-template #body let-client>
-            <tr>
-              <td class="font-bold">{{ client.dni }}</td>
-              <td [class.text-red-500]="client.risk.isMoroso">
-                @if (client.risk.isMoroso) { 🔴 } {{ client.fullName }}
-              </td>
-              <td>{{ client.phone || '-' }}</td>
-              <td>
-                <p-tag severity="secondary" [value]="client.collectorName"></p-tag>
-              </td>
-              <td>
-                <p-tag [severity]="getRiskSeverity(client.risk.level)" [value]="client.risk.text"></p-tag>
-              </td>
-              <td class="font-bold" [class.text-red-500]="client.balance > 0">{{ client.balance | currency: 'PEN' : 'symbol' : '1.2-2' : 'es-PE' }}</td>
-              <td>
-                <span [class.text-red-500]="client.risk.days > 0">{{ client.risk.days }} días</span>
-              </td>
-              <td class="text-center">
-                <div class="flex gap-2 justify-center">
-                  <p-button severity="secondary" variant="outlined" size="small"><i class="pi pi-eye mr-2"></i>Ver</p-button>
-                  <p-button severity="secondary" variant="outlined" size="small" (click)="openEditDialog(client)"><i class="pi pi-pencil mr-2"></i>Editar</p-button>
-                </div>
-              </td>
-            </tr>
-          </ng-template>
-          <ng-template #empty>
-            <tr>
-              <td colspan="8" class="text-center p-4">No se encontraron clientes.</td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </div>
-    </div>
-
-    <p-dialog [(visible)]="dialogVisible" [header]="dialogMode() === 'new' ? 'Nuevo Cliente' : 'Editar Cliente'" [modal]="true" [style]="{width: '500px'}">
-      <form [formGroup]="clientForm" (ngSubmit)="saveClient()" class="flex flex-col gap-4 mt-2">
-        <div class="flex flex-col gap-1">
-          <label for="dni" class="font-medium text-sm">DNI</label>
-          <input pInputText id="dni" formControlName="dni" />
-        </div>
-        <div class="flex flex-col gap-1">
-          <label for="fullName" class="font-medium text-sm">Nombre Completo</label>
-          <input pInputText id="fullName" formControlName="fullName" />
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="flex flex-col gap-1">
-            <label for="phone" class="font-medium text-sm">Teléfono</label>
-            <input pInputText id="phone" formControlName="phone" />
-          </div>
-          <div class="flex flex-col gap-1">
-            <label for="collectorId" class="font-medium text-sm">Cobrador Asignado</label>
-            <p-select id="collectorId" formControlName="collectorId" [options]="collectorList()" optionLabel="fullName" optionValue="id" placeholder="Seleccionar" appendTo="body" class="w-full"></p-select>
-          </div>
-        </div>
-        <div class="flex flex-col gap-1">
-          <label for="address" class="font-medium text-sm">Dirección</label>
-          <input pInputText id="address" formControlName="address" />
-        </div>
-        <div class="flex justify-end gap-2 mt-4">
-          <p-button type="button" label="Cancelar" severity="secondary" variant="text" (click)="dialogVisible.set(false)"></p-button>
-          <p-button type="submit" label="Guardar" [disabled]="clientForm.invalid"></p-button>
-        </div>
-      </form>
-    </p-dialog>
-  `
+  templateUrl: `./clients.html`,
 })
 export default class Clients {
-  appStore = inject(AppStoreService);
-  fb = inject(FormBuilder);
-  messageService = inject(MessageService);
+  protected readonly store = inject(ClientsStore);
+  private readonly messageService = inject(MessageService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
-  searchQuery = signal('');
-  selectedCollector = signal<string | null>(null);
+  private readonly collectorIdFromUrl = toSignal(
+    this.route.queryParamMap.pipe(map((params) => params.get('collectorId') ?? '')),
+    { initialValue: this.route.snapshot.queryParamMap.get('collectorId') ?? '' },
+  );
 
-  dialogVisible = signal(false);
-  dialogMode = signal<'new' | 'edit'>('new');
-  currentClientId = signal<string | null>(null);
-
-  clientForm = this.fb.nonNullable.group({
-    dni: ['', [Validators.required]],
-    fullName: ['', [Validators.required]],
-    phone: [''],
-    collectorId: ['', [Validators.required]],
-    address: ['', [Validators.required]]
+  protected readonly loadingRows = [1, 2, 3];
+  protected readonly searchQuery = signal('');
+  protected readonly selectedCollector = linkedSignal(() => this.collectorIdFromUrl());
+  protected readonly dialogVisible = signal(false);
+  protected readonly dialogMode = signal<'create' | 'edit'>('create');
+  protected readonly editingClientId = signal('');
+  private readonly editBaseline = signal<ClientFormModel | null>(null);
+  protected readonly clientModel = signal<ClientFormModel>(emptyModel());
+  protected readonly clientForm = form(this.clientModel, (path) => {
+    required(path.dni, { message: 'Ingresá el DNI.' });
+    pattern(path.dni, /^\d{8,12}$/, { message: 'El DNI debe contener entre 8 y 12 dígitos.' });
+    required(path.fullName, { message: 'Ingresá el nombre completo.' });
+    pattern(path.fullName, /.*\S.*/, { message: 'Ingresá un nombre válido.' });
+    maxLength(path.fullName, 160, { message: 'El nombre es demasiado largo.' });
+    pattern(path.phone, /^\d{0,15}$/, { message: 'El teléfono solo puede contener dígitos.' });
+    required(path.collectorId, { message: 'Seleccioná un cobrador.' });
+    required(path.address, { message: 'Ingresá la dirección.' });
+    pattern(path.address, /.*\S.*/, { message: 'Ingresá una dirección válida.' });
+    maxLength(path.notes, 500, { message: 'Las observaciones no pueden superar 500 caracteres.' });
   });
 
-  collectorList = computed(() => this.appStore.profiles().filter(p => p.role === 'COBRADOR'));
-  
-  collectorOptions = computed(() => {
-    return this.collectorList().map(c => ({ label: c.fullName, value: c.id }));
+  protected readonly hasClientChanges = computed(() => {
+    if (this.dialogMode() === 'create') return true;
+    const baseline = this.editBaseline();
+    if (!baseline) return false;
+    return !sameClientModel(baseline, this.clientModel());
   });
+  protected readonly editingClient = computed(() =>
+    this.store.clients().find((client) => client.id === this.editingClientId()),
+  );
 
-  readonly clientsWithDetails = computed(() => {
-    const clients = this.appStore.clients();
-    const loans = this.appStore.loans();
-    const profiles = this.appStore.profiles();
+  constructor() {
+    void this.store.initialize(this.collectorIdFromUrl() || null);
 
-    return clients.map(client => {
-      const activeLoan = loans.find(l => l.clientId === client.id && l.status === 'ACTIVE');
-      const collector = profiles.find(p => p.id === client.collectorId);
-      
-      const riskStatus = this.appStore.getClientRiskStatus(client);
-
-      return {
-        ...client,
-        collectorName: collector ? collector.fullName : 'Sin asignar',
-        balance: activeLoan ? activeLoan.balance : 0,
-        risk: { 
-          level: riskStatus.level, 
-          text: riskStatus.text, 
-          isMoroso: riskStatus.isMoroso, 
-          days: riskStatus.days 
-        }
-      };
+    effect(() => {
+      void this.store.setCollectorFilter(this.collectorIdFromUrl() || null);
     });
-  });
 
-  readonly filteredClients = computed(() => {
-    let result = this.clientsWithDetails();
-    const query = this.searchQuery().toLowerCase();
-    const colFilter = this.selectedCollector();
-
-    if (query) {
-      result = result.filter(c => c.fullName.toLowerCase().includes(query) || c.dni.includes(query));
-    }
-    if (colFilter) {
-      result = result.filter(c => c.collectorId === colFilter);
-    }
-    return result;
-  });
-
-  getRiskSeverity(level: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
-    switch (level) {
-      case 'green': return 'success';
-      case 'yellow': return 'warn';
-      case 'orange': return 'warn';
-      case 'red': return 'danger';
-      default: return 'secondary';
-    }
+    effect((onCleanup) => {
+      const search = this.searchQuery();
+      const timer = setTimeout(() => void this.store.setSearch(search), 300);
+      onCleanup(() => clearTimeout(timer));
+    });
   }
 
-  openNewDialog() {
-    this.dialogMode.set('new');
-    this.currentClientId.set(null);
-    this.clientForm.reset();
+  protected updateSearch(event: Event): void {
+    this.searchQuery.set((event.target as HTMLInputElement).value);
+  }
+
+  protected updateCollector(event: Event): void {
+    const collectorId = (event.target as HTMLSelectElement).value;
+    this.selectedCollector.set(collectorId);
+    void this.store.setCollectorFilter(collectorId || null);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { collectorId: collectorId || null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  protected openCreateDialog(): void {
+    this.store.clearError();
+    this.dialogMode.set('create');
+    this.editingClientId.set('');
+    this.editBaseline.set(null);
+    this.clientForm().reset();
+    this.clientModel.set(emptyModel());
     this.dialogVisible.set(true);
   }
 
-  openEditDialog(client: any) {
+  protected openEditDialog(client: ClientListItem): void {
+    this.store.clearError();
     this.dialogMode.set('edit');
-    this.currentClientId.set(client.id);
-    this.clientForm.patchValue({
+    this.editingClientId.set(client.id);
+    this.clientForm().reset();
+    const model = {
       dni: client.dni,
       fullName: client.fullName,
-      phone: client.phone || '',
+      phone: client.phone,
       collectorId: client.collectorId,
-      address: client.address
-    });
+      address: client.address,
+      notes: client.notes,
+      active: client.active,
+    };
+    this.editBaseline.set(model);
+    this.clientModel.set(model);
     this.dialogVisible.set(true);
   }
 
-  saveClient() {
-    if (this.clientForm.invalid) return;
-    this.messageService.add({ severity: 'success', summary: 'Éxito', detail: 'Cliente guardado correctamente' });
-    this.dialogVisible.set(false);
+  protected saveClient(): void {
+    if (this.dialogMode() === 'edit' && !this.hasClientChanges()) return;
+
+    void submit(this.clientForm, async () => {
+      const model = this.clientModel();
+      const saved = this.dialogMode() === 'create'
+        ? await this.store.create(model)
+        : await this.store.update({
+          ...model,
+          id: this.editingClientId(),
+        });
+
+      if (saved) {
+        this.dialogVisible.set(false);
+        const isCreate = this.dialogMode() === 'create';
+        this.messageService.add({
+          severity: 'success',
+          summary: isCreate ? 'Cliente registrado' : 'Cliente actualizado',
+          detail: isCreate
+            ? 'El cliente ya está disponible para crear un préstamo.'
+            : 'Los datos y la asignación del cliente fueron actualizados.',
+        });
+      }
+    });
   }
+
+  protected changePage(event: { first?: number; rows?: number }): void {
+    void this.store.setPage(event.first ?? 0, event.rows ?? this.store.pageSize());
+  }
+
+  protected riskLabel(client: ClientListItem): string {
+    if (client.isBlacklisted) return `Moroso (${client.overdueDays} d)`;
+    if (client.overdueDays > 0) return `Atraso (${client.overdueDays} d)`;
+    if (client.outstandingAmount > 0) return 'Al día';
+    return 'Sin préstamo';
+  }
+
+  protected riskSeverity(client: ClientListItem): 'success' | 'warn' | 'danger' | 'secondary' {
+    if (client.isBlacklisted) return 'danger';
+    if (client.overdueDays > 0) return 'warn';
+    if (client.outstandingAmount > 0) return 'success';
+    return 'secondary';
+  }
+}
+
+function sameClientModel(left: ClientFormModel, right: ClientFormModel): boolean {
+  return (
+    left.dni.trim() === right.dni.trim() &&
+    left.fullName.trim() === right.fullName.trim() &&
+    left.phone.trim() === right.phone.trim() &&
+    left.collectorId === right.collectorId &&
+    left.address.trim() === right.address.trim() &&
+    left.notes.trim() === right.notes.trim() &&
+    left.active === right.active
+  );
 }

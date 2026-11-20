@@ -1,77 +1,92 @@
-<form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-5">
+<form class="flex flex-col gap-5" (submit)="onSubmit(); $event.preventDefault()">
+  @if (successMessage()) {
+  <div role="status"
+    class="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-800/50 dark:bg-green-950/30 dark:text-green-300">
+    <i class="pi pi-check-circle shrink-0" aria-hidden="true"></i>
+    <span>{{ successMessage() }}</span>
+  </div>
+  }
+
   <!-- Error message -->
   @if (errorMessage()) {
   <div role="alert"
     class="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800/50 dark:bg-red-950/30 dark:text-red-400">
     <i class="pi pi-exclamation-triangle shrink-0" aria-hidden="true"></i>
-    {{ errorMessage() }}
+    <span>{{ errorMessage() }}</span>
   </div>
   }
 
-  <div pFocusTrap class="flex flex-col gap-1.5">
+  <div class="flex flex-col gap-3">
+    <!-- DNI -->
+    <div>
+      <label for="dni" class="sr-only">DNI</label>
+      <p-iconfield>
+        <p-inputicon>
+          <i class="pi pi-id-card" aria-hidden="true"></i>
+        </p-inputicon>
+        <input
+          pInputText
+          appDigitsOnly
+          id="dni"
+          type="text"
+          inputmode="numeric"
+          autocomplete="username"
+          spellcheck="false"
+          placeholder="DNI (8 dígitos)"
+          [fluid]="true"
+          [formField]="loginForm.dni"
+        />
+      </p-iconfield>
+      @if (loginForm.dni().touched() && loginForm.dni().invalid()) {
+      <small class="mt-1 block text-red-600">{{ loginForm.dni().errors()[0]?.message }}</small>
+      }
+    </div>
 
-    <p-iconfield>
-      <p-inputicon>
-        <i class="pi pi-user"></i>
-      </p-inputicon>
-      <input type="text" pInputText id="input" formControlName="dni" type="text" placeholder="DNI" [fluid]="true" />
-    </p-iconfield>
+    <!-- PIN con toggle mostrar/ocultar -->
+    <div>
+      <label for="pin" class="sr-only">PIN</label>
+      <div class="relative">
+        <p-iconfield>
+          <p-inputicon>
+            <i class="pi pi-lock" aria-hidden="true"></i>
+          </p-inputicon>
+          <input
+            pInputText
+            appDigitsOnly
+            id="pin"
+            [type]="showPin() ? 'text' : 'password'"
+            inputmode="numeric"
+            autocomplete="current-password"
+            spellcheck="false"
+            placeholder="PIN de 6 dígitos"
+            [fluid]="true"
+            class="pr-10"
+            [formField]="loginForm.pin"
+          />
+        </p-iconfield>
+        <button
+          type="button"
+          (click)="showPin.set(!showPin())"
+          class="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-surface-400 transition-colors hover:text-surface-600 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:hover:text-surface-200 dark:focus-visible:ring-offset-surface-800"
+          [attr.aria-label]="showPin() ? 'Ocultar PIN' : 'Mostrar PIN'">
+          <i [class]="showPin() ? 'pi pi-eye-slash' : 'pi pi-eye'" aria-hidden="true"></i>
+        </button>
+      </div>
+      @if (loginForm.pin().touched() && loginForm.pin().invalid()) {
+      <small class="mt-1 block text-red-600">{{ loginForm.pin().errors()[0]?.message }}</small>
+      }
+    </div>
 
-    <p-iconfield>
-      <p-inputicon>
-        <i class="pi pi-user"></i>
-      </p-inputicon>
-      <input type="text" pInputText id="input" formControlName="pin" type="password" inputmode="numeric"
-        placeholder="••••" [fluid]="true" />
-    </p-iconfield>
-
-
-    <button pButton type="submit" class="w-full mt-2 justify-center font-bold py-3" [disabled]="loginForm.invalid">
+    <!-- Submit Button -->
+    <button
+      pButton
+      type="submit"
+      class="w-full mt-2 justify-center font-bold py-3"
+      [disabled]="loginForm().invalid() || loading()">
+      @if (loading()) {
+        <i class="pi pi-spin pi-spinner"></i>
+      }
       Ingresar
     </button>
   </div>
 </form>
-
-<!-- Quick Access Demo -->
-<div class="mt-10">
-  <div class="flex items-center gap-4 mb-5">
-    <div class="h-px bg-surface-200 dark:bg-surface-700 flex-1"></div>
-    <span class="text-xs font-semibold text-surface-400 uppercase tracking-widest">Demo rápido</span>
-    <div class="h-px bg-surface-200 dark:bg-surface-700 flex-1"></div>
-  </div>
-
-  <div class="grid grid-cols-3 gap-3">
-    <button type="button"
-      class="flex flex-col items-center justify-center p-3 rounded-xl border border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900 hover:bg-surface-50 dark:hover:bg-surface-800 focus-visible:ring-2 focus-visible:ring-primary-500 transition-colors"
-      (click)="quickLogin('prof-admin')">
-      <div
-        class="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-1.5">
-        <i class="pi pi-crown"></i>
-      </div>
-      <span class="text-xs font-bold text-surface-700 dark:text-surface-300">Admin</span>
-      <span class="text-[10px] text-surface-400">Carlos M.</span>
-    </button>
-
-    <button type="button"
-      class="flex flex-col items-center justify-center p-3 rounded-xl border border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900 hover:bg-surface-50 dark:hover:bg-surface-800 focus-visible:ring-2 focus-visible:ring-primary-500 transition-colors"
-      (click)="quickLogin('prof-cobrador-1')">
-      <div
-        class="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-1.5">
-        <i class="pi pi-motorcycle"></i>
-      </div>
-      <span class="text-xs font-bold text-surface-700 dark:text-surface-300">Cobrador A</span>
-      <span class="text-[10px] text-surface-400">Pedro C.</span>
-    </button>
-
-    <button type="button"
-      class="flex flex-col items-center justify-center p-3 rounded-xl border border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-900 hover:bg-surface-50 dark:hover:bg-surface-800 focus-visible:ring-2 focus-visible:ring-primary-500 transition-colors"
-      (click)="quickLogin('prof-cobrador-2')">
-      <div
-        class="w-9 h-9 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-orange-600 dark:text-orange-400 mb-1.5">
-        <i class="pi pi-motorcycle"></i>
-      </div>
-      <span class="text-xs font-bold text-surface-700 dark:text-surface-300">Cobrador B</span>
-      <span class="text-[10px] text-surface-400">Luis Q.</span>
-    </button>
-  </div>
-</div>

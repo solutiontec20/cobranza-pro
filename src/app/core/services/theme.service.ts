@@ -1,6 +1,6 @@
-import { Injectable, signal, effect } from '@angular/core';
+import { signal, effect, Service } from '@angular/core';
 
-@Injectable({ providedIn: 'root' })
+@Service()
 export class ThemeService {
   isDark = signal<boolean>(false);
 
@@ -8,7 +8,7 @@ export class ThemeService {
     // Inicializar desde localStorage o preferir light
     const stored = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
+
     if (stored === 'dark' || (!stored && prefersDark)) {
       this.isDark.set(true);
     } else {

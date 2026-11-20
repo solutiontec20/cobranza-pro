@@ -1,60 +1,79 @@
 import { Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { form, FormField, maxLength, pattern, required, submit } from '@angular/forms/signals';
 import { AuthService } from '../auth.service';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
-import { AutoFocusModule } from 'primeng/autofocus';
+import { DigitsOnly } from '../../../shared/directives/digits-only';
+
+interface LoginModel {
+  dni: string;
+  pin: string;
+}
+
 @Component({
   selector: 'login-form',
-  imports: [ReactiveFormsModule, ButtonModule, InputTextModule, IconField, InputIcon],
+  imports: [FormField, ButtonModule, DigitsOnly, InputTextModule, IconField, InputIcon],
   templateUrl: './login.html',
 })
 export default class Login {
-
   private authService = inject(AuthService);
   private router = inject(Router);
-  private fb = inject(FormBuilder);
+  private route = inject(ActivatedRoute);
 
-  errorMessage = signal<string | null>(null);
+  errorMessage = signal<string | null>(
+    this.route.snapshot.queryParamMap.get('accessClosed') === '1'
+      ? 'El acceso para cobradores está disponible de 7:00 a. m. a 8:00 p. m.'
+      : null,
+  );
+  successMessage = signal<string | null>(
+    this.route.snapshot.queryParamMap.get('pinChanged') === '1'
+      ? 'Tu PIN fue actualizado. Ingresá nuevamente con el PIN nuevo.'
+      : null,
+  );
+  loading = signal(false);
+  showPin = signal(false);
 
-  loginForm = this.fb.group({
-    dni: ['', [Validators.required, Validators.minLength(8)]],
-    pin: ['', [Validators.required]]
+  protected readonly model = signal<LoginModel>({ dni: '', pin: '' });
+  protected readonly loginForm = form(this.model, (path) => {
+    required(path.dni, { message: 'Ingresá tu DNI.' });
+    pattern(path.dni, /^\d{8}$/, { message: 'El DNI debe contener 8 dígitos.' });
+    maxLength(path.dni, 8, { message: 'El DNI debe contener 8 dígitos.' });
+    required(path.pin, { message: 'Ingresá tu PIN.' });
+    pattern(path.pin, /^\d{6}$/, { message: 'El PIN debe contener 6 dígitos.' });
+    maxLength(path.pin, 6, { message: 'El PIN debe contener 6 dígitos.' });
   });
 
-  onSubmit() {
+  async onSubmit() {
     this.errorMessage.set(null);
-    if (this.loginForm.invalid) {
-      this.errorMessage.set('Por favor, ingrese DNI y PIN válidos');
-      return;
-    }
 
-    const { dni, pin } = this.loginForm.value;
-    const result = this.authService.login(dni!, pin!);
+    void submit(this.loginForm, async () => {
+      const { dni, pin } = this.model();
+      this.loading.set(true);
 
-    if (result.success) {
-      this.navigateBasedOnRole();
-    } else {
-      this.errorMessage.set(result.error || 'Error de autenticación');
-    }
-  }
-
-  quickLogin(profileId: string) {
-    this.errorMessage.set(null);
-    if (this.authService.switchUser(profileId)) {
-      this.navigateBasedOnRole();
-    } else {
-      this.errorMessage.set('Error al cambiar de usuario');
-    }
+      try {
+        await this.authService.login(dni, pin);
+        this.navigateBasedOnRole();
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Error de autenticación';
+        this.errorMessage.set(message);
+      } finally {
+        this.loading.set(false);
+      }
+    });
   }
 
   private navigateBasedOnRole() {
+    if (this.authService.mustChangePin()) {
+      this.router.navigate(['/cambiar-pin']);
+      return;
+    }
+
     if (this.authService.isCollector()) {
       this.router.navigate(['/cobrador']);
-    } else if (this.authService.isAdmin()) {
+    } else if (this.authService.isAdmin() || this.authService.isSupervisor()) {
       this.router.navigate(['/admin']);
     }
   }

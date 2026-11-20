@@ -1,6 +1,15 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { AppStoreService } from '../../core/services/app-store.service';
-import { AuthService } from '../auth/auth.service';
+import { AppError } from '../../core/errors/app-error';
+import { currentLimaDate } from '../../core/calculations/date-time';
+import { normalizeSearchText } from '../../core/calculations/text';
+import {
+  CollectorPortfolioEntry,
+  CreateCollectorClientInput,
+  CreateCollectorClientResult,
+  CreateCollectorLoanInput,
+  CreateCollectorLoanResult,
+} from '../../core/models/collector-portfolio.model';
+import { COLLECTOR_PORTFOLIO_REPOSITORY } from '../../core/repositories/collector-portfolio.repository';
 import {
   CollectionClient,
   CollectionFilter,
@@ -8,57 +17,26 @@ import {
   CollectionSort,
 } from './collection.model';
 
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class CollectionDashboardStore {
-  private appStore = inject(AppStoreService);
-  private authService = inject(AuthService);
+  private readonly repository = inject(COLLECTOR_PORTFOLIO_REPOSITORY);
+
+  private readonly entries = signal<CollectorPortfolioEntry[]>([]);
+  readonly loading = signal(false);
+  readonly saving = signal(false);
+  readonly error = signal<string | null>(null);
 
   readonly query = signal('');
   readonly activeFilter = signal<CollectionFilter>('ALL');
   readonly sortOrder = signal<CollectionSort>('MOST_OVERDUE');
 
-  readonly clients = computed<CollectionClient[]>(() => {
-    const user = this.authService.currentUser();
-    if (!user || user.role !== 'COBRADOR') return [];
-
-    const allClients = this.appStore.clients().filter(c => c.collectorId === user.id && c.active);
-    
-    return allClients.map(client => {
-      const riskStatus = this.appStore.getClientRiskStatus(client);
-      const todayInstallment = this.appStore.getClientTodayInstallment(client.id);
-      const paidToday = this.appStore.hasClientPaidToday(client.id);
-      
-      const activeLoan = this.appStore.loans().find(l => l.clientId === client.id && l.status === 'ACTIVE');
-      const paidLoan = this.appStore.loans().find(l => l.clientId === client.id && l.status === 'PAID');
-      const loan = activeLoan || paidLoan;
-
-      let risk: CollectionRisk = 'current';
-      if (riskStatus.level === 'yellow' || riskStatus.level === 'warning') risk = 'warning';
-      else if (riskStatus.level === 'orange' || riskStatus.level === 'late') risk = 'late';
-      else if (riskStatus.level === 'red' || riskStatus.level === 'defaulted') risk = 'defaulted';
-      else if (riskStatus.level === 'green' || riskStatus.level === 'paid') risk = 'paid';
-
-      return {
-        id: client.id,
-        fullName: client.fullName,
-        dni: client.dni,
-        phone: client.phone,
-        address: client.address,
-        installmentAmount: loan?.installmentAmount || 0,
-        balance: loan?.balance || 0,
-        overdueDays: riskStatus.days,
-        risk,
-        hasDueToday: !!todayInstallment,
-        paidToday,
-        collectedToday: paidToday && todayInstallment ? todayInstallment.paidAmount : 0,
-        loanStatus: activeLoan ? 'ACTIVE' : 'PAID',
-      };
-    });
-  });
+  readonly clients = computed<CollectionClient[]>(() =>
+    this.entries().map((entry) => this.toCollectionClient(entry)),
+  );
 
   readonly summary = computed(() => {
     const clientsList = this.clients();
-    const activeClients = clientsList.filter(client => client.loanStatus === 'ACTIVE');
+    const activeClients = clientsList.filter((client) => client.loanStatus === 'ACTIVE');
     const expectedToday = activeClients
       .filter((client) => client.hasDueToday)
       .reduce((total, client) => total + client.installmentAmount, 0);
@@ -73,14 +51,12 @@ export class CollectionDashboardStore {
       collectedToday,
       overdueClients: activeClients.filter((client) => client.overdueDays > 0).length,
       completionPercentage:
-        expectedToday === 0
-          ? 0
-          : Math.min(100, Math.round((collectedToday / expectedToday) * 100)),
+        expectedToday === 0 ? 0 : Math.min(100, Math.round((collectedToday / expectedToday) * 100)),
     };
   });
 
   readonly filteredClients = computed(() => {
-    const query = this.normalize(this.query());
+    const query = normalizeSearchText(this.query());
     const filter = this.activeFilter();
     const order = this.sortOrder();
 
@@ -89,6 +65,75 @@ export class CollectionDashboardStore {
       .filter((client) => this.matchesFilter(client, filter))
       .sort((left, right) => this.compare(left, right, order));
   });
+
+  async load(): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
+
+    try {
+      this.entries.set(await this.repository.listPortfolio(currentLimaDate()));
+    } catch (error) {
+      this.error.set(this.messageFrom(error, 'No se pudo cargar tu cartera de clientes.'));
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async create(input: CreateCollectorClientInput): Promise<CreateCollectorClientResult | null> {
+    this.saving.set(true);
+    this.error.set(null);
+
+    try {
+      const result = await this.repository.createClient(input);
+      await this.load();
+      return result;
+    } catch (error) {
+      this.error.set(this.messageFrom(error, 'No se pudo registrar el cliente.'));
+      return null;
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  /**
+   * Creates a loan for a customer who already exists in the collector's portfolio but currently
+   * has no renewable loan (never had one, or their only loan isn't active/paid). Prefer `renew`
+   * (via `CollectorLoanStore`) when the customer has an active or fully paid loan.
+   */
+  async createLoanForCustomer(
+    input: CreateCollectorLoanInput,
+  ): Promise<CreateCollectorLoanResult | null> {
+    this.saving.set(true);
+    this.error.set(null);
+
+    try {
+      const result = await this.repository.createLoan(input);
+      await this.load();
+      return result;
+    } catch (error) {
+      this.error.set(this.messageFrom(error, 'No se pudo crear el préstamo.'));
+      return null;
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  /** Resolves the loan to open for a given customer, even outside the cached portfolio list. */
+  async findLoanId(customerId: string): Promise<string | null> {
+    const cached = this.entries().find((entry) => entry.customerId === customerId);
+    if (cached?.loanId) return cached.loanId;
+
+    try {
+      return await this.repository.findLatestLoanId(customerId);
+    } catch (error) {
+      this.error.set(this.messageFrom(error, 'No se pudo cargar el préstamo del cliente.'));
+      return null;
+    }
+  }
+
+  entryFor(customerId: string): CollectorPortfolioEntry | undefined {
+    return this.entries().find((entry) => entry.customerId === customerId);
+  }
 
   setQuery(query: string) {
     this.query.set(query);
@@ -107,14 +152,50 @@ export class CollectionDashboardStore {
     this.activeFilter.set('ALL');
   }
 
+  clearError(): void {
+    this.error.set(null);
+  }
+
   countFor(filter: CollectionFilter) {
     return this.clients().filter((client) => this.matchesFilter(client, filter)).length;
+  }
+
+  private toCollectionClient(entry: CollectorPortfolioEntry): CollectionClient {
+    const risk = this.riskFor(entry);
+
+    return {
+      id: entry.customerId,
+      fullName: entry.fullName,
+      dni: entry.dni,
+      phone: entry.phone,
+      address: entry.address,
+      installmentAmount: entry.installmentAmount,
+      balance: entry.remainingBalance,
+      overdueDays: entry.overdueDays,
+      risk,
+      hasDueToday: entry.todayScheduledAmount > 0,
+      paidToday: entry.todayCollectedAmount > 0,
+      collectedToday: entry.todayCollectedAmount,
+      loanStatus: entry.isLoanActive ? 'ACTIVE' : 'PAID',
+    };
+  }
+
+  /**
+   * A client automatically becomes "moroso" after more than 5 days of accumulated overdue
+   * (confirmed business rule, mirrored by `customer_financial_status.is_blacklisted` in the
+   * database: `overdue_days > 5`). There is no intermediate "late" tier backed by a real rule.
+   */
+  private riskFor(entry: CollectorPortfolioEntry): CollectionRisk {
+    if (!entry.isLoanActive) return 'paid';
+    if (entry.overdueDays > 5) return 'defaulted';
+    if (entry.overdueDays > 0) return 'warning';
+    return 'current';
   }
 
   private matchesQuery(client: CollectionClient, query: string) {
     if (!query) return true;
     return [client.fullName, client.dni, client.phone]
-      .map((value) => this.normalize(value))
+      .map(normalizeSearchText)
       .some((value) => value.includes(query));
   }
 
@@ -141,7 +222,9 @@ export class CollectionDashboardStore {
   private compare(left: CollectionClient, right: CollectionClient, order: CollectionSort) {
     switch (order) {
       case 'MOST_OVERDUE':
-        return (right.overdueDays - left.overdueDays || Number(right.hasDueToday) - Number(left.hasDueToday));
+        return (
+          right.overdueDays - left.overdueDays || Number(right.hasDueToday) - Number(left.hasDueToday)
+        );
       case 'LEAST_OVERDUE':
         return left.overdueDays - right.overdueDays;
       case 'HIGHEST_BALANCE':
@@ -153,11 +236,7 @@ export class CollectionDashboardStore {
     }
   }
 
-  private normalize(value: string) {
-    return value
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLocaleLowerCase('es-PE')
-      .trim();
+  private messageFrom(error: unknown, fallback: string): string {
+    return AppError.from(error).message || fallback;
   }
 }
