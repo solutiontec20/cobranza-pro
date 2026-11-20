@@ -1,13 +1,14 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { AppError } from '../../../core/errors/app-error';
-import { normalizeSearchText } from '../../../core/calculations/text';
 import {
   CreateLoanInput,
   LoanClientOption,
+  LoanCollectorOption,
   LoanDetail,
   LoanFrequency,
   LoanInstallment,
   LoanListItem,
+  LoanListQuery,
   LoanStatus,
   RegisterLoanPaymentInput,
   RegisterLoanPaymentResult,
@@ -25,9 +26,11 @@ export type LoanFrequencyFilter = 'all' | LoanFrequency;
 export class LoansStore {
   private readonly repository = inject(LOAN_REPOSITORY);
   private detailRequestSequence = 0;
+  private pageRequestSequence = 0;
 
   readonly loans = signal<LoanListItem[]>([]);
   readonly availableClients = signal<LoanClientOption[]>([]);
+  readonly collectorOptions = signal<LoanCollectorOption[]>([]);
   readonly selectedSchedule = signal<LoanInstallment[]>([]);
   readonly selectedScheduleLoanId = signal<string | null>(null);
   readonly selectedDetail = signal<LoanDetail | null>(null);
@@ -45,51 +48,90 @@ export class LoansStore {
   readonly statusFilter = signal<LoanStatusFilter>('all');
   readonly collectorFilter = signal<string | null>(null);
   readonly frequencyFilter = signal<LoanFrequencyFilter>('all');
-
-  readonly collectorOptions = computed(() => {
-    const byId = new Map<string, string>();
-    for (const loan of this.loans()) {
-      byId.set(loan.collectorId, loan.collectorName);
-    }
-    return [...byId.entries()]
-      .map(([id, fullName]) => ({ id, fullName }))
-      .sort((left, right) => left.fullName.localeCompare(right.fullName, 'es-PE'));
-  });
-
-  readonly filteredLoans = computed(() => {
-    const query = normalizeSearchText(this.query());
-    const status = this.statusFilter();
-    const collectorId = this.collectorFilter();
-    const frequency = this.frequencyFilter();
-
-    return this.loans().filter((loan) => {
-      if (status !== 'all' && loan.status !== status) return false;
-      if (collectorId !== null && loan.collectorId !== collectorId) return false;
-      if (frequency !== 'all' && loan.frequency !== frequency) return false;
-      if (!query) return true;
-
-      return [loan.clientName, loan.clientDni, loan.collectorName]
-        .map(normalizeSearchText)
-        .some((value) => value.includes(query));
-    });
-  });
+  readonly pageIndex = signal(0);
+  readonly pageSize = signal(10);
+  readonly totalRecords = signal(0);
 
   async load(): Promise<void> {
+    const requestSequence = ++this.pageRequestSequence;
     this.loading.set(true);
     this.error.set(null);
 
     try {
-      const [loans, clients] = await Promise.all([
-        this.repository.list(),
+      const [page, clients, collectors] = await Promise.all([
+        this.repository.listPage(this.pageQuery()),
         this.repository.listAvailableClients(),
+        this.repository.listCollectorOptions(),
       ]);
-      this.loans.set(loans);
+      if (requestSequence !== this.pageRequestSequence) return;
+      this.applyPage(page);
       this.availableClients.set(clients);
+      this.collectorOptions.set(collectors);
     } catch (error) {
+      if (requestSequence !== this.pageRequestSequence) return;
+      this.loans.set([]);
+      this.totalRecords.set(0);
       this.error.set(this.messageFrom(error, 'No se pudo cargar la gestión de préstamos.'));
     } finally {
-      this.loading.set(false);
+      if (requestSequence === this.pageRequestSequence) this.loading.set(false);
     }
+  }
+
+  async loadPage(): Promise<void> {
+    const requestSequence = ++this.pageRequestSequence;
+    this.loading.set(true);
+    this.error.set(null);
+
+    try {
+      const page = await this.repository.listPage(this.pageQuery());
+      if (requestSequence !== this.pageRequestSequence) return;
+      this.applyPage(page);
+    } catch (error) {
+      if (requestSequence !== this.pageRequestSequence) return;
+      this.loans.set([]);
+      this.totalRecords.set(0);
+      this.error.set(this.messageFrom(error, 'No se pudo cargar la gestión de préstamos.'));
+    } finally {
+      if (requestSequence === this.pageRequestSequence) this.loading.set(false);
+    }
+  }
+
+  async setSearch(search: string): Promise<void> {
+    const normalized = search.trim();
+    if (normalized === this.query()) return;
+    this.query.set(normalized);
+    this.pageIndex.set(0);
+    await this.loadPage();
+  }
+
+  async setStatusFilter(status: LoanStatusFilter): Promise<void> {
+    if (status === this.statusFilter()) return;
+    this.statusFilter.set(status);
+    this.pageIndex.set(0);
+    await this.loadPage();
+  }
+
+  async setCollectorFilter(collectorId: string | null): Promise<void> {
+    if (collectorId === this.collectorFilter()) return;
+    this.collectorFilter.set(collectorId);
+    this.pageIndex.set(0);
+    await this.loadPage();
+  }
+
+  async setFrequencyFilter(frequency: LoanFrequencyFilter): Promise<void> {
+    if (frequency === this.frequencyFilter()) return;
+    this.frequencyFilter.set(frequency);
+    this.pageIndex.set(0);
+    await this.loadPage();
+  }
+
+  async setPage(first: number, rows: number): Promise<void> {
+    const pageSize = Math.min(100, Math.max(1, rows));
+    const pageIndex = Math.max(0, Math.floor(first / pageSize));
+    if (pageSize === this.pageSize() && pageIndex === this.pageIndex()) return;
+    this.pageSize.set(pageSize);
+    this.pageIndex.set(pageIndex);
+    await this.loadPage();
   }
 
   async create(input: CreateLoanInput): Promise<boolean> {
@@ -98,6 +140,7 @@ export class LoansStore {
 
     try {
       await this.repository.create(input);
+      this.pageIndex.set(0);
       await this.load();
       return this.error() === null;
     } catch (error) {
@@ -199,12 +242,12 @@ export class LoansStore {
       const result = await this.repository.registerPayment(input);
 
       try {
-        const [loans, clients, detail] = await Promise.all([
-          this.repository.list(),
+        const [page, clients, detail] = await Promise.all([
+          this.repository.listPage(this.pageQuery()),
           this.repository.listAvailableClients(),
           this.repository.getDetail(input.loanId),
         ]);
-        this.loans.set(loans);
+        this.applyPage(page);
         this.availableClients.set(clients);
         this.selectedDetail.set(detail);
       } catch (error) {
@@ -228,11 +271,11 @@ export class LoansStore {
 
     try {
       await this.repository.voidPayment(input);
-      const [loans, detail] = await Promise.all([
-        this.repository.list(),
+      const [page, detail] = await Promise.all([
+        this.repository.listPage(this.pageQuery()),
         this.repository.getDetail(input.loanId),
       ]);
-      this.loans.set(loans);
+      this.applyPage(page);
       this.selectedDetail.set(detail);
       return true;
     } catch (error) {
@@ -251,12 +294,12 @@ export class LoansStore {
       const result = await this.repository.renew(input);
 
       try {
-        const [loans, clients, detail] = await Promise.all([
-          this.repository.list(),
+        const [page, clients, detail] = await Promise.all([
+          this.repository.listPage(this.pageQuery()),
           this.repository.listAvailableClients(),
           this.repository.getDetail(result.loanId),
         ]);
-        this.loans.set(loans);
+        this.applyPage(page);
         this.availableClients.set(clients);
         this.selectedDetail.set(detail);
       } catch (error) {
@@ -278,11 +321,39 @@ export class LoansStore {
     this.error.set(null);
   }
 
-  clearFilters(): void {
+  async clearFilters(): Promise<void> {
+    const alreadyClear =
+      this.query() === '' &&
+      this.statusFilter() === 'all' &&
+      this.collectorFilter() === null &&
+      this.frequencyFilter() === 'all' &&
+      this.pageIndex() === 0;
+    if (alreadyClear) return;
+
     this.query.set('');
     this.statusFilter.set('all');
     this.collectorFilter.set(null);
     this.frequencyFilter.set('all');
+    this.pageIndex.set(0);
+    await this.loadPage();
+  }
+
+  private pageQuery(): LoanListQuery {
+    const status = this.statusFilter();
+    const frequency = this.frequencyFilter();
+    return {
+      pageIndex: this.pageIndex(),
+      pageSize: this.pageSize(),
+      search: this.query(),
+      status: status === 'all' ? null : status,
+      collectorId: this.collectorFilter(),
+      frequency: frequency === 'all' ? null : frequency,
+    };
+  }
+
+  private applyPage(page: { items: LoanListItem[]; total: number }): void {
+    this.loans.set(page.items);
+    this.totalRecords.set(page.total);
   }
 
   private messageFrom(error: unknown, fallback: string): string {

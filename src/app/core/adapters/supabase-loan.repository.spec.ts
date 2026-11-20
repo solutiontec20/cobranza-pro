@@ -13,10 +13,7 @@ describe('SupabaseLoanRepository', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     TestBed.configureTestingModule({
-      providers: [
-        SupabaseLoanRepository,
-        { provide: SUPABASE, useValue: { from, rpc } },
-      ],
+      providers: [SupabaseLoanRepository, { provide: SUPABASE, useValue: { from, rpc } }],
     });
     repository = TestBed.inject(SupabaseLoanRepository);
   });
@@ -56,86 +53,110 @@ describe('SupabaseLoanRepository', () => {
     expect(order).toHaveBeenCalledWith('installment_number', { ascending: true });
   });
 
-  it('uses posted payment history for the same balance shown by loan detail', async () => {
-    from
-      .mockImplementationOnce(() => ({
-        select: () => ({
-          order: () =>
-            Promise.resolve({
-              data: [
-                {
-                  id: 'loan-1',
-                  customer_id: 'customer-1',
-                  principal_amount: 120,
-                  interest_rate_percent: 0,
-                  total_amount: 120,
-                  installment_count: 30,
-                  frequency: 'daily',
-                  started_on: '2026-10-01',
-                  first_due_on: '2026-10-01',
-                  status: 'active',
-                  created_at: '2026-10-01T12:00:00Z',
-                  customer: {
-                    id: 'customer-1',
-                    full_name: 'Ana Flores',
-                    document_number: '45678901',
-                    collector_id: 'collector-1',
-                    collector: { id: 'collector-1', full_name: 'Luis Ramos' },
-                  },
-                },
-              ],
-              error: null,
-            }),
-        }),
-      }))
-      .mockImplementationOnce(() => ({
-        select: () =>
-          Promise.resolve({
-            data: [
-              {
-                loan_id: 'loan-1',
-                installment_number: 1,
-                due_date: '2026-10-01',
-                scheduled_amount: 4,
-                outstanding_amount: 3,
-              },
-              {
-                loan_id: 'loan-1',
-                installment_number: 30,
-                due_date: '2026-11-04',
-                scheduled_amount: 4,
-                outstanding_amount: 112,
-              },
-            ],
-            error: null,
-          }),
-      }))
-      .mockImplementationOnce(() => ({
-        select: () =>
-          Promise.resolve({
-            data: [
-              { loan_id: 'loan-1', amount: 1, status: 'posted' },
-              { loan_id: 'loan-1', amount: 9, status: 'posted' },
-              { loan_id: 'loan-1', amount: 20, status: 'posted' },
-              { loan_id: 'loan-1', amount: 4, status: 'voided' },
-            ],
-            error: null,
-          }),
-      }));
+  it('maps a paginated loan summary without loading unbounded related rows', async () => {
+    rpc.mockResolvedValue({
+      data: [
+        {
+          id: 'loan-1',
+          customer_id: 'customer-1',
+          client_name: 'Ana Flores',
+          client_dni: '45678901',
+          collector_id: 'collector-1',
+          collector_name: 'Luis Ramos',
+          principal_amount: 120,
+          interest_rate_percent: 0,
+          total_amount: 120,
+          installment_count: 30,
+          installment_amount: 4,
+          frequency: 'daily',
+          started_on: '2026-10-01',
+          end_date: '2026-11-04',
+          balance: 90,
+          status: 'active',
+          created_at: '2026-10-01T12:00:00Z',
+          total_count: 87,
+        },
+      ],
+      error: null,
+    });
 
-    const [result] = await repository.list();
+    await expect(
+      repository.listPage({
+        pageIndex: 0,
+        pageSize: 10,
+        search: '',
+        status: null,
+        collectorId: null,
+        frequency: null,
+      }),
+    ).resolves.toEqual({
+      items: [
+        {
+          id: 'loan-1',
+          clientId: 'customer-1',
+          clientName: 'Ana Flores',
+          clientDni: '45678901',
+          collectorId: 'collector-1',
+          collectorName: 'Luis Ramos',
+          principal: 120,
+          interestRate: 0,
+          totalAmount: 120,
+          installmentAmount: 4,
+          installmentCount: 30,
+          frequency: 'daily',
+          balance: 90,
+          status: 'active',
+          startedOn: '2026-10-01',
+          endDate: '2026-11-04',
+          createdAt: '2026-10-01T12:00:00Z',
+        },
+      ],
+      total: 87,
+    });
+    expect(rpc).toHaveBeenCalledWith('admin_list_loans_page', {
+      p_page_index: 0,
+      p_page_size: 10,
+      p_search: undefined,
+      p_status: undefined,
+      p_collector_id: undefined,
+      p_frequency: undefined,
+    });
+    expect(from).not.toHaveBeenCalled();
+  });
 
-    expect(result.balance).toBe(90);
-    expect(result.installmentAmount).toBe(4);
-    expect(result.endDate).toBe('2026-11-04');
-    expect(result.clientDni).toBe('45678901');
+  it('loads active collector options independently from the current loan page', async () => {
+    rpc.mockResolvedValue({
+      data: [
+        {
+          id: 'collector-2',
+          full_name: 'Luis Ramos',
+          dni: '70000002',
+          phone: null,
+          active: true,
+          active_customer_count: 12,
+          created_at: '2026-10-01T12:00:00Z',
+        },
+        {
+          id: 'collector-1',
+          full_name: 'Ana Torres',
+          dni: '70000001',
+          phone: null,
+          active: false,
+          active_customer_count: 0,
+          created_at: '2026-10-01T12:00:00Z',
+        },
+      ],
+      error: null,
+    });
+
+    await expect(repository.listCollectorOptions()).resolves.toEqual([
+      { id: 'collector-2', fullName: 'Luis Ramos' },
+    ]);
+    expect(rpc).toHaveBeenCalledWith('admin_list_collectors');
   });
 
   it.each([
-    [
-      'Only active loans may be updated',
-      'Solo se pueden editar préstamos activos.',
-    ],
+    ['Only active loans may be updated', 'Solo se pueden editar préstamos activos.'],
     [
       'Loans with payment history cannot be updated',
       'No se puede editar un préstamo con historial de pagos.',
@@ -207,7 +228,10 @@ describe('SupabaseLoanRepository', () => {
 
   it.each([
     ['Payment exceeds outstanding loan balance', 'El monto no puede superar el saldo pendiente.'],
-    ['Payments can only be registered on active loans', 'Solo se pueden registrar pagos en préstamos activos.'],
+    [
+      'Payments can only be registered on active loans',
+      'Solo se pueden registrar pagos en préstamos activos.',
+    ],
     ['Loan has no outstanding balance', 'El préstamo no tiene saldo pendiente.'],
   ])('translates the payment error %s', async (databaseMessage, expectedMessage) => {
     rpc.mockResolvedValue({

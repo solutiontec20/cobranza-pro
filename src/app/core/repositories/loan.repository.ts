@@ -3,9 +3,11 @@ import {
   CreateLoanInput,
   Loan,
   LoanClientOption,
+  LoanCollectorOption,
   LoanDetail,
   LoanInstallment,
-  LoanListItem,
+  LoanListPage,
+  LoanListQuery,
   RegisterLoanPaymentInput,
   RegisterLoanPaymentResult,
   RenewLoanInput,
@@ -16,9 +18,11 @@ import {
 } from '../models/loan.model';
 
 export interface LoanRepository {
-  list(): Promise<LoanListItem[]>;
+  listPage(query: LoanListQuery): Promise<LoanListPage>;
 
   listAvailableClients(): Promise<LoanClientOption[]>;
+
+  listCollectorOptions(): Promise<LoanCollectorOption[]>;
 
   getSchedule(loanId: string): Promise<LoanInstallment[]>;
 

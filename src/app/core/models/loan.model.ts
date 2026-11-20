@@ -52,6 +52,25 @@ export interface LoanListItem {
   createdAt: string;
 }
 
+export interface LoanListQuery {
+  pageIndex: number;
+  pageSize: number;
+  search: string;
+  status: LoanStatus | null;
+  collectorId: string | null;
+  frequency: LoanFrequency | null;
+}
+
+export interface LoanListPage {
+  items: LoanListItem[];
+  total: number;
+}
+
+export interface LoanCollectorOption {
+  id: string;
+  fullName: string;
+}
+
 export interface LoanClientOption {
   id: string;
   dni: string;

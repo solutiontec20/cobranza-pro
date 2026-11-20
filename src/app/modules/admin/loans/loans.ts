@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { form, FormField, max, min, required, submit, validate } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
@@ -13,7 +13,6 @@ import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-import { pageItems } from '../../../core/calculations/loan-detail-filtering';
 import { LoanFrequency, LoanStatus } from '../../../core/models/loan.model';
 import { EsDate } from '../../../shared/pipes/es-date';
 import { PenCurrency } from '../../../shared/pipes/pen-currency';
@@ -62,12 +61,15 @@ const emptyModel = (): LoanFormModel => ({
 export default class Loans {
   protected readonly store = inject(LoansStore);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly loadingRows = [1, 2, 3];
   protected readonly createDialogVisible = signal(false);
   protected readonly pageSizeOptions = [5, 10, 25];
-  protected readonly pageFirst = signal(0);
-  protected readonly pageRows = signal(10);
+  protected readonly pageFirst = computed(() => this.store.pageIndex() * this.store.pageSize());
+  protected readonly pageRows = this.store.pageSize;
+  protected readonly searchValue = signal('');
   protected readonly frequencyOptions: Array<{ label: string; value: LoanFrequency }> = [
     { label: 'Diario', value: 'daily' },
     { label: 'Semanal', value: 'weekly' },
@@ -129,42 +131,46 @@ export default class Loans {
       value: client.id,
     })),
   );
-  protected readonly visibleLoans = computed(() =>
-    pageItems(this.store.filteredLoans(), this.pageFirst(), this.pageRows()),
-  );
-
   constructor() {
     void this.store.load();
+    this.destroyRef.onDestroy(() => {
+      if (this.searchTimer !== null) clearTimeout(this.searchTimer);
+    });
   }
 
   protected updateSearch(event: Event): void {
-    this.store.query.set((event.target as HTMLInputElement).value);
-    this.pageFirst.set(0);
+    const value = (event.target as HTMLInputElement).value;
+    this.searchValue.set(value);
+    if (this.searchTimer !== null) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => {
+      this.searchTimer = null;
+      void this.store.setSearch(value);
+    }, 300);
   }
 
   protected changeStatusFilter(status: LoanStatusFilter): void {
-    this.store.statusFilter.set(status);
-    this.pageFirst.set(0);
+    void this.store.setStatusFilter(status);
   }
 
   protected changeCollectorFilter(collectorId: string | null): void {
-    this.store.collectorFilter.set(collectorId);
-    this.pageFirst.set(0);
+    void this.store.setCollectorFilter(collectorId);
   }
 
   protected changeFrequencyFilter(frequency: LoanFrequencyFilter): void {
-    this.store.frequencyFilter.set(frequency);
-    this.pageFirst.set(0);
+    void this.store.setFrequencyFilter(frequency);
   }
 
   protected clearFilters(): void {
-    this.store.clearFilters();
-    this.pageFirst.set(0);
+    if (this.searchTimer !== null) {
+      clearTimeout(this.searchTimer);
+      this.searchTimer = null;
+    }
+    this.searchValue.set('');
+    void this.store.clearFilters();
   }
 
   protected changePage(event: { first?: number; rows?: number }): void {
-    this.pageFirst.set(event.first ?? 0);
-    this.pageRows.set(event.rows ?? 10);
+    void this.store.setPage(event.first ?? 0, event.rows ?? 10);
   }
 
   protected openCreateDialog(): void {

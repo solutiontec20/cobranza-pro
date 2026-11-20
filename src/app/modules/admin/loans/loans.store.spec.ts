@@ -76,8 +76,9 @@ const detail: LoanDetail = {
 describe('LoansStore', () => {
   let store: LoansStore;
   let repository: {
-    list: ReturnType<typeof vi.fn<LoanRepository['list']>>;
+    listPage: ReturnType<typeof vi.fn<LoanRepository['listPage']>>;
     listAvailableClients: ReturnType<typeof vi.fn<LoanRepository['listAvailableClients']>>;
+    listCollectorOptions: ReturnType<typeof vi.fn<LoanRepository['listCollectorOptions']>>;
     getSchedule: ReturnType<typeof vi.fn<LoanRepository['getSchedule']>>;
     getDetail: ReturnType<typeof vi.fn<LoanRepository['getDetail']>>;
     create: ReturnType<typeof vi.fn<LoanRepository['create']>>;
@@ -89,8 +90,12 @@ describe('LoansStore', () => {
 
   beforeEach(() => {
     repository = {
-      list: vi.fn<LoanRepository['list']>().mockResolvedValue([loan]),
+      listPage: vi.fn<LoanRepository['listPage']>().mockResolvedValue({ items: [loan], total: 1 }),
       listAvailableClients: vi.fn<LoanRepository['listAvailableClients']>().mockResolvedValue([]),
+      listCollectorOptions: vi.fn<LoanRepository['listCollectorOptions']>().mockResolvedValue([
+        { id: 'collector-2', fullName: 'Luis Ramos' },
+        { id: 'collector-1', fullName: 'María Quispe' },
+      ]),
       getSchedule: vi.fn<LoanRepository['getSchedule']>().mockResolvedValue(schedule),
       getDetail: vi.fn<LoanRepository['getDetail']>().mockResolvedValue(detail),
       create: vi.fn<LoanRepository['create']>(),
@@ -138,7 +143,7 @@ describe('LoansStore', () => {
         firstDueOn: loan.startedOn,
       }),
     ).toBe(true);
-    expect(repository.list).toHaveBeenCalledOnce();
+    expect(repository.listPage).toHaveBeenCalledOnce();
   });
 
   it('loads the selected payment schedule', async () => {
@@ -212,7 +217,7 @@ describe('LoansStore', () => {
     });
 
     expect(updated).toBe(true);
-    expect(repository.list).toHaveBeenCalledOnce();
+    expect(repository.listPage).toHaveBeenCalledOnce();
     expect(repository.getSchedule).toHaveBeenCalledWith(loan.id);
     expect(store.saving()).toBe(false);
   });
@@ -253,7 +258,7 @@ describe('LoansStore', () => {
     expect(updated).toBe(false);
     expect(store.error()).toBe('Solo se pueden editar préstamos activos.');
     expect(store.loans()).toEqual([loan]);
-    expect(repository.list).toHaveBeenCalledOnce();
+    expect(repository.listPage).toHaveBeenCalledOnce();
   });
 
   it('registers a payment and refreshes the complete server state', async () => {
@@ -280,7 +285,7 @@ describe('LoansStore', () => {
       paymentMethod: 'cash',
       notes: 'Pago en oficina',
     });
-    expect(repository.list).toHaveBeenCalledOnce();
+    expect(repository.listPage).toHaveBeenCalledOnce();
     expect(repository.listAvailableClients).toHaveBeenCalledOnce();
     expect(repository.getDetail).toHaveBeenCalledWith(loan.id);
     expect(store.paying()).toBe(false);
@@ -328,7 +333,7 @@ describe('LoansStore', () => {
       loanId: loan.id,
       reason: 'Pago duplicado confirmado.',
     });
-    expect(repository.list).toHaveBeenCalledOnce();
+    expect(repository.listPage).toHaveBeenCalledOnce();
     expect(repository.getDetail).toHaveBeenCalledWith(loan.id);
     expect(store.voidingPayment()).toBe(false);
   });
@@ -357,7 +362,7 @@ describe('LoansStore', () => {
       }),
     ).resolves.toEqual(renewResult);
 
-    expect(repository.list).toHaveBeenCalledOnce();
+    expect(repository.listPage).toHaveBeenCalledOnce();
     expect(repository.listAvailableClients).toHaveBeenCalledOnce();
     expect(repository.getDetail).toHaveBeenCalledWith('loan-2');
     expect(store.renewing()).toBe(false);
@@ -386,74 +391,79 @@ describe('LoansStore', () => {
     );
   });
 
-  describe('filtering', () => {
+  describe('server-backed filtering', () => {
     beforeEach(() => {
-      repository.list.mockResolvedValue([loan, otherLoan]);
+      repository.listPage.mockResolvedValue({ items: [loan, otherLoan], total: 2 });
     });
 
-    it('filters by free-text search across client name, DNI and collector name, ignoring accents', async () => {
+    it('requests free-text search from the server', async () => {
       await store.load();
+      await store.setSearch(' ana ');
 
-      store.query.set('ana');
-      expect(store.filteredLoans()).toEqual([loan]);
-
-      store.query.set('71234567');
-      expect(store.filteredLoans()).toEqual([otherLoan]);
-
-      store.query.set('ramos');
-      expect(store.filteredLoans()).toEqual([otherLoan]);
-
-      store.query.set('ningún cliente');
-      expect(store.filteredLoans()).toEqual([]);
+      expect(repository.listPage).toHaveBeenLastCalledWith(
+        expect.objectContaining({ pageIndex: 0, search: 'ana' }),
+      );
     });
 
-    it('filters by status', async () => {
+    it('requests status filtering from the server', async () => {
       await store.load();
-      store.statusFilter.set('paid');
-      expect(store.filteredLoans()).toEqual([otherLoan]);
+      await store.setStatusFilter('paid');
+
+      expect(repository.listPage).toHaveBeenLastCalledWith(
+        expect.objectContaining({ pageIndex: 0, status: 'paid' }),
+      );
     });
 
-    it('filters by collector', async () => {
+    it('requests collector filtering from the server', async () => {
       await store.load();
-      store.collectorFilter.set('collector-1');
-      expect(store.filteredLoans()).toEqual([loan]);
+      await store.setCollectorFilter('collector-1');
+
+      expect(repository.listPage).toHaveBeenLastCalledWith(
+        expect.objectContaining({ pageIndex: 0, collectorId: 'collector-1' }),
+      );
     });
 
-    it('filters by frequency', async () => {
+    it('requests frequency filtering from the server', async () => {
       await store.load();
-      store.frequencyFilter.set('monthly');
-      expect(store.filteredLoans()).toEqual([otherLoan]);
+      await store.setFrequencyFilter('monthly');
+
+      expect(repository.listPage).toHaveBeenLastCalledWith(
+        expect.objectContaining({ pageIndex: 0, frequency: 'monthly' }),
+      );
     });
 
-    it('combines every active filter', async () => {
+    it('loads collector options independently from the current page', async () => {
       await store.load();
-      store.statusFilter.set('active');
-      store.collectorFilter.set('collector-2');
-      expect(store.filteredLoans()).toEqual([]);
-    });
 
-    it('exposes the distinct collectors present in the loaded loans, sorted by name', async () => {
-      await store.load();
       expect(store.collectorOptions()).toEqual([
         { id: 'collector-2', fullName: 'Luis Ramos' },
         { id: 'collector-1', fullName: 'María Quispe' },
       ]);
     });
 
-    it('clears every filter back to its default', async () => {
+    it('clears every filter and reloads the first page', async () => {
       await store.load();
       store.query.set('ana');
       store.statusFilter.set('paid');
       store.collectorFilter.set('collector-2');
       store.frequencyFilter.set('monthly');
+      store.pageIndex.set(3);
 
-      store.clearFilters();
+      await store.clearFilters();
 
       expect(store.query()).toBe('');
       expect(store.statusFilter()).toBe('all');
       expect(store.collectorFilter()).toBeNull();
       expect(store.frequencyFilter()).toBe('all');
-      expect(store.filteredLoans()).toEqual([loan, otherLoan]);
+      expect(store.pageIndex()).toBe(0);
+      expect(repository.listPage).toHaveBeenLastCalledWith({
+        pageIndex: 0,
+        pageSize: 10,
+        search: '',
+        status: null,
+        collectorId: null,
+        frequency: null,
+      });
     });
   });
 });
