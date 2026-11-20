@@ -92,19 +92,34 @@ select throws_ok(
 set local request.jwt.claim.sub = 'a1000000-0000-0000-0000-000000000002';
 
 select is(
-  (select count(*) from public.admin_list_loans_page(0, 2, null, null, null, null)),
+  (
+    select count(*)
+    from public.admin_list_loans_page(
+      0, 2, null, null, 'a1000000-0000-0000-0000-000000000001', null
+    )
+  ),
   2::bigint,
   'The first page contains the requested number of loans'
 );
 
 select is(
-  (select max(total_count) from public.admin_list_loans_page(0, 2, null, null, null, null)),
+  (
+    select max(total_count)
+    from public.admin_list_loans_page(
+      0, 2, null, null, 'a1000000-0000-0000-0000-000000000001', null
+    )
+  ),
   3::bigint,
   'Every page reports the full filtered count'
 );
 
 select is(
-  (select count(*) from public.admin_list_loans_page(1, 2, null, null, null, null)),
+  (
+    select count(*)
+    from public.admin_list_loans_page(
+      1, 2, null, null, 'a1000000-0000-0000-0000-000000000001', null
+    )
+  ),
   1::bigint,
   'The second page contains only the remaining loan'
 );
@@ -121,7 +136,9 @@ select is(
 select is(
   (
     select count(*)
-    from public.admin_list_loans_page(0, 10, null, 'active', null, 'weekly')
+    from public.admin_list_loans_page(
+      0, 10, null, 'active', 'a1000000-0000-0000-0000-000000000001', 'weekly'
+    )
   ),
   1::bigint,
   'Status and frequency filters are applied on the server'
