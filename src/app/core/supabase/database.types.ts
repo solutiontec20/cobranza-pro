@@ -1002,6 +1002,36 @@ export type Database = {
           phone: string;
         }[];
       };
+      admin_list_loans_page: {
+        Args: {
+          p_collector_id?: string;
+          p_frequency?: Database['public']['Enums']['loan_frequency'];
+          p_page_index?: number;
+          p_page_size?: number;
+          p_search?: string;
+          p_status?: Database['public']['Enums']['loan_status'];
+        };
+        Returns: {
+          balance: number;
+          client_dni: string;
+          client_name: string;
+          collector_id: string;
+          collector_name: string;
+          created_at: string;
+          customer_id: string;
+          end_date: string;
+          frequency: Database['public']['Enums']['loan_frequency'];
+          id: string;
+          installment_amount: number;
+          installment_count: number;
+          interest_rate_percent: number;
+          principal_amount: number;
+          started_on: string;
+          status: Database['public']['Enums']['loan_status'];
+          total_amount: number;
+          total_count: number;
+        }[];
+      };
       admin_prepare_collector_pin_reset: {
         Args: { p_collector_id: string; p_reason: string };
         Returns: {

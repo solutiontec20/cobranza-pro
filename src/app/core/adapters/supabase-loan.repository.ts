@@ -7,9 +7,12 @@ import {
   CreateLoanInput,
   Loan,
   LoanClientOption,
+  LoanCollectorOption,
   LoanDetail,
   LoanInstallment,
   LoanInstallmentStatus,
+  LoanListPage,
+  LoanListQuery,
   LoanListItem,
   RegisterLoanPaymentInput,
   RegisterLoanPaymentResult,
@@ -28,161 +31,45 @@ type UpdateLoanRow = Database['public']['Functions']['admin_update_loan']['Retur
 type RegisterPaymentRow = Database['public']['Functions']['register_payment']['Returns'][number];
 type RenewLoanRow = Database['public']['Functions']['renew_loan']['Returns'][number];
 type VoidPaymentRow = Database['public']['Functions']['void_payment']['Returns'][number];
+type LoanPageRow = Database['public']['Functions']['admin_list_loans_page']['Returns'][number];
+type CollectorRow = Database['public']['Functions']['admin_list_collectors']['Returns'][number];
 
 @Service({ autoProvided: false })
 export class SupabaseLoanRepository implements LoanRepository {
   private readonly supabase = inject(SUPABASE) as SupabaseClient<Database>;
 
-  async list(): Promise<LoanListItem[]> {
-    const loansQuery = this.supabase
-      .from('loans')
-      .select(
-        `
-        id,
-        customer_id,
-        principal_amount,
-        interest_rate_percent,
-        total_amount,
-        installment_count,
-        frequency,
-        started_on,
-        first_due_on,
-        status,
-        created_at,
-        customer:customers!loans_customer_id_fkey (
-          id,
-          full_name,
-          document_number,
-          collector_id,
-          collector:profiles!customers_collector_id_fkey (
-            id,
-            full_name
-          )
-        )
-      `,
-      )
-      .order('created_at', { ascending: false });
-
-    const balancesQuery = this.supabase.from('installment_balances').select(`
-        loan_id,
-        installment_number,
-        due_date,
-        scheduled_amount,
-        outstanding_amount
-      `);
-
-    const paymentsQuery = this.supabase.from('payments').select('loan_id, amount, status');
-
-    const [
-      { data: loans, error: loansError },
-      { data: balances, error: balancesError },
-      { data: payments, error: paymentsError },
-    ] = await Promise.all([loansQuery, balancesQuery, paymentsQuery]);
-
-    if (loansError) {
-      throw this.toAppError(loansError, 'No se pudo cargar la lista de préstamos.');
-    }
-
-    if (balancesError) {
-      throw this.toAppError(balancesError, 'No se pudo calcular el saldo de los préstamos.');
-    }
-
-    if (paymentsError) {
-      throw this.toAppError(paymentsError, 'No se pudo calcular el saldo real de los préstamos.');
-    }
-
-    const scheduleSummaries = new Map<
-      string,
-      {
-        installmentAmount: number | null;
-        endDate: string | null;
-      }
-    >();
-
-    for (const row of balances ?? []) {
-      if (!row.loan_id) {
-        continue;
-      }
-
-      const current = scheduleSummaries.get(row.loan_id) ?? {
-        installmentAmount: null,
-        endDate: null,
-      };
-
-      if (row.installment_number === 1 && row.scheduled_amount !== null) {
-        current.installmentAmount = Number(row.scheduled_amount);
-      }
-
-      if (row.due_date && (current.endDate === null || row.due_date > current.endDate)) {
-        current.endDate = row.due_date;
-      }
-
-      scheduleSummaries.set(row.loan_id, current);
-    }
-
-    const paymentsByLoan = new Map<
-      string,
-      Array<{ amount: number; status: 'posted' | 'voided' }>
-    >();
-
-    for (const payment of payments ?? []) {
-      const loanPayments = paymentsByLoan.get(payment.loan_id) ?? [];
-      loanPayments.push({
-        amount: Number(payment.amount),
-        status: payment.status,
-      });
-      paymentsByLoan.set(payment.loan_id, loanPayments);
-    }
-
-    return (loans ?? []).map((row) => {
-      const customer = row.customer;
-      const collector = customer?.collector;
-
-      if (!customer || !collector) {
-        throw new AppError(
-          'SUPABASE_RPC',
-          'El préstamo tiene relaciones de cliente o cobrador incompletas.',
-        );
-      }
-
-      const summary = scheduleSummaries.get(row.id);
-      if (!summary || summary.installmentAmount === null || summary.endDate === null) {
-        throw new AppError('SUPABASE_RPC', 'El préstamo no tiene un cronograma de cuotas válido.');
-      }
-
-      return {
-        id: row.id,
-
-        clientId: customer.id,
-        clientName: customer.full_name,
-        clientDni: customer.document_number,
-
-        collectorId: collector.id,
-        collectorName: collector.full_name,
-
-        principal: Number(row.principal_amount),
-        interestRate: Number(row.interest_rate_percent),
-        totalAmount: Number(row.total_amount),
-
-        installmentAmount: summary.installmentAmount,
-        installmentCount: Number(row.installment_count),
-
-        frequency: row.frequency,
-
-        balance: calculateLoanPaymentSummary(
-          Number(row.total_amount),
-          paymentsByLoan.get(row.id) ?? [],
-        ).remainingBalance,
-
-        status: row.status,
-
-        startedOn: row.started_on,
-
-        endDate: summary.endDate,
-
-        createdAt: row.created_at,
-      };
+  async listPage(query: LoanListQuery): Promise<LoanListPage> {
+    const { data, error } = await this.supabase.rpc('admin_list_loans_page', {
+      p_page_index: query.pageIndex,
+      p_page_size: query.pageSize,
+      p_search: query.search || undefined,
+      p_status: query.status ?? undefined,
+      p_collector_id: query.collectorId ?? undefined,
+      p_frequency: query.frequency ?? undefined,
     });
+
+    if (error) {
+      throw this.toAppError(error, 'No se pudo cargar la lista de préstamos.');
+    }
+
+    const rows = data ?? [];
+    return {
+      items: rows.map((row) => this.toLoanListItem(row)),
+      total: Number(rows[0]?.total_count ?? 0),
+    };
+  }
+
+  async listCollectorOptions(): Promise<LoanCollectorOption[]> {
+    const { data, error } = await this.supabase.rpc('admin_list_collectors');
+
+    if (error) {
+      throw this.toAppError(error, 'No se pudo cargar la lista de cobradores.');
+    }
+
+    return (data ?? [])
+      .filter((row) => row.active)
+      .map((row: CollectorRow) => ({ id: row.id, fullName: row.full_name }))
+      .sort((left, right) => left.fullName.localeCompare(right.fullName, 'es-PE'));
   }
 
   // ==========================================================
@@ -580,6 +467,32 @@ export class SupabaseLoanRepository implements LoanRepository {
   // ==========================================================
   // MAPPERS
   // ==========================================================
+
+  private toLoanListItem(row: LoanPageRow): LoanListItem {
+    if (row.installment_amount === null || row.end_date === null) {
+      throw new AppError('SUPABASE_RPC', 'El préstamo no tiene un cronograma de cuotas válido.');
+    }
+
+    return {
+      id: row.id,
+      clientId: row.customer_id,
+      clientName: row.client_name,
+      clientDni: row.client_dni,
+      collectorId: row.collector_id,
+      collectorName: row.collector_name,
+      principal: Number(row.principal_amount),
+      interestRate: Number(row.interest_rate_percent),
+      totalAmount: Number(row.total_amount),
+      installmentAmount: Number(row.installment_amount),
+      installmentCount: Number(row.installment_count),
+      frequency: row.frequency,
+      balance: Number(row.balance),
+      status: row.status,
+      startedOn: row.started_on,
+      endDate: row.end_date,
+      createdAt: row.created_at,
+    };
+  }
 
   private toLoan(row: CreateLoanRow | UpdateLoanRow): Loan {
     return {
