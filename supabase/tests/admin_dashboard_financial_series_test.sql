@@ -29,17 +29,28 @@ values (
 insert into public.loans (
   id, customer_id, principal_amount, interest_rate_percent, total_amount, disbursed_amount,
   installment_count, frequency, started_on, first_due_on, status, created_by
-) values (
-  'f3000000-0000-0000-0000-000000000001', 'f2000000-0000-0000-0000-000000000001',
-  100.00, 20.0000, 120.00, 100.00, 1, 'monthly', '2026-10-01', '2026-11-01', 'active',
-  'f1000000-0000-0000-0000-000000000001'
-);
+) values
+  (
+    'f3000000-0000-0000-0000-000000000001', 'f2000000-0000-0000-0000-000000000001',
+    100.00, 20.0000, 120.00, 100.00, 1, 'monthly', '2026-10-01', '2026-11-01', 'active',
+    'f1000000-0000-0000-0000-000000000001'
+  ),
+  (
+    'f3000000-0000-0000-0000-000000000002', 'f2000000-0000-0000-0000-000000000001',
+    10.00, 20.0000, 12.00, 10.00, 1, 'monthly', '2026-09-01', '2026-10-01', 'paid',
+    'f1000000-0000-0000-0000-000000000001'
+  );
 
 insert into public.installments (id, loan_id, installment_number, due_date, scheduled_amount)
-values (
-  'f4000000-0000-0000-0000-000000000001',
-  'f3000000-0000-0000-0000-000000000001', 1, '2026-11-01', 120.00
-);
+values
+  (
+    'f4000000-0000-0000-0000-000000000001',
+    'f3000000-0000-0000-0000-000000000001', 1, '2026-11-01', 120.00
+  ),
+  (
+    'f4000000-0000-0000-0000-000000000002',
+    'f3000000-0000-0000-0000-000000000002', 1, '2026-10-01', 12.00
+  );
 
 -- The UTC timestamp falls on November 2, but the persisted business date is November 1 in Lima.
 insert into public.payments (
@@ -57,19 +68,24 @@ values (
 
 -- Voided payments and their retained allocations must not contribute.
 insert into public.payments (
-  id, loan_id, collector_id, amount, payment_method, status, business_date, paid_at,
-  created_by, voided_at, voided_by, void_reason
+  id, loan_id, collector_id, amount, payment_method, status, business_date, paid_at, created_by
 ) values (
-  'f5000000-0000-0000-0000-000000000002', 'f3000000-0000-0000-0000-000000000001',
-  'f1000000-0000-0000-0000-000000000003', 12.00, 'cash', 'voided', '2026-11-01',
-  '2026-11-02 04:30:00+00', 'f1000000-0000-0000-0000-000000000003',
-  '2026-11-03 00:00:00+00', 'f1000000-0000-0000-0000-000000000001', 'test void'
+  'f5000000-0000-0000-0000-000000000002', 'f3000000-0000-0000-0000-000000000002',
+  'f1000000-0000-0000-0000-000000000003', 12.00, 'cash', 'posted', '2026-11-01',
+  '2026-11-02 04:30:00+00', 'f1000000-0000-0000-0000-000000000003'
 );
 insert into public.payment_allocations (payment_id, installment_id, amount)
 values (
   'f5000000-0000-0000-0000-000000000002',
-  'f4000000-0000-0000-0000-000000000001', 12.00
+  'f4000000-0000-0000-0000-000000000002', 12.00
 );
+update public.payments
+set
+  status = 'voided',
+  voided_at = '2026-11-03 00:00:00+00',
+  voided_by = 'f1000000-0000-0000-0000-000000000001',
+  void_reason = 'test void'
+where id = 'f5000000-0000-0000-0000-000000000002';
 
 -- Superseded allocations from repaired schedules must not contribute.
 insert into public.payments (

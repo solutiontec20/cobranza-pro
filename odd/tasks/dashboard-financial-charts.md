@@ -17,7 +17,7 @@ Objective: Add two Supabase-backed financial charts to the admin dashboard, shar
 
 - [x] **T1** — S3-S6, S8: add the financial-series model/repository contract, secure RPC migration, generated type entry, Supabase adapter mapping, and pgTAP/adapter coverage. Route: delegated backend unit; disjoint core/Supabase surfaces. Status: implemented; adapter tests pass and pgTAP is pending CI. Commit: pending (user-owned).
 - [x] **T2** — S1-S2, S7-S8: extend the dashboard store and build the shared selectors plus two responsive deferred Chart.js presentations with focused tests. Route: delegated frontend unit; disjoint dashboard surfaces. Status: implemented; store, calculation, and chart tests pass. Commit: pending (user-owned).
-- [x] **T3** — S1-S8: reconcile the backend/frontend seam, format touched files, run focused checks, independent high-risk verification, then full `test:ci` and `build` once. Route: inline. Status: 208 tests and production build pass; independent recheck resolved all reported blockers; pgTAP remains pending CI. Commit: pending (user-owned).
+- [ ] **T3** — S1-S8: reconcile the backend/frontend seam, format touched files, run focused checks, independent high-risk verification, then full `test:ci` and `build` once. Route: inline. Status: CI exposed an invalid voided-payment fixture; corrected locally and awaiting CI pgTAP rerun. Commit: pending (user-owned).
 
 ## Log
 
@@ -31,3 +31,5 @@ Objective: Add two Supabase-backed financial charts to the admin dashboard, shar
 - **L8 — 2026-11-22 (seam):** Parent combined focused run passed 18 tests across four files.
 - **L9 — 2026-11-22 (independent verification):** Verification found a deterministic pgTAP identity-order defect, stale charts displayed during period reload, and missing boundary fixtures. The correction restores the admin identity before validation, prioritizes loading UI, and covers allowances, superseded allocations, zero buckets, and week/month/year boundaries. Scoped recheck found no remaining blocker.
 - **L10 — 2026-11-22 (closure):** Full Angular suite passed 208 tests across 30 files. Production build completed successfully. Existing initial-bundle and PDF/Excel CommonJS warnings remain; pgTAP is pending CI because local Supabase is unavailable.
+- **L11 — 2026-11-22 (CI failure):** `admin_dashboard_financial_series_test.sql` attempted to insert an allocation after creating its payment directly as `voided`, so `private.validate_payment_allocation()` correctly raised `allocations can only be added to posted payments` before any TAP assertion ran.
+- **L12 — 2026-11-22 (fixture correction):** The voided-payment fixture now mirrors production order: create a separate paid loan/installment, create the payment as `posted`, allocate it, then update it to `voided`. T3 remains open until CI executes pgTAP successfully.
