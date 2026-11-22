@@ -1,9 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ClientListItem } from '../../../core/models/client.model';
-import {
-  CLIENT_REPOSITORY,
-  ClientRepository,
-} from '../../../core/repositories/client.repository';
+import { CLIENT_REPOSITORY, ClientRepository } from '../../../core/repositories/client.repository';
 import { ClientsStore } from './clients.store';
 
 const client: ClientListItem = {
@@ -33,9 +30,7 @@ describe('ClientsStore', () => {
 
   beforeEach(() => {
     repository = {
-      list: vi
-        .fn<ClientRepository['list']>()
-        .mockResolvedValue({ items: [client], total: 1 }),
+      list: vi.fn<ClientRepository['list']>().mockResolvedValue({ items: [client], total: 1 }),
       listActiveCollectors: vi
         .fn<ClientRepository['listActiveCollectors']>()
         .mockResolvedValue([{ id: 'collector-1', fullName: 'María Quispe' }]),
@@ -131,5 +126,28 @@ describe('ClientsStore', () => {
 
     expect(updated).toBe(false);
     expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  it('keeps the latest page when an older request finishes later', async () => {
+    const secondPageClient: ClientListItem = {
+      ...client,
+      id: 'client-2',
+      dni: '45678902',
+      fullName: 'Rosa Vega',
+    };
+    let resolveOlderPage!: (value: { items: ClientListItem[]; total: number }) => void;
+    repository.list
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (resolveOlderPage = resolve as typeof resolveOlderPage)),
+      )
+      .mockResolvedValueOnce({ items: [secondPageClient], total: 2 });
+
+    const olderRequest = store.loadPage();
+    await store.setPage(10, 10);
+    resolveOlderPage({ items: [client], total: 1 });
+    await olderRequest;
+
+    expect(store.clients()).toEqual([secondPageClient]);
+    expect(store.totalRecords()).toBe(2);
   });
 });

@@ -32,6 +32,23 @@ export interface AdminDashboardSummary {
   riskDistribution: AdminDashboardRiskDistribution;
 }
 
+export type DashboardFinancialGranularity = 'daily' | 'weekly' | 'monthly' | 'annual';
+
+export interface DashboardFinancialSeriesQuery {
+  granularity: DashboardFinancialGranularity;
+  referenceDate: string;
+}
+
+export interface DashboardFinancialPoint {
+  bucketStart: string;
+  bucketEnd: string;
+  collectedAmount: number;
+  interestCollected: number;
+  loanDisbursements: number;
+  operatingExpenses: number;
+  netProfit: number;
+}
+
 export interface CollectorPerformanceEntry {
   id: string;
   name: string;

@@ -990,6 +990,21 @@ export type Database = {
           total_esperado: number;
         }[];
       };
+      admin_dashboard_financial_series: {
+        Args: {
+          p_granularity: string;
+          p_reference_date: string;
+        };
+        Returns: {
+          bucket_end: string;
+          bucket_start: string;
+          collected_amount: number;
+          interest_collected: number;
+          loan_disbursements: number;
+          net_profit: number;
+          operating_expenses: number;
+        }[];
+      };
       admin_list_collectors: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -1000,6 +1015,30 @@ export type Database = {
           full_name: string;
           id: string;
           phone: string;
+        }[];
+      };
+      admin_list_clients_page: {
+        Args: {
+          p_collector_id?: string;
+          p_page_index?: number;
+          p_page_size?: number;
+          p_search?: string;
+        };
+        Returns: {
+          active: boolean | null;
+          address: string | null;
+          collector_id: string | null;
+          collector_name: string | null;
+          created_at: string | null;
+          document_number: string | null;
+          full_name: string | null;
+          id: string | null;
+          is_blacklisted: boolean | null;
+          max_overdue_days: number | null;
+          notes: string | null;
+          outstanding_amount: number | null;
+          phone: string | null;
+          total_count: number;
         }[];
       };
       admin_list_loans_page: {

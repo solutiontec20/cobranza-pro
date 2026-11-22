@@ -1,7 +1,12 @@
 import { inject, Service } from '@angular/core';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { AppError } from '../errors/app-error';
-import { AdminDashboardSummary, CollectorPerformanceEntry } from '../models/admin-dashboard.model';
+import {
+  AdminDashboardSummary,
+  CollectorPerformanceEntry,
+  DashboardFinancialPoint,
+  DashboardFinancialSeriesQuery,
+} from '../models/admin-dashboard.model';
 import { AdminDashboardRepository } from '../repositories/admin-dashboard.repository';
 import { Database } from '../supabase/database.types';
 import { SUPABASE } from '../supabase/supabase-client';
@@ -9,6 +14,8 @@ import { SUPABASE } from '../supabase/supabase-client';
 type SummaryRow = Database['public']['Functions']['admin_dashboard_summary']['Returns'][number];
 type PerformanceRow =
   Database['public']['Functions']['admin_dashboard_collector_performance']['Returns'][number];
+type FinancialSeriesRow =
+  Database['public']['Functions']['admin_dashboard_financial_series']['Returns'][number];
 
 @Service({ autoProvided: false })
 export class SupabaseAdminDashboardRepository implements AdminDashboardRepository {
@@ -37,6 +44,29 @@ export class SupabaseAdminDashboardRepository implements AdminDashboardRepositor
     }
 
     return (data ?? []).map((row) => this.toPerformanceEntry(row));
+  }
+
+  async getFinancialSeries(
+    query: DashboardFinancialSeriesQuery,
+  ): Promise<DashboardFinancialPoint[]> {
+    const { data, error } = await this.supabase.rpc('admin_dashboard_financial_series', {
+      p_granularity: query.granularity,
+      p_reference_date: query.referenceDate,
+    });
+
+    if (error) {
+      throw this.dashboardError(error);
+    }
+
+    return (data ?? []).map((row: FinancialSeriesRow) => ({
+      bucketStart: row.bucket_start,
+      bucketEnd: row.bucket_end,
+      collectedAmount: Number(row.collected_amount),
+      interestCollected: Number(row.interest_collected),
+      loanDisbursements: Number(row.loan_disbursements),
+      operatingExpenses: Number(row.operating_expenses),
+      netProfit: Number(row.net_profit),
+    }));
   }
 
   private toSummary(row: SummaryRow): AdminDashboardSummary {
@@ -91,7 +121,11 @@ export class SupabaseAdminDashboardRepository implements AdminDashboardRepositor
     }
 
     if (message.includes('Only administrators or supervisors may view the dashboard')) {
-      return new AppError('AUTH_UNAUTHORIZED', 'Solo un administrador o supervisor puede ver el dashboard.', error);
+      return new AppError(
+        'AUTH_UNAUTHORIZED',
+        'Solo un administrador o supervisor puede ver el dashboard.',
+        error,
+      );
     }
 
     return this.toAppError(error, 'No se pudo cargar el dashboard.');
@@ -101,21 +135,35 @@ export class SupabaseAdminDashboardRepository implements AdminDashboardRepositor
     const code = this.errorCode(error);
 
     if (code === '42501') {
-      return new AppError('AUTH_UNAUTHORIZED', 'No tenés permisos para realizar esta acción.', error);
+      return new AppError(
+        'AUTH_UNAUTHORIZED',
+        'No tenés permisos para realizar esta acción.',
+        error,
+      );
     }
 
     return new AppError('SUPABASE_RPC', fallbackMessage, error);
   }
 
   private errorCode(error: unknown): string {
-    if (typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string') {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      typeof error.code === 'string'
+    ) {
       return error.code;
     }
     return '';
   }
 
   private errorMessage(error: unknown): string {
-    if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'message' in error &&
+      typeof error.message === 'string'
+    ) {
       return error.message;
     }
     return '';
