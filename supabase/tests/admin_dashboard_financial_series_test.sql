@@ -20,6 +20,31 @@ insert into public.profiles (id, dni, full_name, role, active) values
   ('f1000000-0000-0000-0000-000000000002', '93000002', 'Financial Series Supervisor', 'supervisor', true),
   ('f1000000-0000-0000-0000-000000000003', '93000003', 'Financial Series Collector', 'collector', true);
 
+-- The local test database includes seed ledger rows. Capture the aggregate baseline so the
+-- boundary assertions verify only this test's contribution instead of depending on seed totals.
+create temporary table financial_series_baseline (
+  granularity text not null,
+  bucket_start date not null,
+  loan_disbursements numeric(12,2) not null
+) on commit drop;
+set local role authenticated;
+set local request.jwt.claim.sub = 'f1000000-0000-0000-0000-000000000001';
+insert into financial_series_baseline (granularity, bucket_start, loan_disbursements)
+select
+  'monthly'::text as granularity,
+  bucket_start,
+  loan_disbursements
+from public.admin_dashboard_financial_series('monthly', '2026-11-15')
+where bucket_start = '2026-11-01'
+union all
+select
+  'annual'::text,
+  bucket_start,
+  loan_disbursements
+from public.admin_dashboard_financial_series('annual', '2026-11-15')
+where bucket_start = '2026-01-01';
+reset role;
+
 insert into public.customers (id, document_number, full_name, collector_id, created_by, active)
 values (
   'f2000000-0000-0000-0000-000000000001', '94000001', 'Financial Series Client',
@@ -280,8 +305,12 @@ select is(
   'Monthly view returns twelve months'
 );
 select is(
-  (select loan_disbursements from public.admin_dashboard_financial_series('monthly', '2026-11-15')
-    where bucket_start = '2026-11-01'),
+  (
+    select series.loan_disbursements - baseline.loan_disbursements
+    from public.admin_dashboard_financial_series('monthly', '2026-11-15') series
+    join financial_series_baseline baseline using (bucket_start)
+    where baseline.granularity = 'monthly'
+  ),
   120.00::numeric,
   'Monthly aggregation includes activity on the final calendar day'
 );
@@ -291,8 +320,12 @@ select is(
   'Annual view returns five years'
 );
 select is(
-  (select loan_disbursements from public.admin_dashboard_financial_series('annual', '2026-11-15')
-    where bucket_start = '2026-01-01'),
+  (
+    select series.loan_disbursements - baseline.loan_disbursements
+    from public.admin_dashboard_financial_series('annual', '2026-11-15') series
+    join financial_series_baseline baseline using (bucket_start)
+    where baseline.granularity = 'annual'
+  ),
   170.00::numeric,
   'Annual aggregation includes activity on December 31'
 );
