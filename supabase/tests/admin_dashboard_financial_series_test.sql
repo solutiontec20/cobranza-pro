@@ -27,6 +27,7 @@ create temporary table financial_series_baseline (
   bucket_start date not null,
   loan_disbursements numeric(12,2) not null
 ) on commit drop;
+grant select, insert on financial_series_baseline to authenticated;
 set local role authenticated;
 set local request.jwt.claim.sub = 'f1000000-0000-0000-0000-000000000001';
 insert into financial_series_baseline (granularity, bucket_start, loan_disbursements)
