@@ -364,12 +364,15 @@ select is(
   'Voiding the payments reopens the previously paid loan'
 );
 
+reset role;
+
 select is(
   private.loan_outstanding('c1000000-0000-0000-0000-000000000001'),
   100.00::numeric,
   'The loan balance excludes every voided payment'
 );
 
+set local role authenticated;
 set local request.jwt.claim.sub = 'a1000000-0000-0000-0000-000000000003';
 
 select lives_ok(
