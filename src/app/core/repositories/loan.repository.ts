@@ -1,5 +1,7 @@
 import { InjectionToken } from '@angular/core';
 import {
+  BulkVoidLoanPaymentsInput,
+  BulkVoidLoanPaymentsResult,
   CreateLoanInput,
   Loan,
   LoanClientOption,
@@ -35,6 +37,8 @@ export interface LoanRepository {
   registerPayment(input: RegisterLoanPaymentInput): Promise<RegisterLoanPaymentResult>;
 
   voidPayment(input: VoidLoanPaymentInput): Promise<VoidLoanPaymentResult>;
+
+  voidPaymentsBulk(input: BulkVoidLoanPaymentsInput): Promise<BulkVoidLoanPaymentsResult>;
 
   renew(input: RenewLoanInput): Promise<RenewLoanResult>;
 }

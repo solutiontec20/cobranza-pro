@@ -194,3 +194,16 @@ export interface VoidLoanPaymentResult {
   loanId: string;
   remainingBalance: number;
 }
+
+export interface BulkVoidLoanPaymentsInput {
+  loanId: string;
+  paymentIds: string[];
+  reason: string;
+}
+
+export interface BulkVoidLoanPaymentsResult {
+  loanId: string;
+  voidedCount: number;
+  voidedAmount: number;
+  remainingBalance: number;
+}

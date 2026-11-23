@@ -158,8 +158,8 @@ describe('SupabaseLoanRepository', () => {
   it.each([
     ['Only active loans may be updated', 'Solo se pueden editar préstamos activos.'],
     [
-      'Loans with payment history cannot be updated',
-      'No se puede editar un préstamo con historial de pagos.',
+      'Loans with posted payments cannot be updated',
+      'No se puede editar el préstamo mientras tenga pagos vigentes.',
     ],
     [
       'Principal cannot change after its cash closure exists',
@@ -249,6 +249,61 @@ describe('SupabaseLoanRepository', () => {
     await expect(promise).rejects.toMatchObject({
       code: 'VALIDATION',
       message: expectedMessage,
+    });
+  });
+
+  it('voids selected payments with one bulk RPC and maps its summary', async () => {
+    rpc.mockResolvedValue({
+      data: [
+        {
+          loan_id: 'loan-1',
+          voided_count: 2,
+          voided_amount: 8,
+          remaining_balance: 110,
+        },
+      ],
+      error: null,
+    });
+
+    await expect(
+      repository.voidPaymentsBulk({
+        loanId: 'loan-1',
+        paymentIds: ['payment-1', 'payment-2'],
+        reason: ' Pagos duplicados confirmados ',
+      }),
+    ).resolves.toEqual({
+      loanId: 'loan-1',
+      voidedCount: 2,
+      voidedAmount: 8,
+      remainingBalance: 110,
+    });
+
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(rpc).toHaveBeenCalledWith('void_payments_bulk', {
+      p_loan_id: 'loan-1',
+      p_payment_ids: ['payment-1', 'payment-2'],
+      p_reason: 'Pagos duplicados confirmados',
+    });
+  });
+
+  it('exposes a validation error when a selected payment is no longer posted', async () => {
+    rpc.mockResolvedValue({
+      data: null,
+      error: {
+        code: '22023',
+        message: 'All selected payments must belong to the loan and be posted',
+      },
+    });
+
+    await expect(
+      repository.voidPaymentsBulk({
+        loanId: 'loan-1',
+        paymentIds: ['payment-1'],
+        reason: 'Pago duplicado confirmado',
+      }),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION',
+      message: 'Todos los pagos seleccionados deben estar vigentes y pertenecer al préstamo.',
     });
   });
 

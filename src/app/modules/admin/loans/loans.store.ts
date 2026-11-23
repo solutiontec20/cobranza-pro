@@ -1,6 +1,8 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { AppError } from '../../../core/errors/app-error';
 import {
+  BulkVoidLoanPaymentsInput,
+  BulkVoidLoanPaymentsResult,
   CreateLoanInput,
   LoanClientOption,
   LoanCollectorOption,
@@ -281,6 +283,37 @@ export class LoansStore {
     } catch (error) {
       this.error.set(this.messageFrom(error, 'No se pudo anular el pago.'));
       return false;
+    } finally {
+      this.voidingPayment.set(false);
+    }
+  }
+
+  async voidPaymentsBulk(
+    input: BulkVoidLoanPaymentsInput,
+  ): Promise<BulkVoidLoanPaymentsResult | null> {
+    this.voidingPayment.set(true);
+    this.error.set(null);
+
+    try {
+      const result = await this.repository.voidPaymentsBulk(input);
+
+      try {
+        const [page, detail] = await Promise.all([
+          this.repository.listPage(this.pageQuery()),
+          this.repository.getDetail(input.loanId),
+        ]);
+        this.applyPage(page);
+        this.selectedDetail.set(detail);
+      } catch (error) {
+        this.error.set(
+          `Los pagos se anularon, pero no se pudo actualizar la información. ${this.messageFrom(error, '')}`.trim(),
+        );
+      }
+
+      return result;
+    } catch (error) {
+      this.error.set(this.messageFrom(error, 'No se pudieron anular los pagos seleccionados.'));
+      return null;
     } finally {
       this.voidingPayment.set(false);
     }

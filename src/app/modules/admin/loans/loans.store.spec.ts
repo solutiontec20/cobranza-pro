@@ -85,6 +85,7 @@ describe('LoansStore', () => {
     update: ReturnType<typeof vi.fn<LoanRepository['update']>>;
     registerPayment: ReturnType<typeof vi.fn<LoanRepository['registerPayment']>>;
     voidPayment: ReturnType<typeof vi.fn<LoanRepository['voidPayment']>>;
+    voidPaymentsBulk: ReturnType<typeof vi.fn<LoanRepository['voidPaymentsBulk']>>;
     renew: ReturnType<typeof vi.fn<LoanRepository['renew']>>;
   };
 
@@ -102,6 +103,7 @@ describe('LoansStore', () => {
       update: vi.fn<LoanRepository['update']>(),
       registerPayment: vi.fn<LoanRepository['registerPayment']>(),
       voidPayment: vi.fn<LoanRepository['voidPayment']>(),
+      voidPaymentsBulk: vi.fn<LoanRepository['voidPaymentsBulk']>(),
       renew: vi.fn<LoanRepository['renew']>(),
     };
     TestBed.configureTestingModule({
@@ -336,6 +338,57 @@ describe('LoansStore', () => {
     expect(repository.listPage).toHaveBeenCalledOnce();
     expect(repository.getDetail).toHaveBeenCalledWith(loan.id);
     expect(store.voidingPayment()).toBe(false);
+  });
+
+  it('voids selected payments atomically and refreshes the loan once', async () => {
+    repository.voidPaymentsBulk.mockResolvedValue({
+      loanId: loan.id,
+      voidedCount: 2,
+      voidedAmount: 8,
+      remainingBalance: 110,
+    });
+
+    await expect(
+      store.voidPaymentsBulk({
+        loanId: loan.id,
+        paymentIds: ['payment-1', 'payment-2'],
+        reason: 'Pagos duplicados confirmados',
+      }),
+    ).resolves.toEqual({
+      loanId: loan.id,
+      voidedCount: 2,
+      voidedAmount: 8,
+      remainingBalance: 110,
+    });
+
+    expect(repository.voidPaymentsBulk).toHaveBeenCalledOnce();
+    expect(repository.listPage).toHaveBeenCalledOnce();
+    expect(repository.getDetail).toHaveBeenCalledOnce();
+    expect(repository.getDetail).toHaveBeenCalledWith(loan.id);
+    expect(store.voidingPayment()).toBe(false);
+  });
+
+  it('does not refresh loan state when the bulk void is rejected', async () => {
+    repository.voidPaymentsBulk.mockRejectedValue(
+      new AppError(
+        'VALIDATION',
+        'Todos los pagos seleccionados deben estar vigentes y pertenecer al préstamo.',
+      ),
+    );
+
+    await expect(
+      store.voidPaymentsBulk({
+        loanId: loan.id,
+        paymentIds: ['payment-1'],
+        reason: 'Pago duplicado confirmado',
+      }),
+    ).resolves.toBeNull();
+
+    expect(repository.listPage).not.toHaveBeenCalled();
+    expect(repository.getDetail).not.toHaveBeenCalled();
+    expect(store.error()).toBe(
+      'Todos los pagos seleccionados deben estar vigentes y pertenecer al préstamo.',
+    );
   });
 
   it('renews a loan and refreshes the complete server state with the new loan id', async () => {
