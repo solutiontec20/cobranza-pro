@@ -902,6 +902,42 @@ export type Database = {
       };
     };
     Functions: {
+      admin_analytics_collectors: {
+        Args: { p_end: string; p_start: string };
+        Returns: {
+          clients_attended: number;
+          collected_amount: number;
+          collector_dni: string;
+          collector_id: string;
+          collector_name: string;
+          interest_collected: number;
+          loan_disbursements: number;
+          net_profit: number;
+          operating_expenses: number;
+          payments_count: number;
+        }[];
+      };
+      admin_analytics_expense_categories: {
+        Args: { p_collector_id?: string; p_end: string; p_start: string };
+        Returns: {
+          category: Database['public']['Enums']['cash_expense_category'];
+          expense_count: number;
+          spent_amount: number;
+        }[];
+      };
+      admin_analytics_series: {
+        Args: { p_bucket: string; p_collector_id?: string; p_end: string; p_start: string };
+        Returns: {
+          bucket_end: string;
+          bucket_start: string;
+          collected_amount: number;
+          interest_collected: number;
+          loan_disbursements: number;
+          net_profit: number;
+          operating_expenses: number;
+          payments_count: number;
+        }[];
+      };
       admin_create_collector_profile: {
         Args: { p_dni: string; p_full_name: string; p_phone?: string; p_user_id: string };
         Returns: {

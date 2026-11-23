@@ -16,9 +16,6 @@ import { PenCurrency } from '../../../shared/pipes/pen-currency';
 import { CollectorPerformanceTable } from './collector-performance-table';
 import { pageItems } from '../../../core/calculations/loan-detail-filtering';
 import { normalizeSearchText } from '../../../core/calculations/text';
-import { DashboardFinancialGranularity } from '../../../core/models/admin-dashboard.model';
-import { shiftFinancialReferenceDate } from './financial-chart-calculations';
-import { FinancialSeriesChart } from './financial-series-chart';
 
 const EMPTY_BUCKET = { count: 0, percent: 0 };
 
@@ -38,7 +35,6 @@ const EMPTY_BUCKET = { count: 0, percent: 0 };
     PenCurrency,
     RecoveryChart,
     CollectorPerformanceTable,
-    FinancialSeriesChart,
   ],
   templateUrl: './dashboard.html',
 })
@@ -84,12 +80,6 @@ export default class Dashboard implements OnInit, OnDestroy {
   protected readonly performancePageSizeOptions = [5, 10, 20];
   protected readonly performancePageFirst = signal(0);
   protected readonly performancePageRows = signal(5);
-  protected readonly financialGranularityOptions = [
-    { label: 'Diario', value: 'daily' as const },
-    { label: 'Semanal', value: 'weekly' as const },
-    { label: 'Mensual', value: 'monthly' as const },
-    { label: 'Anual', value: 'annual' as const },
-  ];
   protected readonly filteredCollectorPerformance = computed(() => {
     const query = normalizeSearchText(this.performanceQuery());
     const delay = this.performanceDelayFilter();
@@ -134,23 +124,6 @@ export default class Dashboard implements OnInit, OnDestroy {
   protected changePerformancePage(event: { first?: number; rows?: number }): void {
     this.performancePageFirst.set(event.first ?? 0);
     this.performancePageRows.set(event.rows ?? 5);
-  }
-
-  protected changeFinancialGranularity(granularity: DashboardFinancialGranularity): void {
-    void this.store.setFinancialGranularity(granularity);
-  }
-
-  protected changeFinancialReferenceDate(event: Event): void {
-    void this.store.setReferenceDate((event.target as HTMLInputElement).value);
-  }
-
-  protected shiftFinancialWindow(direction: -1 | 1): void {
-    const nextDate = shiftFinancialReferenceDate(
-      this.store.referenceDate(),
-      this.store.financialGranularity(),
-      direction,
-    );
-    void this.store.setReferenceDate(nextDate);
   }
 
   ngOnInit(): void {

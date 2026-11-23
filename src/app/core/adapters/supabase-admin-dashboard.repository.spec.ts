@@ -33,7 +33,7 @@ function performanceRow(overrides: Partial<Record<string, unknown>> = {}) {
   };
 }
 
-describe('SupabaseAdminDashboardRepository financial series', () => {
+describe('SupabaseAdminDashboardRepository', () => {
   const rpc = vi.fn();
   let repository: SupabaseAdminDashboardRepository;
 
@@ -105,65 +105,5 @@ describe('SupabaseAdminDashboardRepository financial series', () => {
     });
 
     await expect(repository.getSummary()).rejects.toMatchObject({ code: 'AUTH_UNAUTHORIZED' });
-  });
-
-  it('calls the shared RPC and maps numeric database values to domain numbers', async () => {
-    rpc.mockResolvedValueOnce({
-      data: [
-        {
-          bucket_start: '2026-11-01',
-          bucket_end: '2026-11-01',
-          collected_amount: '100.25',
-          interest_collected: '20.05',
-          loan_disbursements: '75.00',
-          operating_expenses: '5.50',
-          net_profit: '14.55',
-        },
-      ],
-      error: null,
-    });
-
-    const series = await repository.getFinancialSeries({
-      granularity: 'daily',
-      referenceDate: '2026-11-01',
-    });
-
-    expect(rpc).toHaveBeenCalledWith('admin_dashboard_financial_series', {
-      p_granularity: 'daily',
-      p_reference_date: '2026-11-01',
-    });
-    expect(series).toEqual([
-      {
-        bucketStart: '2026-11-01',
-        bucketEnd: '2026-11-01',
-        collectedAmount: 100.25,
-        interestCollected: 20.05,
-        loanDisbursements: 75,
-        operatingExpenses: 5.5,
-        netProfit: 14.55,
-      },
-    ]);
-  });
-
-  it('returns an empty series when the RPC returns no rows', async () => {
-    rpc.mockResolvedValueOnce({ data: null, error: null });
-
-    await expect(
-      repository.getFinancialSeries({ granularity: 'weekly', referenceDate: '2026-11-01' }),
-    ).resolves.toEqual([]);
-  });
-
-  it('translates authorization failures into a user-facing unauthorized error', async () => {
-    rpc.mockResolvedValueOnce({
-      data: null,
-      error: {
-        code: '42501',
-        message: 'Only administrators or supervisors may view dashboard financial series',
-      },
-    });
-
-    await expect(
-      repository.getFinancialSeries({ granularity: 'annual', referenceDate: '2026-11-01' }),
-    ).rejects.toMatchObject({ code: 'AUTH_UNAUTHORIZED' });
   });
 });
