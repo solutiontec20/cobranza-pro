@@ -215,7 +215,7 @@
 
     @if (!canEdit() && detail.loan.status === 'active') {
       <p-message severity="info" styleClass="w-full">
-        Este préstamo ya tiene historial de pagos y sus condiciones financieras no se pueden editar.
+        Este préstamo tiene pagos vigentes. Anulalos antes de editar sus condiciones financieras.
       </p-message>
     }
 
@@ -594,6 +594,89 @@
         }
       </div>
 
+      @if (postedPayments().length > 0) {
+        <div
+          class="mb-4 rounded-xl border border-surface-200 bg-surface-50 p-3 dark:border-surface-700 dark:bg-surface-800/60"
+          aria-live="polite"
+        >
+          <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div class="flex items-center gap-2">
+              <p-checkbox
+                inputId="select-all-posted-payments"
+                [binary]="true"
+                [ngModel]="allPostedPaymentsSelected()"
+                (ngModelChange)="setAllPostedPaymentsSelected($event)"
+              />
+              <label for="select-all-posted-payments" class="font-medium text-color">
+                Seleccionar todos los pagos vigentes
+              </label>
+            </div>
+
+            <div class="flex flex-col gap-1 text-sm text-muted-color sm:flex-row sm:gap-4">
+              <span>
+                <strong class="text-color">{{ paymentSelectionSummary().selectedCount }}</strong>
+                seleccionados
+              </span>
+              <span>
+                Total:
+                <strong class="text-color">
+                  {{ paymentSelectionSummary().selectedAmount | penCurrency }}
+                </strong>
+              </span>
+              <span>
+                Quedarán vigentes:
+                <strong class="text-color">
+                  {{ paymentSelectionSummary().remainingPostedCount }}
+                </strong>
+              </span>
+            </div>
+
+            <div class="flex flex-col gap-2 sm:flex-row">
+              @if (paymentSelectionSummary().selectedCount > 0) {
+                <button
+                  pButton
+                  type="button"
+                  severity="secondary"
+                  variant="text"
+                  size="small"
+                  (click)="clearPaymentSelection()"
+                >
+                  Limpiar selección
+                </button>
+              }
+              <button
+                pButton
+                type="button"
+                severity="danger"
+                size="small"
+                [disabled]="
+                  paymentSelectionSummary().selectedCount === 0 ||
+                  paymentSelectionSummary().selectedCount > 100
+                "
+                (click)="openBulkVoidPaymentDialog()"
+              >
+                <i class="pi pi-ban" aria-hidden="true"></i>
+                Anular seleccionados
+              </button>
+            </div>
+          </div>
+
+          @if (
+            paymentSelectionSummary().selectedCount > 0 &&
+            paymentSelectionSummary().remainingPostedCount === 0
+          ) {
+            <p class="mt-2 text-sm text-primary">
+              Al confirmar, el préstamo quedará disponible para edición.
+            </p>
+          }
+          @if (paymentSelectionSummary().selectedCount > 100) {
+            <p class="mt-2 text-sm text-red-600" role="alert">
+              Podés anular hasta 100 pagos por operación.
+            </p>
+          }
+        </div>
+      }
+
       @if (detail.payments.length === 0) {
         <div class="rounded-lg border border-dashed border-surface px-5 py-8 text-center">
           <i class="pi pi-receipt mb-3 text-3xl text-muted-color" aria-hidden="true"></i>
@@ -637,10 +720,23 @@
                     {{ payment.paidAt | esDate: 'datetime' }}
                   </p>
                 </div>
-                <p-tag
-                  [severity]="paymentSeverity(payment.status)"
-                  [value]="paymentStatusLabel(payment.status)"
-                />
+                <div class="flex items-center gap-3">
+                  @if (payment.status === 'posted') {
+                    <p-checkbox
+                      [inputId]="'select-payment-mobile-' + payment.id"
+                      [binary]="true"
+                      [ngModel]="isPaymentSelected(payment.id)"
+                      (ngModelChange)="setPaymentSelected(payment, $event)"
+                    />
+                    <label [for]="'select-payment-mobile-' + payment.id" class="sr-only">
+                      Seleccionar pago de {{ payment.amount | penCurrency }}
+                    </label>
+                  }
+                  <p-tag
+                    [severity]="paymentSeverity(payment.status)"
+                    [value]="paymentStatusLabel(payment.status)"
+                  />
+                </div>
               </div>
               <dl
                 class="mt-3 grid gap-2 border-t border-surface-200 pt-3 text-sm dark:border-surface-700"
@@ -689,6 +785,7 @@
           <p-table [value]="visiblePayments()" styleClass="p-datatable-sm">
             <ng-template #header>
               <tr>
+                <th class="w-12"><span class="sr-only">Seleccionar</span></th>
                 <th>Fecha</th>
                 <th class="text-right">Monto</th>
                 <th>Medio</th>
@@ -700,6 +797,19 @@
             </ng-template>
             <ng-template #body let-payment>
               <tr [class.opacity-60]="payment.status === 'voided'">
+                <td>
+                  @if (payment.status === 'posted') {
+                    <p-checkbox
+                      [inputId]="'select-payment-desktop-' + payment.id"
+                      [binary]="true"
+                      [ngModel]="isPaymentSelected(payment.id)"
+                      (ngModelChange)="setPaymentSelected(payment, $event)"
+                    />
+                    <label [for]="'select-payment-desktop-' + payment.id" class="sr-only">
+                      Seleccionar pago de {{ payment.amount | penCurrency }}
+                    </label>
+                  }
+                </td>
                 <td>{{ payment.paidAt | esDate: 'datetime' }}</td>
                 <td
                   class="text-right font-semibold"
@@ -964,20 +1074,47 @@
 </p-dialog>
 
 <p-dialog
-  header="Anular pago"
-  [visible]="!!voidPaymentTarget()"
+  [header]="voidPaymentDialogHeader()"
+  [visible]="voidPaymentDialogVisible()"
   (visibleChange)="!$event && closeVoidPaymentDialog()"
   [modal]="true"
   [draggable]="false"
   [breakpoints]="{ '640px': '100vw' }"
   styleClass="w-[calc(100vw-1.5rem)] max-w-md"
 >
-  @if (voidPaymentTarget(); as payment) {
+  @if (voidPaymentDialogVisible()) {
     <form class="flex flex-col gap-4" (submit)="submitVoidPayment(); $event.preventDefault()">
-      <p-message severity="warn" styleClass="w-full">
-        El pago de <strong>{{ payment.amount | penCurrency }}</strong> no se eliminará. Quedará
-        anulado con su motivo, actor y movimiento de caja reverso.
-      </p-message>
+      @if (bulkVoidDialogVisible()) {
+        <p-message severity="warn" styleClass="w-full">
+          Se anularán
+          <strong>{{ paymentSelectionSummary().selectedCount }} pagos</strong> por
+          <strong>{{ paymentSelectionSummary().selectedAmount | penCurrency }}</strong
+          >. La operación es atómica: si un pago ya no está vigente, no se anulará ninguno.
+        </p-message>
+        <dl class="grid grid-cols-2 gap-3 rounded-lg border border-surface p-3 text-sm">
+          <div>
+            <dt class="text-muted-color">Pagos que quedarán vigentes</dt>
+            <dd class="mt-1 text-lg font-semibold text-color">
+              {{ paymentSelectionSummary().remainingPostedCount }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-muted-color">Edición posterior</dt>
+            <dd class="mt-1 font-medium text-color">
+              {{
+                paymentSelectionSummary().remainingPostedCount === 0
+                  ? 'Quedará habilitada'
+                  : 'Seguirá bloqueada'
+              }}
+            </dd>
+          </div>
+        </dl>
+      } @else if (voidPaymentTarget(); as payment) {
+        <p-message severity="warn" styleClass="w-full">
+          El pago de <strong>{{ payment.amount | penCurrency }}</strong> no se eliminará. Quedará
+          anulado con su motivo, actor y movimiento de caja reverso.
+        </p-message>
+      }
 
       @if (store.error()) {
         <p-message severity="error" styleClass="w-full" role="alert">{{ store.error() }}</p-message>
@@ -1050,7 +1187,7 @@
           } @else {
             <i class="pi pi-ban"></i>
           }
-          Confirmar anulación
+          {{ bulkVoidDialogVisible() ? 'Anular pagos seleccionados' : 'Confirmar anulación' }}
         </button>
       </div>
     </form>

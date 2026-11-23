@@ -1,5 +1,12 @@
-export { calculateLoanPaymentSummary } from '../../../core/calculations/loan-payment-calculations';
-export type { LoanPaymentSummary } from '../../../core/calculations/loan-payment-calculations';
+export {
+  calculateLoanPaymentSummary,
+  canEditLoan,
+  summarizePaymentSelection,
+} from '../../../core/calculations/loan-payment-calculations';
+export type {
+  LoanPaymentSummary,
+  PaymentSelectionSummary,
+} from '../../../core/calculations/loan-payment-calculations';
 
 export {
   calculateLoanSummary,

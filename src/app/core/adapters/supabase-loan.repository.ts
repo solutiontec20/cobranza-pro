@@ -4,6 +4,8 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { calculateLoanPaymentSummary } from '../calculations/loan-payment-calculations';
 import { AppError } from '../errors/app-error';
 import {
+  BulkVoidLoanPaymentsInput,
+  BulkVoidLoanPaymentsResult,
   CreateLoanInput,
   Loan,
   LoanClientOption,
@@ -31,6 +33,7 @@ type UpdateLoanRow = Database['public']['Functions']['admin_update_loan']['Retur
 type RegisterPaymentRow = Database['public']['Functions']['register_payment']['Returns'][number];
 type RenewLoanRow = Database['public']['Functions']['renew_loan']['Returns'][number];
 type VoidPaymentRow = Database['public']['Functions']['void_payment']['Returns'][number];
+type BulkVoidPaymentsRow = Database['public']['Functions']['void_payments_bulk']['Returns'][number];
 type LoanPageRow = Database['public']['Functions']['admin_list_loans_page']['Returns'][number];
 type CollectorRow = Database['public']['Functions']['admin_list_collectors']['Returns'][number];
 
@@ -433,6 +436,30 @@ export class SupabaseLoanRepository implements LoanRepository {
     };
   }
 
+  async voidPaymentsBulk(input: BulkVoidLoanPaymentsInput): Promise<BulkVoidLoanPaymentsResult> {
+    const { data, error } = await this.supabase.rpc('void_payments_bulk', {
+      p_loan_id: input.loanId,
+      p_payment_ids: input.paymentIds,
+      p_reason: input.reason.trim(),
+    });
+
+    if (error) {
+      throw this.bulkVoidPaymentsError(error);
+    }
+
+    const row: BulkVoidPaymentsRow | undefined = data?.[0];
+    if (!row) {
+      throw new AppError('SUPABASE_RPC', 'La anulación masiva no devolvió una confirmación.');
+    }
+
+    return {
+      loanId: row.loan_id,
+      voidedCount: Number(row.voided_count),
+      voidedAmount: Number(row.voided_amount),
+      remainingBalance: Number(row.remaining_balance),
+    };
+  }
+
   async renew(input: RenewLoanInput): Promise<RenewLoanResult> {
     const { data, error } = await this.supabase.rpc('renew_loan', {
       p_loan_id: input.loanId,
@@ -573,10 +600,10 @@ export class SupabaseLoanRepository implements LoanRepository {
       return new AppError('VALIDATION', 'Solo se pueden editar préstamos activos.', error);
     }
 
-    if (message.includes('Loans with payment history cannot be updated')) {
+    if (message.includes('Loans with posted payments cannot be updated')) {
       return new AppError(
         'VALIDATION',
-        'No se puede editar un préstamo con historial de pagos.',
+        'No se puede editar el préstamo mientras tenga pagos vigentes.',
         error,
       );
     }
@@ -713,6 +740,32 @@ export class SupabaseLoanRepository implements LoanRepository {
     }
 
     return this.toAppError(error, 'No se pudo renovar el préstamo.');
+  }
+
+  private bulkVoidPaymentsError(error: unknown): AppError {
+    const message = this.errorMessage(error);
+
+    if (message.includes('All selected payments must belong to the loan and be posted')) {
+      return new AppError(
+        'VALIDATION',
+        'Todos los pagos seleccionados deben estar vigentes y pertenecer al préstamo.',
+        error,
+      );
+    }
+
+    if (message.includes('Duplicate payment selection is not allowed')) {
+      return new AppError('VALIDATION', 'La selección contiene pagos duplicados.', error);
+    }
+
+    if (message.includes('At least one payment must be selected')) {
+      return new AppError('VALIDATION', 'Seleccioná al menos un pago vigente.', error);
+    }
+
+    if (message.includes('A maximum of 100 payments may be voided at once')) {
+      return new AppError('VALIDATION', 'Podés anular hasta 100 pagos por operación.', error);
+    }
+
+    return this.toAppError(error, 'No se pudieron anular los pagos seleccionados.');
   }
 
   private toAppError(error: unknown, fallbackMessage: string): AppError {

@@ -13,6 +13,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { MessageModule } from 'primeng/message';
@@ -49,7 +50,9 @@ import { PenCurrency } from '../../../../shared/pipes/pen-currency';
 import {
   calculateLoanPaymentSummary,
   calculateLoanSummary,
+  canEditLoan,
   firstDueOn,
+  summarizePaymentSelection,
   toDateInput,
 } from '../loan-calculations';
 import {
@@ -118,6 +121,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
   selector: 'app-admin-loan-detail',
   imports: [
     ButtonModule,
+    CheckboxModule,
     DialogModule,
     EsDate,
     FormField,
@@ -214,6 +218,20 @@ export default class LoanDetailPage {
   protected readonly visiblePayments = computed(() =>
     pageItems(this.filteredPayments(), this.paymentPageFirst(), this.paymentRows()),
   );
+  protected readonly selectedPaymentIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly postedPayments = computed(() =>
+    (this.detail()?.payments ?? []).filter((payment) => payment.status === 'posted'),
+  );
+  protected readonly paymentSelectionSummary = computed(() =>
+    summarizePaymentSelection(this.detail()?.payments ?? [], this.selectedPaymentIds()),
+  );
+  protected readonly allPostedPaymentsSelected = computed(() => {
+    const postedPayments = this.postedPayments();
+    const selectedIds = this.selectedPaymentIds();
+    return (
+      postedPayments.length > 0 && postedPayments.every((payment) => selectedIds.has(payment.id))
+    );
+  });
   protected readonly paymentDialogVisible = signal(false);
   protected readonly paymentResult = signal<RegisterLoanPaymentResult | null>(null);
   protected readonly paymentModel = signal<PaymentFormModel>(emptyPaymentModel());
@@ -223,6 +241,13 @@ export default class LoanDetailPage {
     maxLength(path.notes, 500, { message: 'La observación no puede superar 500 caracteres.' });
   });
   protected readonly voidPaymentTarget = signal<LoanPaymentRecord | null>(null);
+  protected readonly bulkVoidDialogVisible = signal(false);
+  protected readonly voidPaymentDialogVisible = computed(
+    () => this.bulkVoidDialogVisible() || this.voidPaymentTarget() !== null,
+  );
+  protected readonly voidPaymentDialogHeader = computed(() =>
+    this.bulkVoidDialogVisible() ? 'Anular pagos seleccionados' : 'Anular pago',
+  );
   protected readonly voidPaymentModel = signal<VoidPaymentModel>({
     reasonCode: '',
     customReason: '',
@@ -315,7 +340,7 @@ export default class LoanDetailPage {
   });
   protected readonly canEdit = computed(() => {
     const detail = this.detail();
-    return detail?.loan.status === 'active' && detail.payments.length === 0;
+    return detail ? canEditLoan(detail.loan.status, detail.payments) : false;
   });
   /**
    * Mirrors `renew_loan`'s server-side rule: a loan can only be renewed while active or fully
@@ -410,6 +435,9 @@ export default class LoanDetailPage {
       const loanId = this.loanId();
       untracked(() => {
         this.resetDetailFilters();
+        this.selectedPaymentIds.set(new Set());
+        this.bulkVoidDialogVisible.set(false);
+        this.voidPaymentTarget.set(null);
         void this.store.loadDetail(loanId);
       });
     });
@@ -542,23 +570,88 @@ export default class LoanDetailPage {
     this.store.clearError();
     this.voidPaymentModel.set({ reasonCode: '', customReason: '' });
     this.voidPaymentForm().reset();
+    this.bulkVoidDialogVisible.set(false);
     this.voidPaymentTarget.set(payment);
+  }
+
+  protected isPaymentSelected(paymentId: string): boolean {
+    return this.selectedPaymentIds().has(paymentId);
+  }
+
+  protected setPaymentSelected(payment: LoanPaymentRecord, selected: boolean): void {
+    if (payment.status !== 'posted') return;
+    this.selectedPaymentIds.update((current) => {
+      const next = new Set(current);
+      if (selected) next.add(payment.id);
+      else next.delete(payment.id);
+      return next;
+    });
+  }
+
+  protected setAllPostedPaymentsSelected(selected: boolean): void {
+    this.selectedPaymentIds.set(
+      selected ? new Set(this.postedPayments().map((payment) => payment.id)) : new Set(),
+    );
+  }
+
+  protected clearPaymentSelection(): void {
+    this.selectedPaymentIds.set(new Set());
+  }
+
+  protected openBulkVoidPaymentDialog(): void {
+    const selectedCount = this.paymentSelectionSummary().selectedCount;
+    if (selectedCount === 0 || selectedCount > 100) return;
+    this.store.clearError();
+    this.voidPaymentModel.set({ reasonCode: '', customReason: '' });
+    this.voidPaymentForm().reset();
+    this.voidPaymentTarget.set(null);
+    this.bulkVoidDialogVisible.set(true);
   }
 
   protected closeVoidPaymentDialog(): void {
     if (this.store.voidingPayment()) return;
     this.voidPaymentTarget.set(null);
+    this.bulkVoidDialogVisible.set(false);
     this.store.clearError();
   }
 
   protected submitVoidPayment(): void {
     const payment = this.voidPaymentTarget();
-    if (!payment) return;
+    const bulkVoid = this.bulkVoidDialogVisible();
+    if (!payment && !bulkVoid) return;
 
     void submit(this.voidPaymentForm, async () => {
       const model = this.voidPaymentModel();
       const reason = resolveVoidReason(model.reasonCode, model.customReason);
       if (!reason) return;
+
+      if (bulkVoid) {
+        const selectedIds = this.selectedPaymentIds();
+        const paymentIds = this.postedPayments()
+          .filter((postedPayment) => selectedIds.has(postedPayment.id))
+          .map((postedPayment) => postedPayment.id);
+        if (paymentIds.length === 0 || paymentIds.length > 100) return;
+
+        const result = await this.store.voidPaymentsBulk({
+          loanId: this.loanId(),
+          paymentIds,
+          reason,
+        });
+
+        if (result) {
+          this.bulkVoidDialogVisible.set(false);
+          this.clearPaymentSelection();
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Pagos anulados',
+            detail: `${result.voidedCount} pagos por S/ ${result.voidedAmount.toFixed(2)} fueron anulados y auditados.`,
+            life: 5000,
+          });
+        }
+        return;
+      }
+
+      if (!payment) return;
 
       const succeeded = await this.store.voidPayment({
         paymentId: payment.id,
@@ -568,6 +661,7 @@ export default class LoanDetailPage {
 
       if (succeeded) {
         this.voidPaymentTarget.set(null);
+        this.setPaymentSelected(payment, false);
         this.messageService.add({
           severity: 'success',
           summary: 'Pago anulado',

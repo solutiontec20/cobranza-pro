@@ -1517,6 +1517,15 @@ export type Database = {
           remaining_balance: number;
         }[];
       };
+      void_payments_bulk: {
+        Args: { p_loan_id: string; p_payment_ids: string[]; p_reason: string };
+        Returns: {
+          loan_id: string;
+          remaining_balance: number;
+          voided_amount: number;
+          voided_count: number;
+        }[];
+      };
     };
     Enums: {
       app_role: 'admin' | 'supervisor' | 'collector';

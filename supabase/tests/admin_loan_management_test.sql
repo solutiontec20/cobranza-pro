@@ -12,7 +12,7 @@ select set_config(
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(34);
+select plan(35);
 
 insert into auth.users (id, email)
 values
@@ -510,16 +510,50 @@ where l.customer_id = '60000000-0000-0000-0000-000000000003';
 set local role authenticated;
 set local request.jwt.claim.sub = '50000000-0000-0000-0000-000000000002';
 
+select lives_ok(
+  $$
+    select * from public.admin_update_loan(
+      (select id from public.loans where customer_id = '60000000-0000-0000-0000-000000000003'),
+      85, 5, 'weekly', 4, '2026-10-20', 'Correct loan after voided payment'
+    )
+  $$,
+  'Voided payment history does not block loan editing'
+);
+
+reset role;
+
+insert into public.payments (
+  loan_id,
+  collector_id,
+  amount,
+  payment_method,
+  status,
+  created_by
+)
+select
+  l.id,
+  c.collector_id,
+  1.00,
+  'cash',
+  'posted',
+  '50000000-0000-0000-0000-000000000002'
+from public.loans l
+join public.customers c on c.id = l.customer_id
+where l.customer_id = '60000000-0000-0000-0000-000000000003';
+
+set local role authenticated;
+set local request.jwt.claim.sub = '50000000-0000-0000-0000-000000000002';
+
 select throws_ok(
   $$
     select * from public.admin_update_loan(
       (select id from public.loans where customer_id = '60000000-0000-0000-0000-000000000003'),
-      85, 5, 'weekly', 4, '2026-10-20', 'Attempt after voided payment'
+      90, 5, 'weekly', 4, '2026-10-20', 'Attempt while posted payment remains'
     )
   $$,
   '22023',
-  'Loans with payment history cannot be updated',
-  'Even voided payment history blocks loan editing'
+  'Loans with posted payments cannot be updated',
+  'A posted payment still blocks loan editing'
 );
 
 select lives_ok(
