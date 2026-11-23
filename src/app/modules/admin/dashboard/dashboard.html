@@ -12,10 +12,15 @@
         Una vista clara del capital, la recuperación y el riesgo de toda la cartera.
       </p>
     </div>
-    <span class="dashboard-date">
-      <i class="pi pi-calendar" aria-hidden="true"></i>
-      Corte al {{ today }}
-    </span>
+    <div class="flex flex-col items-start gap-3 sm:items-end">
+      <span class="dashboard-date">
+        <i class="pi pi-calendar" aria-hidden="true"></i>
+        Corte al {{ today }}
+      </span>
+      <a pButton routerLink="/admin/analiticas" size="small" class="w-fit">
+        <i class="pi pi-chart-line mr-2" aria-hidden="true"></i>Ver análisis detallado
+      </a>
+    </div>
   </header>
 
   @if (store.error()) {
@@ -111,139 +116,6 @@
       </p-card>
     </section>
   }
-
-  <section
-    class="flex flex-col gap-4 rounded-2xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-700 dark:bg-surface-900 sm:p-5"
-    aria-labelledby="financial-charts-title"
-  >
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div>
-        <h2
-          id="financial-charts-title"
-          class="m-0 text-xl font-bold text-surface-950 dark:text-surface-0"
-        >
-          Tendencia financiera
-        </h2>
-        <p class="mb-0 mt-1 text-sm text-surface-500 dark:text-surface-400">
-          Utilidad y salidas de caja en la misma ventana de tiempo.
-        </p>
-      </div>
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(9rem,12rem)_minmax(10rem,13rem)]">
-        <label
-          class="flex flex-col gap-1 text-sm font-medium text-surface-700 dark:text-surface-200"
-        >
-          Período
-          <p-select
-            [options]="financialGranularityOptions"
-            optionLabel="label"
-            optionValue="value"
-            [ngModel]="store.financialGranularity()"
-            (ngModelChange)="changeFinancialGranularity($event)"
-            styleClass="w-full"
-            ariaLabel="Período de los gráficos financieros"
-          />
-        </label>
-        <label
-          class="flex flex-col gap-1 text-sm font-medium text-surface-700 dark:text-surface-200"
-        >
-          Fecha de referencia
-          <input
-            pInputText
-            type="date"
-            [value]="store.referenceDate()"
-            (change)="changeFinancialReferenceDate($event)"
-          />
-        </label>
-      </div>
-    </div>
-
-    <div
-      class="flex items-center justify-between gap-3 border-t border-surface-200 pt-3 dark:border-surface-700"
-    >
-      <button
-        pButton
-        type="button"
-        severity="secondary"
-        variant="outlined"
-        size="small"
-        aria-label="Ver período anterior"
-        (click)="shiftFinancialWindow(-1)"
-      >
-        <i class="pi pi-chevron-left" aria-hidden="true"></i>
-        <span class="ml-2">Anterior</span>
-      </button>
-      <p class="m-0 text-center text-xs text-surface-500" aria-live="polite">
-        @if (store.financialSeriesLoading()) {
-          Actualizando gráficos…
-        } @else {
-          Datos en soles peruanos (PEN)
-        }
-      </p>
-      <button
-        pButton
-        type="button"
-        severity="secondary"
-        variant="outlined"
-        size="small"
-        aria-label="Ver período siguiente"
-        (click)="shiftFinancialWindow(1)"
-      >
-        <span class="mr-2">Siguiente</span>
-        <i class="pi pi-chevron-right" aria-hidden="true"></i>
-      </button>
-    </div>
-
-    @if (store.financialSeriesError()) {
-      <p-message severity="error" styleClass="w-full" role="alert">
-        {{ store.financialSeriesError() }}
-      </p-message>
-    }
-
-    @defer (on viewport) {
-      @if (store.financialSeriesLoading()) {
-        <div class="flex h-64 items-center justify-center" role="status" aria-live="polite">
-          <span class="sr-only">Cargando gráficos financieros…</span>
-          <p-skeleton width="100%" height="15rem" borderRadius="1rem" aria-hidden="true" />
-        </div>
-      } @else if (store.financialSeries().length > 0 && !store.financialSeriesError()) {
-        <div class="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
-          <article class="min-w-0 rounded-xl border border-surface-200 p-4 dark:border-surface-700">
-            <app-financial-series-chart
-              kind="profit"
-              [granularity]="store.financialGranularity()"
-              [points]="store.financialSeries()"
-            />
-          </article>
-          <article class="min-w-0 rounded-xl border border-surface-200 p-4 dark:border-surface-700">
-            <app-financial-series-chart
-              kind="outflows"
-              [granularity]="store.financialGranularity()"
-              [points]="store.financialSeries()"
-            />
-          </article>
-        </div>
-      } @else if (!store.financialSeriesError()) {
-        <p
-          class="m-0 rounded-lg bg-surface-50 p-8 text-center text-sm text-surface-600 dark:bg-surface-800 dark:text-surface-300"
-        >
-          No hay movimientos financieros para este período.
-        </p>
-      }
-    } @placeholder {
-      <div class="grid grid-cols-1 gap-4 xl:grid-cols-2" aria-hidden="true">
-        <p-skeleton height="19rem" borderRadius="1rem" />
-        <p-skeleton height="19rem" borderRadius="1rem" />
-      </div>
-    } @loading (minimum 200ms) {
-      <div class="flex h-64 items-center justify-center" aria-live="polite">
-        Cargando gráficos financieros…
-      </div>
-    } @error {
-      <p class="m-0 p-8 text-center text-sm text-red-600 dark:text-red-400" role="alert">
-        No se pudieron cargar los gráficos financieros.
-      </p>
-    }
-  </section>
 
   <section class="grid grid-cols-1 gap-4 lg:grid-cols-2" aria-label="Análisis de cartera">
     <p-card class="insight-card h-full" header="Recuperación de cartera">

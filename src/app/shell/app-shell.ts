@@ -150,6 +150,19 @@ import { Topbar } from './topbar/topbar';
                           <p-sidebar-menu-item>
                             <a
                               pSidebarMenuButton
+                              routerLink="/admin/analiticas"
+                              routerLinkActive
+                              #adminAnalytics="routerLinkActive"
+                              [isActive]="adminAnalytics.isActive"
+                              (click)="closeNavigation()"
+                            >
+                              <i class="pi pi-chart-line" aria-hidden="true"></i>
+                              <span>Analíticas</span>
+                            </a>
+                          </p-sidebar-menu-item>
+                          <p-sidebar-menu-item>
+                            <a
+                              pSidebarMenuButton
                               routerLink="/admin/clientes"
                               routerLinkActive
                               #adminClients="routerLinkActive"

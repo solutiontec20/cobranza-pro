@@ -1,0 +1,559 @@
+<div class="dashboard-page flex flex-col gap-5">
+  <header
+    class="flex flex-col gap-3 border-b border-surface-200 pb-5 dark:border-surface-700 sm:flex-row sm:items-end sm:justify-between"
+  >
+    <div>
+      <h1
+        class="dashboard-heading m-0 text-3xl font-extrabold text-surface-950 dark:text-surface-0 sm:text-4xl"
+      >
+        Analíticas
+      </h1>
+      <p class="mt-2 max-w-2xl text-sm text-surface-500 dark:text-surface-400">
+        Qué pasó exactamente en el día, la semana, el mes, el año o el rango que elijas, y cómo
+        rindió cada cobrador.
+      </p>
+    </div>
+    <a
+      pButton
+      routerLink="/admin/dashboard"
+      severity="secondary"
+      variant="outlined"
+      size="small"
+      class="w-fit"
+    >
+      <i class="pi pi-arrow-left mr-2" aria-hidden="true"></i>Volver al dashboard
+    </a>
+  </header>
+
+  <section
+    class="flex flex-col gap-4 rounded-2xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-700 dark:bg-surface-900 sm:p-5"
+    aria-labelledby="analytics-period-title"
+  >
+    <h2 id="analytics-period-title" class="sr-only">Selección de período y cobrador</h2>
+
+    <div class="flex min-w-0 flex-col gap-1">
+      <span
+        id="analytics-preset-label"
+        class="text-sm font-medium text-surface-700 dark:text-surface-200"
+      >
+        Período
+      </span>
+      <p-selectbutton
+        [options]="presetOptions"
+        optionLabel="label"
+        optionValue="value"
+        [allowEmpty]="false"
+        [fluid]="true"
+        ariaLabelledBy="analytics-preset-label"
+        [ngModel]="store.preset()"
+        (ngModelChange)="changePreset($event)"
+      />
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-[repeat(3,minmax(0,1fr))]">
+      @if (store.preset() === 'custom') {
+        <label
+          class="flex flex-col gap-1 text-sm font-medium text-surface-700 dark:text-surface-200"
+        >
+          Desde
+          <input
+            id="analytics-start"
+            pInputText
+            type="date"
+            [value]="store.customStart()"
+            [max]="store.customEnd()"
+            (change)="changeCustomStart($event)"
+          />
+        </label>
+        <label
+          class="flex flex-col gap-1 text-sm font-medium text-surface-700 dark:text-surface-200"
+        >
+          Hasta
+          <input
+            id="analytics-end"
+            pInputText
+            type="date"
+            [value]="store.customEnd()"
+            [min]="store.customStart()"
+            (change)="changeCustomEnd($event)"
+          />
+        </label>
+      } @else {
+        <label
+          class="flex flex-col gap-1 text-sm font-medium text-surface-700 dark:text-surface-200"
+        >
+          {{ dateLabel() }}
+          <input
+            pInputText
+            type="date"
+            [value]="store.referenceDate()"
+            (change)="changeReferenceDate($event)"
+          />
+        </label>
+      }
+
+      <label class="flex flex-col gap-1 text-sm font-medium text-surface-700 dark:text-surface-200">
+        Cobrador
+        <p-select
+          [options]="collectorSelectOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="store.collectorId()"
+          (ngModelChange)="selectCollector($event)"
+          [filter]="true"
+          filterPlaceholder="Buscar cobrador"
+          styleClass="w-full"
+          ariaLabel="Filtrar por cobrador"
+        />
+      </label>
+    </div>
+
+    @if (rangeError()) {
+      <p-message severity="warn" styleClass="w-full" role="alert">{{ rangeError() }}</p-message>
+    }
+
+    <div
+      class="flex flex-wrap items-center justify-between gap-3 border-t border-surface-200 pt-3 dark:border-surface-700"
+    >
+      @if (store.canShift()) {
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          variant="outlined"
+          size="small"
+          aria-label="Ver período anterior"
+          (click)="store.shiftPeriod(-1)"
+        >
+          <i class="pi pi-chevron-left" aria-hidden="true"></i>
+          <span class="ml-2">Anterior</span>
+        </button>
+      }
+      <div class="min-w-0 flex-1 text-center" aria-live="polite">
+        <p
+          class="m-0 text-sm font-semibold text-surface-900 dark:text-surface-0"
+          data-testid="analytics-range"
+        >
+          {{ periodTitle() }}: {{ rangeText() }}
+          <span class="font-normal text-surface-500 dark:text-surface-400">(ambos incluidos)</span>
+        </p>
+        <p class="m-0 mt-0.5 text-xs text-surface-500 dark:text-surface-400">
+          @if (store.selectedCollectorName(); as name) {
+            Solo el cobrador {{ name }}.
+          } @else {
+            Todo el negocio.
+          }
+          Montos en soles peruanos (PEN), fechas de Lima.
+        </p>
+      </div>
+      @if (store.canShift()) {
+        <div class="flex items-center gap-2">
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            variant="text"
+            size="small"
+            (click)="store.goToToday()"
+          >
+            Hoy
+          </button>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            variant="outlined"
+            size="small"
+            aria-label="Ver período siguiente"
+            (click)="store.shiftPeriod(1)"
+          >
+            <span class="mr-2">Siguiente</span>
+            <i class="pi pi-chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
+      }
+    </div>
+  </section>
+
+  @if (store.error()) {
+    <p-message severity="error" styleClass="w-full" role="alert">
+      <span class="flex flex-wrap items-center gap-3">
+        {{ store.error() }}
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          variant="outlined"
+          size="small"
+          (click)="store.retry()"
+        >
+          <i class="pi pi-refresh mr-2" aria-hidden="true"></i>Reintentar
+        </button>
+      </span>
+    </p-message>
+  } @else if (store.loading()) {
+    <div role="status" aria-live="polite">
+      <span class="sr-only">Cargando analíticas…</span>
+      <div
+        class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+        aria-hidden="true"
+      >
+        @for (card of loadingCards; track card) {
+          <p-skeleton height="8rem" borderRadius="1rem" />
+        }
+      </div>
+      <div class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2" aria-hidden="true">
+        <p-skeleton height="19rem" borderRadius="1rem" />
+        <p-skeleton height="19rem" borderRadius="1rem" />
+      </div>
+    </div>
+  } @else if (!store.hasActivity()) {
+    <p
+      class="m-0 rounded-lg bg-surface-50 p-8 text-center text-sm text-surface-600 dark:bg-surface-800 dark:text-surface-300"
+      data-testid="analytics-empty"
+    >
+      No hay movimientos financieros en este período. Probá con otra fecha, otro tipo de período o
+      quitá el filtro de cobrador.
+    </p>
+  } @else {
+    <section
+      class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+      aria-label="Totales del período"
+    >
+      <p-card class="metric-card metric-card--green">
+        <div class="flex items-center gap-3">
+          <span class="metric-icon"><i class="pi pi-chart-line" aria-hidden="true"></i></span>
+          <span class="metric-label">Utilidad neta</span>
+        </div>
+        <p class="metric-value metric-value--accent" data-testid="kpi-net-profit">
+          {{ store.totals().netProfit | penCurrency }}
+        </p>
+        <p class="metric-caption">Interés cobrado menos gastos aprobados</p>
+      </p-card>
+
+      <p-card class="metric-card metric-card--blue">
+        <div class="flex items-center gap-3">
+          <span class="metric-icon"><i class="pi pi-check-circle" aria-hidden="true"></i></span>
+          <span class="metric-label">Cobranza recibida</span>
+        </div>
+        <p class="metric-value" data-testid="kpi-collected">
+          {{ store.totals().collectedAmount | penCurrency }}
+        </p>
+        <p class="metric-caption">{{ store.totals().paymentsCount }} pagos contabilizados</p>
+      </p-card>
+
+      <p-card class="metric-card metric-card--cyan">
+        <div class="flex items-center gap-3">
+          <span class="metric-icon"><i class="pi pi-percentage" aria-hidden="true"></i></span>
+          <span class="metric-label">Intereses cobrados</span>
+        </div>
+        <p class="metric-value metric-value--accent">
+          {{ store.totals().interestCollected | penCurrency }}
+        </p>
+        <p class="metric-caption">Parte de la cobranza que corresponde a interés</p>
+      </p-card>
+
+      <p-card class="metric-card metric-card--orange">
+        <div class="flex items-center gap-3">
+          <span class="metric-icon"><i class="pi pi-send" aria-hidden="true"></i></span>
+          <span class="metric-label">Préstamos desembolsados</span>
+        </div>
+        <p class="metric-value metric-value--accent">
+          {{ store.totals().loanDisbursements | penCurrency }}
+        </p>
+        <p class="metric-caption">Neto de préstamos anulados</p>
+      </p-card>
+
+      <p-card class="metric-card metric-card--red">
+        <div class="flex items-center gap-3">
+          <span class="metric-icon"><i class="pi pi-wallet" aria-hidden="true"></i></span>
+          <span class="metric-label">Gastos operativos</span>
+        </div>
+        <p class="metric-value metric-value--accent">
+          {{ store.totals().operatingExpenses | penCurrency }}
+        </p>
+        <p class="metric-caption">Solo gastos aprobados; el viático entregado no es gasto</p>
+      </p-card>
+    </section>
+
+    @if (showEvolution()) {
+      <section aria-label="Evolución del período">
+        @defer (on viewport) {
+          <div class="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
+            <article
+              class="min-w-0 rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-700 dark:bg-surface-900"
+            >
+              <app-financial-series-chart
+                kind="profit"
+                [bucket]="store.bucket()"
+                [points]="store.series()"
+              />
+            </article>
+            <article
+              class="min-w-0 rounded-xl border border-surface-200 bg-surface-0 p-4 dark:border-surface-700 dark:bg-surface-900"
+            >
+              <app-financial-series-chart
+                kind="cashflow"
+                [bucket]="store.bucket()"
+                [points]="store.series()"
+              />
+            </article>
+          </div>
+        } @placeholder {
+          <div class="grid grid-cols-1 gap-4 xl:grid-cols-2" aria-hidden="true">
+            <p-skeleton height="19rem" borderRadius="1rem" />
+            <p-skeleton height="19rem" borderRadius="1rem" />
+          </div>
+        } @loading (minimum 200ms) {
+          <div class="flex h-64 items-center justify-center text-sm" aria-live="polite">
+            Cargando gráficos…
+          </div>
+        } @error {
+          <p class="m-0 p-8 text-center text-sm text-red-600 dark:text-red-400" role="alert">
+            No se pudieron cargar los gráficos. El detalle numérico sigue disponible en las tablas.
+          </p>
+        }
+      </section>
+    }
+
+    <section
+      class="rounded-2xl border border-surface-200 bg-surface-0 dark:border-surface-700 dark:bg-surface-900"
+      aria-labelledby="analytics-collectors-title"
+    >
+      <div class="border-b border-surface-200 px-4 py-3 dark:border-surface-700 sm:px-5">
+        <h2
+          id="analytics-collectors-title"
+          class="m-0 text-lg font-bold text-surface-950 dark:text-surface-0"
+        >
+          Rendimiento por cobrador
+        </h2>
+        <p class="m-0 mt-0.5 text-xs text-surface-500 dark:text-surface-400">
+          Todos los cobradores en el mismo período. Elegí uno para ver solo su cobranza.
+        </p>
+      </div>
+
+      @if (store.collectors().length > 0) {
+        <div class="p-4 sm:p-5">
+          @defer (on viewport) {
+            <app-collectors-chart [entries]="store.collectors()" />
+          } @placeholder {
+            <p-skeleton height="19rem" borderRadius="1rem" />
+          }
+        </div>
+      }
+
+      <div
+        class="overflow-x-auto"
+        role="region"
+        aria-labelledby="analytics-collectors-title"
+        tabindex="0"
+      >
+        <table class="w-full min-w-[48rem] border-collapse text-sm" data-testid="collectors-table">
+          <caption class="sr-only">
+            Cobranza, clientes atendidos, desembolsos, gastos y utilidad por cobrador
+          </caption>
+          <thead>
+            <tr class="text-left text-xs text-surface-600 dark:text-surface-300">
+              <th scope="col" class="px-4 py-2 font-semibold">Cobrador</th>
+              <th scope="col" class="px-4 py-2 text-right font-semibold">Pagos</th>
+              <th scope="col" class="px-4 py-2 text-right font-semibold">Clientes</th>
+              <th scope="col" class="px-4 py-2 text-right font-semibold">Cobranza</th>
+              <th scope="col" class="px-4 py-2 text-right font-semibold">Intereses</th>
+              <th scope="col" class="px-4 py-2 text-right font-semibold">Desembolsos</th>
+              <th scope="col" class="px-4 py-2 text-right font-semibold">Gastos</th>
+              <th scope="col" class="px-4 py-2 text-right font-semibold">Utilidad</th>
+              <th scope="col" class="px-4 py-2 text-right font-semibold">Detalle</th>
+            </tr>
+          </thead>
+          <tbody class="tabular-nums">
+            @for (entry of store.collectors(); track entry.collectorId) {
+              <tr
+                class="border-t border-surface-200 dark:border-surface-700"
+                [class.bg-primary-50]="store.collectorId() === entry.collectorId"
+                [class.dark:bg-primary-900/20]="store.collectorId() === entry.collectorId"
+              >
+                <th scope="row" class="px-4 py-2 text-left font-medium">
+                  {{ entry.name }}
+                  <span class="block text-xs font-normal text-surface-500"
+                    >DNI {{ entry.dni }}</span
+                  >
+                </th>
+                <td class="px-4 py-2 text-right">{{ entry.paymentsCount }}</td>
+                <td class="px-4 py-2 text-right">{{ entry.clientsAttended }}</td>
+                <td class="px-4 py-2 text-right font-semibold">
+                  {{ entry.collectedAmount | penCurrency }}
+                </td>
+                <td class="px-4 py-2 text-right">{{ entry.interestCollected | penCurrency }}</td>
+                <td class="px-4 py-2 text-right">{{ entry.loanDisbursements | penCurrency }}</td>
+                <td class="px-4 py-2 text-right">{{ entry.operatingExpenses | penCurrency }}</td>
+                <td class="px-4 py-2 text-right">{{ entry.netProfit | penCurrency }}</td>
+                <td class="px-4 py-2 text-right">
+                  @if (store.collectorId() === entry.collectorId) {
+                    <button
+                      pButton
+                      type="button"
+                      size="small"
+                      variant="text"
+                      severity="secondary"
+                      [attr.aria-label]="'Quitar filtro de ' + entry.name"
+                      (click)="selectCollector(null)"
+                    >
+                      Ver todos
+                    </button>
+                  } @else {
+                    <button
+                      pButton
+                      type="button"
+                      size="small"
+                      variant="outlined"
+                      [attr.aria-label]="'Ver solo a ' + entry.name"
+                      (click)="selectCollector(entry.collectorId)"
+                    >
+                      Ver solo
+                    </button>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="9" class="px-4 py-6 text-center text-surface-500">
+                  No hay cobradores con actividad en este período.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    @if (store.categories().length > 0) {
+      <section
+        class="rounded-2xl border border-surface-200 bg-surface-0 dark:border-surface-700 dark:bg-surface-900"
+        aria-labelledby="analytics-categories-title"
+      >
+        <div class="border-b border-surface-200 px-4 py-3 dark:border-surface-700 sm:px-5">
+          <h2
+            id="analytics-categories-title"
+            class="m-0 text-lg font-bold text-surface-950 dark:text-surface-0"
+          >
+            Gastos por categoría
+          </h2>
+        </div>
+        <div class="grid grid-cols-1 gap-4 p-4 sm:p-5 lg:grid-cols-2 lg:items-center">
+          @defer (on viewport) {
+            <app-expense-categories-chart [entries]="store.categories()" />
+          } @placeholder {
+            <p-skeleton height="19rem" borderRadius="1rem" />
+          }
+          <div
+            class="overflow-x-auto"
+            role="region"
+            aria-labelledby="analytics-categories-title"
+            tabindex="0"
+          >
+            <table class="w-full border-collapse text-sm" data-testid="categories-table">
+              <caption class="sr-only">
+                Gastos aprobados por categoría
+              </caption>
+              <thead>
+                <tr class="text-left text-xs text-surface-600 dark:text-surface-300">
+                  <th scope="col" class="px-4 py-2 font-semibold">Categoría</th>
+                  <th scope="col" class="px-4 py-2 text-right font-semibold">Gastos</th>
+                  <th scope="col" class="px-4 py-2 text-right font-semibold">Monto</th>
+                </tr>
+              </thead>
+              <tbody class="tabular-nums">
+                @for (entry of store.categories(); track entry.category) {
+                  <tr class="border-t border-surface-200 dark:border-surface-700">
+                    <th scope="row" class="px-4 py-2 text-left font-medium">
+                      {{ categoryLabels[entry.category] }}
+                    </th>
+                    <td class="px-4 py-2 text-right">{{ entry.expenseCount }}</td>
+                    <td class="px-4 py-2 text-right font-semibold">
+                      {{ entry.spentAmount | penCurrency }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    }
+
+    @if (showEvolution()) {
+      <section
+        class="rounded-2xl border border-surface-200 bg-surface-0 dark:border-surface-700 dark:bg-surface-900"
+        aria-labelledby="analytics-table-title"
+      >
+        <div class="border-b border-surface-200 px-4 py-3 dark:border-surface-700 sm:px-5">
+          <h2
+            id="analytics-table-title"
+            class="m-0 text-lg font-bold text-surface-950 dark:text-surface-0"
+          >
+            Detalle del período
+          </h2>
+          <p class="m-0 mt-0.5 text-xs text-surface-500 dark:text-surface-400">
+            Mismos valores que los gráficos, en soles peruanos.
+          </p>
+        </div>
+        <div
+          class="overflow-x-auto"
+          role="region"
+          aria-labelledby="analytics-table-title"
+          tabindex="0"
+        >
+          <table class="w-full min-w-[40rem] border-collapse text-sm" data-testid="detail-table">
+            <caption class="sr-only">
+              Cobranza, intereses, desembolsos, gastos y utilidad neta por período
+            </caption>
+            <thead>
+              <tr class="text-left text-xs text-surface-600 dark:text-surface-300">
+                <th scope="col" class="px-4 py-2 font-semibold">Período</th>
+                <th scope="col" class="px-4 py-2 text-right font-semibold">Cobranza</th>
+                <th scope="col" class="px-4 py-2 text-right font-semibold">Intereses</th>
+                <th scope="col" class="px-4 py-2 text-right font-semibold">Desembolsos</th>
+                <th scope="col" class="px-4 py-2 text-right font-semibold">Gastos</th>
+                <th scope="col" class="px-4 py-2 text-right font-semibold">Utilidad neta</th>
+              </tr>
+            </thead>
+            <tbody class="tabular-nums">
+              @for (point of store.series(); track point.bucketStart) {
+                <tr class="border-t border-surface-200 dark:border-surface-700">
+                  <th scope="row" class="px-4 py-2 text-left font-medium whitespace-nowrap">
+                    {{ rangeOf(point) }}
+                  </th>
+                  <td class="px-4 py-2 text-right">{{ point.collectedAmount | penCurrency }}</td>
+                  <td class="px-4 py-2 text-right">{{ point.interestCollected | penCurrency }}</td>
+                  <td class="px-4 py-2 text-right">{{ point.loanDisbursements | penCurrency }}</td>
+                  <td class="px-4 py-2 text-right">{{ point.operatingExpenses | penCurrency }}</td>
+                  <td class="px-4 py-2 text-right font-semibold">
+                    {{ point.netProfit | penCurrency }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot class="tabular-nums">
+              <tr class="border-t-2 border-surface-300 font-bold dark:border-surface-600">
+                <th scope="row" class="px-4 py-2 text-left">Total del período</th>
+                <td class="px-4 py-2 text-right">
+                  {{ store.totals().collectedAmount | penCurrency }}
+                </td>
+                <td class="px-4 py-2 text-right">
+                  {{ store.totals().interestCollected | penCurrency }}
+                </td>
+                <td class="px-4 py-2 text-right">
+                  {{ store.totals().loanDisbursements | penCurrency }}
+                </td>
+                <td class="px-4 py-2 text-right">
+                  {{ store.totals().operatingExpenses | penCurrency }}
+                </td>
+                <td class="px-4 py-2 text-right">{{ store.totals().netProfit | penCurrency }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+    }
+  }
+</div>

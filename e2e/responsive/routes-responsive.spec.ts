@@ -37,6 +37,7 @@ const publicRoutes: readonly ResponsiveSmokeRoute[] = [
 
 const adminRoutes: readonly ResponsiveSmokeRoute[] = [
   { name: 'dashboard', path: '/admin/dashboard', heading: 'Dashboard general' },
+  { name: 'analíticas', path: '/admin/analiticas', heading: 'Analíticas' },
   { name: 'clientes', path: '/admin/clientes', heading: 'Clientes' },
   { name: 'préstamos', path: '/admin/prestamos', heading: 'Préstamos' },
   { name: 'cobradores', path: '/admin/cobradores', heading: 'Cobradores' },

@@ -4,8 +4,6 @@ import { AppError } from '../errors/app-error';
 import {
   AdminDashboardSummary,
   CollectorPerformanceEntry,
-  DashboardFinancialPoint,
-  DashboardFinancialSeriesQuery,
 } from '../models/admin-dashboard.model';
 import { AdminDashboardRepository } from '../repositories/admin-dashboard.repository';
 import { Database } from '../supabase/database.types';
@@ -14,8 +12,6 @@ import { SUPABASE } from '../supabase/supabase-client';
 type SummaryRow = Database['public']['Functions']['admin_dashboard_summary']['Returns'][number];
 type PerformanceRow =
   Database['public']['Functions']['admin_dashboard_collector_performance']['Returns'][number];
-type FinancialSeriesRow =
-  Database['public']['Functions']['admin_dashboard_financial_series']['Returns'][number];
 
 @Service({ autoProvided: false })
 export class SupabaseAdminDashboardRepository implements AdminDashboardRepository {
@@ -44,29 +40,6 @@ export class SupabaseAdminDashboardRepository implements AdminDashboardRepositor
     }
 
     return (data ?? []).map((row) => this.toPerformanceEntry(row));
-  }
-
-  async getFinancialSeries(
-    query: DashboardFinancialSeriesQuery,
-  ): Promise<DashboardFinancialPoint[]> {
-    const { data, error } = await this.supabase.rpc('admin_dashboard_financial_series', {
-      p_granularity: query.granularity,
-      p_reference_date: query.referenceDate,
-    });
-
-    if (error) {
-      throw this.dashboardError(error);
-    }
-
-    return (data ?? []).map((row: FinancialSeriesRow) => ({
-      bucketStart: row.bucket_start,
-      bucketEnd: row.bucket_end,
-      collectedAmount: Number(row.collected_amount),
-      interestCollected: Number(row.interest_collected),
-      loanDisbursements: Number(row.loan_disbursements),
-      operatingExpenses: Number(row.operating_expenses),
-      netProfit: Number(row.net_profit),
-    }));
   }
 
   private toSummary(row: SummaryRow): AdminDashboardSummary {

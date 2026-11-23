@@ -9,13 +9,14 @@ import {
   viewChild,
 } from '@angular/core';
 import Chart from 'chart.js/auto';
+import { AnalyticsBucket, AnalyticsFinancialPoint } from '../../../core/models/analytics.model';
 import {
-  DashboardFinancialGranularity,
-  DashboardFinancialPoint,
-} from '../../../core/models/admin-dashboard.model';
-import { formatFinancialAmount as formatPenAmount } from './financial-chart-calculations';
+  formatBucketLabel,
+  formatFinancialAmount as formatPenAmount,
+  formatRange,
+} from './analytics-calculations';
 
-export type FinancialChartKind = 'profit' | 'outflows';
+export type FinancialChartKind = 'profit' | 'cashflow';
 
 @Component({
   selector: 'app-financial-series-chart',
@@ -43,7 +44,7 @@ export type FinancialChartKind = 'profit' | 'outflows';
       <tbody>
         @for (point of points(); track point.bucketStart) {
           <tr>
-            <th scope="row">{{ formatBucket(point.bucketStart, point.bucketEnd) }}</th>
+            <th scope="row">{{ formatPointRange(point) }}</th>
             @for (value of valuesFor(point); track $index) {
               <td>{{ formatFinancialAmount(value) }}</td>
             }
@@ -56,23 +57,25 @@ export type FinancialChartKind = 'profit' | 'outflows';
 })
 export class FinancialSeriesChart {
   readonly kind = input.required<FinancialChartKind>();
-  readonly granularity = input.required<DashboardFinancialGranularity>();
-  readonly points = input.required<DashboardFinancialPoint[]>();
+  readonly bucket = input.required<AnalyticsBucket>();
+  readonly points = input.required<AnalyticsFinancialPoint[]>();
   protected readonly title = computed(() =>
-    this.kind() === 'profit' ? 'Utilidad' : 'Salidas de caja',
+    this.kind() === 'profit' ? 'Evolución financiera' : 'Desembolsos frente a cobros',
   );
   protected readonly description = computed(() =>
     this.kind() === 'profit'
-      ? 'Interés cobrado, gastos operativos y utilidad neta.'
-      : 'Desembolsos de préstamos y gastos o viáticos aprobados.',
+      ? 'Interés cobrado, gastos operativos y utilidad neta por período.'
+      : 'Préstamos desembolsados y cobranza recibida por período.',
   );
   protected readonly seriesLabels = computed(() =>
     this.kind() === 'profit'
       ? ['Interés cobrado', 'Gastos operativos', 'Utilidad neta']
-      : ['Desembolsos de préstamos', 'Gastos y viáticos aprobados'],
+      : ['Desembolsos de préstamos', 'Cobranza recibida'],
   );
   protected readonly accessibleDescription = computed(
-    () => `${this.title()}. ${this.description()} Valores en soles peruanos.`,
+    () =>
+      `${this.title()}. ${this.description()} Series: ${this.seriesLabels().join(', ')}. ` +
+      'Valores en soles peruanos; el detalle numérico está en la tabla del período.',
   );
 
   private readonly destroyRef = inject(DestroyRef);
@@ -83,7 +86,10 @@ export class FinancialSeriesChart {
     afterRenderEffect(() => {
       const points = this.points();
       const kind = this.kind();
-      const labels = points.map((point) => this.formatBucket(point.bucketStart, point.bucketEnd));
+      const bucket = this.bucket();
+      const labels = points.map((point) =>
+        formatBucketLabel(point.bucketStart, point.bucketEnd, bucket),
+      );
       const datasets = this.buildDatasets(points, kind);
       const chartTextColor = getComputedStyle(this.chartCanvas().nativeElement).color || '#64748b';
 
@@ -103,17 +109,14 @@ export class FinancialSeriesChart {
               tooltip: {
                 callbacks: {
                   label: (context) =>
-                    `${context.dataset.label}: ${new Intl.NumberFormat('es-PE', {
-                      style: 'currency',
-                      currency: 'PEN',
-                    }).format(context.parsed.y ?? 0)}`,
+                    `${context.dataset.label}: ${formatPenAmount(context.parsed.y ?? 0)}`,
                 },
               },
             },
             scales: {
               x: {
                 grid: { display: false },
-                ticks: { color: chartTextColor, maxTicksLimit: 7, maxRotation: 0 },
+                ticks: { color: chartTextColor, maxTicksLimit: 8, maxRotation: 0 },
               },
               y: {
                 beginAtZero: true,
@@ -145,32 +148,21 @@ export class FinancialSeriesChart {
     });
   }
 
-  protected valuesFor(point: DashboardFinancialPoint): number[] {
+  protected valuesFor(point: AnalyticsFinancialPoint): number[] {
     return this.kind() === 'profit'
       ? [point.interestCollected, point.operatingExpenses, point.netProfit]
-      : [point.loanDisbursements, point.operatingExpenses];
+      : [point.loanDisbursements, point.collectedAmount];
   }
 
   protected formatFinancialAmount(amount: number): string {
     return formatPenAmount(amount);
   }
 
-  protected formatBucket(start: string, end: string): string {
-    const format = (value: string, options: Intl.DateTimeFormatOptions) =>
-      new Intl.DateTimeFormat('es-PE', { ...options, timeZone: 'UTC' }).format(
-        new Date(`${value}T00:00:00Z`),
-      );
-
-    if (this.granularity() === 'annual') return format(start, { year: 'numeric' });
-    if (this.granularity() === 'monthly') return format(start, { month: 'short', year: '2-digit' });
-    if (this.granularity() === 'daily') return format(start, { day: '2-digit' });
-    return `${format(start, { day: '2-digit', month: 'short' })}–${format(end, {
-      day: '2-digit',
-      month: 'short',
-    })}`;
+  protected formatPointRange(point: AnalyticsFinancialPoint): string {
+    return formatRange(point.bucketStart, point.bucketEnd);
   }
 
-  private buildDatasets(points: DashboardFinancialPoint[], kind: FinancialChartKind) {
+  private buildDatasets(points: AnalyticsFinancialPoint[], kind: FinancialChartKind) {
     const common = { tension: 0.28, pointRadius: points.length > 20 ? 0 : 3, borderWidth: 2 };
     if (kind === 'profit') {
       return [
@@ -209,10 +201,10 @@ export class FinancialSeriesChart {
       },
       {
         ...common,
-        label: 'Gastos y viáticos aprobados',
-        data: points.map((point) => point.operatingExpenses),
-        borderColor: '#d97706',
-        backgroundColor: 'rgba(217, 119, 6, 0.12)',
+        label: 'Cobranza recibida',
+        data: points.map((point) => point.collectedAmount),
+        borderColor: '#0891b2',
+        backgroundColor: 'rgba(8, 145, 178, 0.12)',
       },
     ];
   }
