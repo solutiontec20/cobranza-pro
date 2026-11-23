@@ -153,62 +153,64 @@ async function prepareDashboard(page: Page): Promise<void> {
 }
 
 async function mockClientPortfolio(page: Page): Promise<void> {
-  await page.route('**/rest/v1/customers?*', async (route) => {
-    const collectorFilter = new URL(route.request().url()).searchParams.get('collector_id');
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify([
-        {
-          id: 'client-1',
-          document_number: '70000001',
-          full_name: 'Cliente Ana',
-          phone: '900000001',
-          address: 'Dirección 1',
-          notes: null,
-          collector_id: 'collector-1',
-          active: true,
-          created_at: '2026-10-30T12:00:00.000Z',
-          collector: { full_name: 'Ana Torres' },
-        },
-        {
-          id: 'client-2',
-          document_number: '70000002',
-          full_name: 'Cliente Luis',
-          phone: '900000002',
-          address: 'Dirección 2',
-          notes: null,
-          collector_id: 'collector-2',
-          active: true,
-          created_at: '2026-10-29T12:00:00.000Z',
-          collector: { full_name: 'Luis Pérez' },
-        },
-      ].filter(
-        (customer) =>
-          !collectorFilter?.startsWith('eq.') ||
-          customer.collector_id === collectorFilter.slice(3),
-      )),
-    });
-  });
+  await page.route('**/rest/v1/rpc/admin_list_clients_page', async (route) => {
+    const request = route.request().postDataJSON() as {
+      p_collector_id?: string | null;
+      p_page_index?: number;
+      p_page_size?: number;
+      p_search?: string | null;
+    };
+    const collectorId = request.p_collector_id ?? null;
+    const search = request.p_search?.trim().toLocaleLowerCase('es-PE') ?? '';
+    const pageIndex = request.p_page_index ?? 0;
+    const pageSize = request.p_page_size ?? 10;
+    const clients = [
+      {
+        id: 'client-1',
+        document_number: '70000001',
+        full_name: 'Cliente Ana',
+        phone: '900000001',
+        address: 'Dirección 1',
+        notes: null,
+        collector_id: 'collector-1',
+        collector_name: 'Ana Torres',
+        active: true,
+        created_at: '2026-10-30T12:00:00.000Z',
+        outstanding_amount: 100,
+        max_overdue_days: 2,
+        is_blacklisted: false,
+      },
+      {
+        id: 'client-2',
+        document_number: '70000002',
+        full_name: 'Cliente Luis',
+        phone: '900000002',
+        address: 'Dirección 2',
+        notes: null,
+        collector_id: 'collector-2',
+        collector_name: 'Luis Pérez',
+        active: true,
+        created_at: '2026-10-29T12:00:00.000Z',
+        outstanding_amount: 50,
+        max_overdue_days: 0,
+        is_blacklisted: false,
+      },
+    ].filter(
+      (client) =>
+        (!collectorId || client.collector_id === collectorId) &&
+        (!search ||
+          client.full_name.toLocaleLowerCase('es-PE').includes(search) ||
+          client.document_number.includes(search)),
+    );
+    const pageStart = pageIndex * pageSize;
+    const response = clients
+      .slice(pageStart, pageStart + pageSize)
+      .map((client) => ({ ...client, total_count: clients.length }));
 
-  await page.route('**/rest/v1/customer_financial_status?*', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify([
-        {
-          customer_id: 'client-1',
-          max_overdue_days: 2,
-          is_blacklisted: false,
-          outstanding_amount: 100,
-        },
-        {
-          customer_id: 'client-2',
-          max_overdue_days: 0,
-          is_blacklisted: false,
-          outstanding_amount: 50,
-        },
-      ]),
+      body: JSON.stringify(response),
     });
   });
 
