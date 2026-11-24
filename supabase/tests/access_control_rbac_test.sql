@@ -203,19 +203,35 @@ set local request.jwt.claim.sub = 'f1000000-0000-0000-0000-000000000001';
 -- The RPC requires the actor to be a system administrator different from the target, so at least two
 -- exist whenever a system administrator is reassigned. The last-administrator guard is therefore
 -- defense in depth, and the observable invariant is that one administrator always remains.
+-- The local seed already contains a system administrator, so the count is compared with the state
+-- before the reassignment instead of with a fixed number.
+reset role;
+select set_config('test.rbac.system_admins_before',
+  (select count(*)::text from private.profile_access_roles a
+   join private.access_roles r on r.id = a.role_id
+   join public.profiles p on p.id = a.profile_id
+   where r.slug = 'system_administrator' and r.active and p.active and p.role = 'admin'::public.app_role),
+  true);
+set local role authenticated;
+set local request.jwt.claim.sub = 'f1000000-0000-0000-0000-000000000001';
+
 select lives_ok(
   $$ select public.admin_assign_access_role('f1000000-0000-0000-0000-000000000004', current_setting('test.rbac.reader_role_id')::uuid, 'demote second system administrator') $$,
   'A system administrator can be reassigned while another system administrator remains'
 );
 
 reset role;
-select is(
+select ok(
   (select count(*) from private.profile_access_roles a
    join private.access_roles r on r.id = a.role_id
    join public.profiles p on p.id = a.profile_id
-   where r.slug = 'system_administrator' and r.active and p.active and p.role = 'admin'::public.app_role),
-  1::bigint,
-  'At least one active system administrator always remains'
+   where r.slug = 'system_administrator' and r.active and p.active and p.role = 'admin'::public.app_role)
+  = current_setting('test.rbac.system_admins_before')::bigint - 1
+  and (select count(*) from private.profile_access_roles a
+   join private.access_roles r on r.id = a.role_id
+   join public.profiles p on p.id = a.profile_id
+   where r.slug = 'system_administrator' and r.active and p.active and p.role = 'admin'::public.app_role) >= 1,
+  'Reassigning a system administrator removes exactly that one and at least one always remains'
 );
 set local role authenticated;
 set local request.jwt.claim.sub = 'f1000000-0000-0000-0000-000000000001';

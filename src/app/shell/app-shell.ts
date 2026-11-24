@@ -35,7 +35,7 @@ import { Topbar } from './topbar/topbar';
     <p-toast />
 
     <div
-      class="app-shell"
+      class="app-shell flex h-dvh min-h-0 w-full overflow-hidden"
       [class.app-shell--collapsed]="!isMobile() && !open()"
       [class.app-shell--mobile-open]="isMobile() && open()"
     >
@@ -43,7 +43,7 @@ import { Topbar } from './topbar/topbar';
       <!-- BACKDROP MOBILE -->
       @if (isMobile() && open()) {
         <div
-          class="app-sidebar-backdrop"
+          class="app-sidebar-backdrop fixed inset-0 z-50 bg-slate-900/60"
           aria-hidden="true"
           (click)="closeNavigation()"
         ></div>
@@ -52,7 +52,7 @@ import { Topbar } from './topbar/topbar';
       <!-- SIDEBAR -->
       <aside
         id="primary-navigation"
-        class="app-sidebar"
+        class="app-sidebar relative z-[15] flex min-h-0 shrink-0 flex-col overflow-hidden border-r"
         [attr.role]="isMobile() && open() ? 'dialog' : 'navigation'"
         [attr.aria-modal]="isMobile() && open() ? 'true' : null"
         aria-label="Navegación principal"
@@ -62,30 +62,30 @@ import { Topbar } from './topbar/topbar';
       >
 
         <!-- HEADER Y LOGOTIPO -->
-        <div class="app-sidebar-header">
+        <div class="app-sidebar-header flex h-[76px] shrink-0 items-center justify-between border-b px-[17px] py-3">
 
-          <div class="app-brand">
+          <div class="app-brand flex min-w-0 max-w-full items-center justify-start overflow-hidden">
 
             <img
-              class="app-brand-horizontal app-brand-light"
+              class="app-brand-horizontal app-brand-light h-[46px] w-[191px] max-w-full object-contain object-left"
               src="/cobranzapro-quipu-horizontal-claro.svg"
               alt="CobranzaPro"
             />
 
             <img
-              class="app-brand-horizontal app-brand-dark"
+              class="app-brand-horizontal app-brand-dark h-[46px] w-[191px] max-w-full object-contain object-left"
               src="/cobranzapro-quipu-horizontal-oscuro.svg"
               alt="CobranzaPro"
             />
 
             <img
-              class="app-brand-icon app-brand-light"
+              class="app-brand-icon app-brand-light size-[42px] shrink-0 object-contain"
               src="/cobranzapro-quipu-compacto-claro.svg"
               alt=""
             />
 
             <img
-              class="app-brand-icon app-brand-dark"
+              class="app-brand-icon app-brand-dark size-[42px] shrink-0 object-contain"
               src="/cobranzapro-quipu-compacto-oscuro.svg"
               alt=""
             />
@@ -95,7 +95,7 @@ import { Topbar } from './topbar/topbar';
           <button
             #mobileCloseButton
             type="button"
-            class="app-icon-button app-sidebar-close"
+            class="app-icon-button app-sidebar-close size-11 shrink-0 items-center justify-center rounded-xl"
             aria-label="Cerrar navegación"
             (click)="closeNavigation()"
           >
@@ -106,13 +106,13 @@ import { Topbar } from './topbar/topbar';
 
         <!-- NAVEGACIÓN -->
         <nav
-          class="app-sidebar-scroll"
+          class="app-sidebar-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-[11px] py-[18px]"
           aria-label="Secciones de CobranzaPro"
         >
 
           @if (authService.mustChangePin()) {
 
-            <p class="app-nav-notice">
+            <p class="app-nav-notice px-3 py-2 text-xs leading-relaxed">
               Cambiá el PIN temporal para habilitar tu acceso.
             </p>
 
@@ -120,14 +120,14 @@ import { Topbar } from './topbar/topbar';
 
             <section class="app-nav-section">
 
-              <h2 class="app-nav-heading">Cobrador</h2>
+              <h2 class="app-nav-heading mb-2 px-3 text-[10px] font-bold uppercase tracking-widest">Cobrador</h2>
 
-              <div class="app-nav-list">
+              <div class="app-nav-list flex flex-col gap-[3px]">
 
                 @for (item of collectorItems; track item.path) {
 
                   <a
-                    class="app-nav-link"
+                    class="app-nav-link relative flex min-h-11 min-w-0 items-center gap-3 rounded-[10px] px-3 py-2.5 text-[13px] font-medium leading-snug no-underline transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2"
                     [routerLink]="item.path"
                     routerLinkActive="is-active"
                     [routerLinkActiveOptions]="{ exact: true }"
@@ -140,7 +140,7 @@ import { Topbar } from './topbar/topbar';
                       aria-hidden="true"
                     ></i>
 
-                    <span class="app-nav-label">
+                    <span class="app-nav-label min-w-0 truncate">
                       {{ item.label }}
                     </span>
                   </a>
@@ -155,18 +155,18 @@ import { Topbar } from './topbar/topbar';
 
             <section class="app-nav-section">
 
-              <h2 class="app-nav-heading">
+              <h2 class="app-nav-heading mb-2 px-3 text-[10px] font-bold uppercase tracking-widest">
                 Administración
               </h2>
 
-              <div class="app-nav-list">
+              <div class="app-nav-list flex flex-col gap-[3px]">
 
                 @for (item of adminItems; track item.path) {
 
                   @if (accessControl.can(item.permission)) {
 
                     <a
-                      class="app-nav-link"
+                      class="app-nav-link relative flex min-h-11 min-w-0 items-center gap-3 rounded-[10px] px-3 py-2.5 text-[13px] font-medium leading-snug no-underline transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2"
                       [routerLink]="item.path"
                       routerLinkActive="is-active"
                       [routerLinkActiveOptions]="{ exact: true }"
@@ -180,7 +180,7 @@ import { Topbar } from './topbar/topbar';
                         aria-hidden="true"
                       ></i>
 
-                      <span class="app-nav-label">
+                      <span class="app-nav-label min-w-0 truncate">
                         {{ item.label }}
                       </span>
 
@@ -189,7 +189,7 @@ import { Topbar } from './topbar/topbar';
                         correctionRequestsStore.pendingCount() > 0
                       ) {
                         <span
-                          class="app-nav-badge"
+                          class="app-nav-badge ml-auto inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white"
                           [attr.aria-label]="
                             correctionRequestsStore.pendingCount() +
                             ' solicitudes pendientes'
@@ -214,14 +214,14 @@ import { Topbar } from './topbar/topbar';
           <!-- SEGURIDAD -->
           <section class="app-nav-section">
 
-            <h2 class="app-nav-heading">
+            <h2 class="app-nav-heading mb-2 px-3 text-[10px] font-bold uppercase tracking-widest">
               Seguridad
             </h2>
 
-            <div class="app-nav-list">
+            <div class="app-nav-list flex flex-col gap-[3px]">
 
               <a
-                class="app-nav-link"
+                class="app-nav-link relative flex min-h-11 min-w-0 items-center gap-3 rounded-[10px] px-3 py-2.5 text-[13px] font-medium leading-snug no-underline transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2"
                 routerLink="/cambiar-pin"
                 routerLinkActive="is-active"
                 [routerLinkActiveOptions]="{ exact: true }"
@@ -231,7 +231,7 @@ import { Topbar } from './topbar/topbar';
               >
                 <i class="pi pi-lock" aria-hidden="true"></i>
 
-                <span class="app-nav-label">
+                <span class="app-nav-label min-w-0 truncate">
                   Cambiar PIN
                 </span>
               </a>
@@ -243,10 +243,10 @@ import { Topbar } from './topbar/topbar';
         </nav>
 
         <!-- FOOTER USUARIO -->
-        <div class="app-sidebar-footer">
+        <div class="app-sidebar-footer flex min-h-[76px] shrink-0 items-center gap-2.5 border-t px-[13px] py-3">
 
           <div
-            class="app-user-avatar"
+            class="app-user-avatar flex size-[39px] shrink-0 items-center justify-center rounded-xl text-sm font-extrabold text-white"
             aria-hidden="true"
           >
             {{
@@ -256,13 +256,13 @@ import { Topbar } from './topbar/topbar';
             }}
           </div>
 
-          <div class="app-user-info">
+          <div class="app-user-info flex min-w-0 flex-1 flex-col gap-0.5">
 
-            <span class="app-user-name">
+            <span class="app-user-name truncate text-xs font-bold">
               {{ authService.currentUser()?.fullName || 'Usuario' }}
             </span>
 
-            <span class="app-user-role">
+            <span class="app-user-role truncate text-[11px] capitalize">
               {{ authService.currentUser()?.role || '' }}
             </span>
 
@@ -270,7 +270,7 @@ import { Topbar } from './topbar/topbar';
 
           <button
             type="button"
-            class="app-icon-button app-logout"
+            class="app-icon-button app-logout inline-flex size-[38px] shrink-0 items-center justify-center rounded-xl"
             (click)="authService.logout()"
             title="Cerrar sesión"
             aria-label="Cerrar sesión"
@@ -284,18 +284,18 @@ import { Topbar } from './topbar/topbar';
 
       <!-- AREA PRINCIPAL -->
       <div
-        class="app-workspace"
+        class="app-workspace flex min-h-0 min-w-0 flex-1 flex-col"
         [attr.inert]="isMobile() && open() ? '' : null"
       >
 
         <!-- TOPBAR -->
-        <header class="app-topbar">
+        <header class="app-topbar flex h-[68px] shrink-0 items-center gap-3 border-b px-[18px] max-lg:h-[62px] max-lg:px-3">
 
           <!-- BOTÓN HAMBURGUESA -->
           <button
             #navigationButton
             type="button"
-            class="app-icon-button app-menu-button"
+            class="app-icon-button app-menu-button inline-flex size-11 shrink-0 items-center justify-center rounded-[10px] border border-transparent bg-transparent transition-colors duration-150"
             (click)="toggleNavigation()"
             [attr.aria-label]="
               isMobile()
@@ -309,7 +309,7 @@ import { Topbar } from './topbar/topbar';
             <i class="pi pi-bars" aria-hidden="true"></i>
           </button>
 
-          <div class="app-topbar-content">
+          <div class="app-topbar-content min-w-0 flex-1">
             <app-topbar />
           </div>
 
@@ -318,7 +318,7 @@ import { Topbar } from './topbar/topbar';
         <!-- CONTENIDO -->
         <main
           id="main-content"
-          class="app-content"
+          class="app-content min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain p-6 max-lg:p-4 max-[480px]:p-3"
         >
           <router-outlet />
         </main>
