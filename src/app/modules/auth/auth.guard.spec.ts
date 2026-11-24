@@ -1,8 +1,15 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { CanMatchFn, provideRouter, Route, UrlSegment, UrlTree } from '@angular/router';
+import { AccessControlService } from '../../core/services/access-control.service';
 import { AuthService } from './auth.service';
-import { adminCanMatch, authGuard, collectorCanMatch, publicGuard } from './auth.guard';
+import {
+  adminCanMatch,
+  authGuard,
+  collectorCanMatch,
+  permissionCanMatch,
+  publicGuard,
+} from './auth.guard';
 
 describe('role CanMatch guards', () => {
   const auth = {
@@ -125,4 +132,63 @@ describe('role CanMatch guards', () => {
     if (typeof resolved === 'boolean' || resolved instanceof UrlTree) return resolved;
     throw new Error('The activation guard returned an unsupported result');
   }
+});
+
+describe('permissionCanMatch', () => {
+  const access = {
+    ensureLoaded: vi.fn<() => Promise<boolean>>(),
+    can: vi.fn<(permission: string) => boolean>(),
+  };
+
+  beforeEach(() => {
+    access.ensureLoaded.mockReset().mockResolvedValue(true);
+    access.can.mockReset().mockReturnValue(true);
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), { provide: AccessControlService, useValue: access }],
+    });
+  });
+
+  async function run(data: Record<string, unknown> | undefined): Promise<boolean | UrlTree> {
+    const result = TestBed.runInInjectionContext(() =>
+      permissionCanMatch({ data } as Route, [] as UrlSegment[], {} as Parameters<CanMatchFn>[2]),
+    );
+    const resolved = await Promise.resolve(result as boolean | UrlTree | Promise<boolean | UrlTree>);
+    if (typeof resolved === 'boolean' || resolved instanceof UrlTree) return resolved;
+    throw new Error('The permission guard returned an unsupported result');
+  }
+
+  it('allows a route when the verified context holds its permission', async () => {
+    await expect(run({ permission: 'loans.view' })).resolves.toBe(true);
+    expect(access.can).toHaveBeenCalledWith('loans.view');
+  });
+
+  it('sends the user to the access-denied page when the permission is missing', async () => {
+    access.can.mockReturnValue(false);
+
+    const result = await run({ permission: 'loans.view' });
+
+    expect(result).toBeInstanceOf(UrlTree);
+    expect(result.toString()).toBe('/admin/sin-acceso');
+  });
+
+  it('fails closed when the access context cannot be loaded', async () => {
+    access.ensureLoaded.mockResolvedValue(false);
+
+    const result = await run({ permission: 'loans.view' });
+
+    expect(result.toString()).toBe('/admin/sin-acceso');
+    expect(access.can).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['route without data', undefined],
+    ['route without a permission', {}],
+    ['route with an unknown permission', { permission: 'root.all' }],
+    ['route with a non-string permission', { permission: 42 }],
+  ])('denies a %s instead of letting it through', async (_label, data) => {
+    const result = await run(data);
+
+    expect(result.toString()).toBe('/admin/sin-acceso');
+    expect(access.ensureLoaded).not.toHaveBeenCalled();
+  });
 });

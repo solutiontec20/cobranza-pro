@@ -33,6 +33,7 @@ import {
 import { EsDate } from '../../../shared/pipes/es-date';
 import { PenCurrency } from '../../../shared/pipes/pen-currency';
 import { CashClosureStore } from './cash-closure.store';
+import { AccessControlService } from '../../../core/services/access-control.service';
 
 interface OpeningFormModel {
   amount: number;
@@ -81,6 +82,7 @@ const CATEGORY_OPTIONS: Array<{ label: string; value: CashExpenseCategory }> = [
 })
 export default class AdminCashClosure {
   protected readonly store = inject(CashClosureStore);
+  protected readonly access = inject(AccessControlService);
   private readonly messageService = inject(MessageService);
 
   protected readonly loadingRows = [1, 2, 3];

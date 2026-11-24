@@ -21,6 +21,7 @@ import { PenCurrency } from '../../../shared/pipes/pen-currency';
 import { AuthService } from '../../auth/auth.service';
 import { DailyControlExportService } from './daily-control-export.service';
 import { DailyControlStore } from './daily-control.store';
+import { AccessControlService } from '../../../core/services/access-control.service';
 
 @Component({
   selector: 'app-daily-control',
@@ -43,6 +44,7 @@ import { DailyControlStore } from './daily-control.store';
 })
 export default class DailyControl {
   readonly store = inject(DailyControlStore);
+  protected readonly access = inject(AccessControlService);
   private readonly exportService = inject(DailyControlExportService);
   private readonly authService = inject(AuthService);
   private readonly document = inject(DOCUMENT);

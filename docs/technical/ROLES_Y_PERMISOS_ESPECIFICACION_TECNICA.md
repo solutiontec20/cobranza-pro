@@ -1,6 +1,6 @@
 # Especificación técnica del módulo de Roles y Permisos
 
-> **Estado:** Propuesta técnica previa a implementación  
+> **Estado:** Primera versión implementada y verificada (ver §19); queda abierta una limitación de lectura documentada
 > **Aplicación:** CobranzaPro  
 > **Modelo recomendado:** RBAC híbrido en PostgreSQL/Supabase  
 > **Usuarios iniciales:** Administradores y supervisores
@@ -60,7 +60,8 @@ Los roles configurables se aplicarán inicialmente a usuarios de back-office cuy
 Los cobradores conservarán su flujo fijo durante la primera versión:
 
 - Solo pueden acceder a su propia cartera.
-- Mantienen el horario de 07:00 a 20:00, hora de Lima.
+- Mantienen por defecto el horario de 07:00 a 20:00, hora de Lima, configurable por el
+  administrador del sistema.
 - No adquieren acceso administrativo mediante un rol configurable.
 - No pueden modificar las reglas de acceso ni asignarse permisos.
 
@@ -230,6 +231,22 @@ acciones existentes.
 
 La modificación y su auditoría deben ejecutarse dentro de la misma transacción.
 
+### 7.6 Configuración del horario de cobradores
+
+La primera versión almacenará un único intervalo diario compartido por todos los cobradores:
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `start_time` | `time` | Inicio inclusivo; valor inicial `07:00` |
+| `end_time` | `time` | Fin exclusivo; valor inicial `20:00` |
+| `timezone` | `text` | Fijo en `America/Lima` |
+| `updated_by` | `uuid` | Administrador del sistema que realizó el cambio |
+| `updated_at` | `timestamptz` | Última modificación |
+
+El inicio debe ser estrictamente anterior al fin. Una configuración ausente, incompleta o inválida
+debe cerrar el acceso de cobradores. Cada modificación exige un motivo y se registra en
+`private.access_control_audit_log` dentro de la misma transacción.
+
 ## 8. Roles del sistema
 
 La migración inicial debe crear roles reservados para mantener compatibilidad:
@@ -337,6 +354,18 @@ Las operaciones deben ser atómicas y validar:
 - Prohibición de modificar roles reservados.
 - Existencia de al menos un administrador del sistema.
 - Auditoría obligatoria.
+
+### 10.4 Horario de cobradores
+
+```text
+admin_get_collector_access_schedule()
+admin_update_collector_access_schedule(p_start_time, p_end_time, p_reason)
+```
+
+Solo el administrador del sistema puede consultar y modificar esta configuración en la primera
+versión. `private.collector_access_is_open`, `private.current_app_role` y
+`current_access_status()` deben usar la misma configuración PostgreSQL. La zona horaria permanece
+fija en `America/Lima` y el reloj de prueba solo puede alterarse cuando `session_user = 'postgres'`.
 
 ## 11. Integración con los RPC y RLS existentes
 
@@ -509,6 +538,13 @@ Debe permitir:
 
 El módulo asigna roles a perfiles existentes; no crea usuarios de Supabase Auth.
 
+### 13.4 Horario de cobradores
+
+La misma pantalla incluirá una sección reservada al administrador del sistema para consultar y
+editar el intervalo diario. Mostrará explícitamente la zona horaria `America/Lima`, exigirá un motivo
+y mantendrá Guardar deshabilitado cuando no existan cambios reales. La interfaz no será la autoridad:
+la validación y la aplicación efectiva del horario corresponden a PostgreSQL.
+
 ## 14. Prevención de escalamiento de privilegios
 
 La implementación debe impedir:
@@ -586,6 +622,7 @@ No se necesita Realtime, Redis ni un servicio externo para el volumen previsto.
 - Clasificar permisos normales, sensibles y restringidos.
 - Confirmar un rol por usuario.
 - Confirmar que los cobradores quedan fuera de la personalización inicial.
+- Confirmar el intervalo compartido configurable de cobradores.
 
 ### Fase 2. Base de datos
 
@@ -594,6 +631,7 @@ No se necesita Realtime, Redis ni un servicio externo para el volumen previsto.
 - Asignar roles compatibles a admin y supervisor existentes.
 - Crear funciones de autorización y RPC administrativos.
 - Crear auditoría transaccional.
+- Crear la configuración de horario con valores iniciales `07:00` y `20:00` en `America/Lima`.
 - Agregar pruebas pgTAP antes de cambiar módulos productivos.
 
 ### Fase 3. Contexto de acceso Angular
@@ -610,6 +648,7 @@ No se necesita Realtime, Redis ni un servicio externo para el volumen previsto.
 - Crear matriz de permisos.
 - Crear asignaciones de usuarios.
 - Incorporar motivos, confirmaciones y detección de cambios reales.
+- Incorporar la edición del horario de cobradores para el administrador del sistema.
 
 ### Fase 5. Protección por módulo
 
@@ -646,10 +685,16 @@ Un módulo solo se considera terminado cuando frontend y backend utilizan el mis
 - Cada RPC protegido acepta y rechaza según el permiso.
 - Los cobradores siguen limitados a su cartera.
 - El horario del cobrador continúa vigente.
+- Solo el administrador del sistema puede cambiar el horario compartido.
+- Un horario inválido o incompleto cierra el acceso del cobrador.
+- El cambio de horario exige motivo y genera auditoría atómica.
 - La invalidación de credenciales sigue funcionando.
 - Los cierres de caja validados siguen siendo inmutables.
 
 ### 18.2 Unitarias Angular
+
+Estas pruebas se implementarán y ejecutarán al completar la primera versión funcional de Angular,
+no durante los cortes intermedios de desarrollo.
 
 - `can()` y `canAny()`.
 - Carga y error del contexto.
@@ -674,20 +719,23 @@ información.
 
 ## 19. Criterios de aceptación
 
-- [ ] Los roles base `admin`, `supervisor` y `collector` continúan funcionando.
-- [ ] Un administrador del sistema puede crear y editar roles personalizados.
-- [ ] Los roles seleccionan únicamente permisos definidos por el sistema.
-- [ ] Cada usuario administrativo tiene un único rol de acceso activo.
-- [ ] El menú y las rutas respetan permisos.
-- [ ] Los botones y acciones respetan permisos.
+- [x] Los roles base `admin`, `supervisor` y `collector` continúan funcionando.
+- [x] Un administrador del sistema puede crear y editar roles personalizados.
+- [x] Los roles seleccionan únicamente permisos definidos por el sistema.
+- [x] Cada usuario administrativo tiene un único rol de acceso activo.
+- [x] El menú y las rutas respetan permisos.
+- [x] Los botones y acciones respetan permisos.
 - [ ] Las llamadas directas no autorizadas son rechazadas por PostgreSQL.
-- [ ] Los cambios de acceso generan auditoría con antes, después, actor y motivo.
-- [ ] No es posible el autoescalamiento.
-- [ ] Siempre queda al menos un administrador del sistema.
-- [ ] Los cambios de permisos se reflejan de manera segura en sesiones activas.
-- [ ] Los cobradores mantienen propiedad de cartera y horario operativo.
-- [ ] Las pruebas pgTAP cubren permitido, denegado y regresiones.
-- [ ] El módulo se carga de forma lazy desde `/admin/roles`.
+  - **Parcial.** Rechazadas por PostgreSQL: los 28 RPC administrativos (`private.require_*_permission`) y las escrituras directas a `customers` (trigger). Las políticas RLS de **lectura** siguen decidiendo solo por el rol base: un usuario administrativo podría leer tablas por la Data API fuera de los RPC. Cerrarlo exige reescribir políticas módulo por módulo con pruebas de paridad (§11) y queda como siguiente fase.
+- [x] Los cambios de acceso generan auditoría con antes, después, actor y motivo.
+- [x] No es posible el autoescalamiento.
+- [x] Siempre queda al menos un administrador del sistema.
+- [x] Los cambios de permisos se reflejan de manera segura en sesiones activas.
+- [x] Los cobradores mantienen propiedad de cartera y horario operativo.
+- [x] El horario inicial es 07:00–20:00 en `America/Lima` y el administrador del sistema puede
+  modificarlo con motivo y auditoría.
+- [x] Las pruebas pgTAP cubren permitido, denegado y regresiones.
+- [x] El módulo se carga de forma lazy desde `/admin/roles`.
 
 ## 20. Fuera de alcance inicial
 
@@ -698,28 +746,21 @@ información.
 - Motor externo como Cerbos u OpenFGA.
 - Realtime para cambios de permisos.
 - Personalización del flujo de cobradores.
+- Horarios distintos por día, feriados, turnos divididos o configuraciones por cobrador.
 - Sustitución completa de todas las políticas en una sola migración.
 - Uso de permisos frontend como frontera de seguridad.
 
-## 21. Decisiones funcionales pendientes
+## 21. Decisiones funcionales aprobadas para la primera versión
 
-Antes de implementar, el cliente debe aprobar:
-
-1. Qué módulos pueden configurarse.
-2. Qué acciones necesita cada módulo.
-3. Qué permisos se consideran restringidos.
-4. Si `admin` y `supervisor` pueden recibir roles personalizados o solo supervisor.
-5. Si el administrador del sistema es el único que administra roles.
-6. Si una modificación de permisos debe forzar inmediatamente un nuevo login.
-7. Confirmación de un único rol por usuario.
-
-La recomendación inicial es:
-
-- Configurar únicamente usuarios administrativos y supervisores.
-- Mantener cobradores fuera del RBAC dinámico.
-- Usar un solo rol por usuario.
-- Reservar `roles.manage` al administrador del sistema.
-- Forzar renovación de sesión cuando cambien permisos.
+- El catálogo inicial es el definido en la sección 9 y solo puede ampliarse mediante migraciones.
+- `admin` y `supervisor` pueden recibir un único rol de acceso configurable.
+- Los cobradores permanecen fuera del RBAC dinámico.
+- `roles.manage` queda reservado al administrador del sistema.
+- Los cambios de rol, asignación o permisos invalidan las sesiones afectadas y fuerzan un nuevo
+  inicio de sesión.
+- El horario de cobradores es un único intervalo diario compartido, inicia en 07:00–20:00 y usa
+  `America/Lima`.
+- Solo el administrador del sistema puede modificar ese horario, con motivo obligatorio y auditoría.
 
 ## 22. Referencias técnicas
 

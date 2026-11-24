@@ -1,6 +1,9 @@
 import { Routes } from '@angular/router';
 import { SupabaseCorrectionRequestRepository } from './core/adapters/supabase-correction-request.repository';
+import { SupabaseAccessControlRepository } from './core/adapters/supabase-access-control.repository';
 import { CORRECTION_REQUEST_REPOSITORY } from './core/repositories/correction-request.repository';
+import { ACCESS_CONTROL_REPOSITORY } from './core/repositories/access-control.repository';
+import { AccessControlService } from './core/services/access-control.service';
 import {
   adminCanMatch,
   authGuard,
@@ -24,9 +27,14 @@ export const routes: Routes = [
     canActivateChild: [authGuard],
     providers: [
       CorrectionRequestsStore,
+      AccessControlService,
       {
         provide: CORRECTION_REQUEST_REPOSITORY,
         useClass: SupabaseCorrectionRequestRepository,
+      },
+      {
+        provide: ACCESS_CONTROL_REPOSITORY,
+        useClass: SupabaseAccessControlRepository,
       },
     ],
     children: [

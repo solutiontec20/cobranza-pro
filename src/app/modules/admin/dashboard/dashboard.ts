@@ -16,6 +16,7 @@ import { PenCurrency } from '../../../shared/pipes/pen-currency';
 import { CollectorPerformanceTable } from './collector-performance-table';
 import { pageItems } from '../../../core/calculations/loan-detail-filtering';
 import { normalizeSearchText } from '../../../core/calculations/text';
+import { AccessControlService } from '../../../core/services/access-control.service';
 
 const EMPTY_BUCKET = { count: 0, percent: 0 };
 
@@ -40,6 +41,7 @@ const EMPTY_BUCKET = { count: 0, percent: 0 };
 })
 export default class Dashboard implements OnInit, OnDestroy {
   protected readonly store = inject(AdminDashboardStore);
+  protected readonly access = inject(AccessControlService);
 
   protected readonly today = formatEsDate(currentLimaDate(), 'long');
 

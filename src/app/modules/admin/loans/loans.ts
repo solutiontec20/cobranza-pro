@@ -18,6 +18,7 @@ import { EsDate } from '../../../shared/pipes/es-date';
 import { PenCurrency } from '../../../shared/pipes/pen-currency';
 import { calculateLoanSummary, firstDueOn, toDateInput } from './loan-calculations';
 import { LoanFrequencyFilter, LoanStatusFilter, LoansStore } from './loans.store';
+import { AccessControlService } from '../../../core/services/access-control.service';
 
 interface LoanFormModel {
   clientId: string;
@@ -60,6 +61,7 @@ const emptyModel = (): LoanFormModel => ({
 })
 export default class Loans {
   protected readonly store = inject(LoansStore);
+  protected readonly access = inject(AccessControlService);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
   private searchTimer: ReturnType<typeof setTimeout> | null = null;

@@ -21,6 +21,7 @@ import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { map } from 'rxjs';
 import { ClientListItem } from '../../../core/models/client.model';
+import { AccessControlService } from '../../../core/services/access-control.service';
 import { DigitsOnly } from '../../../shared/directives/digits-only';
 import { PenCurrency } from '../../../shared/pipes/pen-currency';
 import { ClientsStore } from './clients.store';
@@ -65,6 +66,10 @@ const emptyModel = (): ClientFormModel => ({
 })
 export default class Clients {
   protected readonly store = inject(ClientsStore);
+  protected readonly access = inject(AccessControlService);
+  protected readonly canEditClients = computed(() =>
+    this.access.canAny(['clients.update', 'clients.reassign', 'clients.deactivate']),
+  );
   private readonly messageService = inject(MessageService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);

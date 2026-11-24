@@ -1,5 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, CanMatchFn, Router } from '@angular/router';
+import { isAccessPermission } from '../../core/models/access-control.model';
+import { AccessControlService } from '../../core/services/access-control.service';
 import { AuthService } from './auth.service';
 
 export const authGuard: CanActivateFn = () => {
@@ -79,6 +81,22 @@ export const adminCanMatch: CanMatchFn = () => {
     return router.createUrlTree(['/cobrador']);
   }
   return router.createUrlTree(['/login']);
+};
+
+export const permissionCanMatch: CanMatchFn = (route) => {
+  const access = inject(AccessControlService);
+  const router = inject(Router);
+  const permission = route.data?.['permission'];
+
+  if (!isAccessPermission(permission)) {
+    return router.createUrlTree(['/admin/sin-acceso']);
+  }
+
+  return access
+    .ensureLoaded()
+    .then((ready) =>
+      ready && access.can(permission) ? true : router.createUrlTree(['/admin/sin-acceso']),
+    );
 };
 
 export const publicGuard: CanActivateFn = () => {

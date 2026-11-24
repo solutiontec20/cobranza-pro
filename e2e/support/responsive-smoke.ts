@@ -1,4 +1,8 @@
 import { expect, Page, test } from '@playwright/test';
+import {
+  ACCESS_PERMISSION_CODES,
+  AccessPermission,
+} from '../../src/app/core/models/access-control.model';
 
 export const responsiveViewports = [
   { name: 'mobile', width: 360, height: 800 },
@@ -27,9 +31,49 @@ interface BrowserErrors {
   page: string[];
 }
 
+/** Permissions the default supervisor role does NOT have (admin-only capabilities). */
+const ADMIN_ONLY_PERMISSIONS: readonly AccessPermission[] = [
+  'loans.create',
+  'collectors.manage',
+  'collectors.reset_pin',
+  'roles.manage',
+];
+
+/** What `current_access_context` would return for the stored profile. */
+function accessContextFor(profile: SmokeProfile | null, override?: readonly AccessPermission[]) {
+  if (!profile || profile.role === 'collector') {
+    return {
+      baseRole: profile?.role ?? 'admin',
+      accessRole: null,
+      permissions: [],
+      updatedAt: null,
+      operational: false,
+    };
+  }
+
+  const permissions =
+    override ??
+    (profile.role === 'admin'
+      ? ACCESS_PERMISSION_CODES
+      : ACCESS_PERMISSION_CODES.filter((code) => !ADMIN_ONLY_PERMISSIONS.includes(code)));
+
+  return {
+    baseRole: profile.role,
+    accessRole: override
+      ? 'custom_e2e'
+      : profile.role === 'admin'
+        ? 'system_administrator'
+        : 'supervisor_default',
+    permissions,
+    updatedAt: null,
+    operational: true,
+  };
+}
+
 export async function prepareResponsiveSmoke(
   page: Page,
   profile: SmokeProfile | null,
+  options: { accessPermissions?: readonly AccessPermission[] } = {},
 ): Promise<BrowserErrors> {
   await page.addInitScript((storedProfile) => {
     if (storedProfile) {
@@ -41,6 +85,16 @@ export async function prepareResponsiveSmoke(
 
   await page.route('**/rest/v1/**', async (route) => {
     const pathname = new URL(route.request().url()).pathname;
+
+    if (pathname.endsWith('/rpc/current_access_context')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(accessContextFor(profile, options.accessPermissions)),
+      });
+      return;
+    }
+
     const body = pathname.endsWith('/rpc/current_access_status')
       ? [
           {

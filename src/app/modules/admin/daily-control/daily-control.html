@@ -10,6 +10,7 @@
       </p>
     </div>
 
+    @if (access.can('daily_control.export')) {
     <div class="grid grid-cols-3 gap-2" aria-label="Opciones de exportación">
       <button pButton severity="secondary" variant="outlined" size="small"
         [disabled]="store.loading() || !store.visibleReport()?.rows?.length || exporting() !== null"
@@ -30,6 +31,7 @@
         PDF
       </button>
     </div>
+    }
   </header>
 
   <section class="rounded-2xl border border-surface bg-surface-0 p-4 shadow-sm dark:bg-surface-900" aria-label="Filtros del control diario">

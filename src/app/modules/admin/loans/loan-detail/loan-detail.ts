@@ -45,6 +45,7 @@ import {
   VoidReasonCode,
 } from '../../../../core/models/void-reason.model';
 import { EsDate } from '../../../../shared/pipes/es-date';
+import { AccessControlService } from '../../../../core/services/access-control.service';
 import { PenCurrency } from '../../../../shared/pipes/pen-currency';
 import {
   calculateLoanPaymentSummary,
@@ -136,6 +137,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
 })
 export default class LoanDetailPage {
   protected readonly store = inject(LoansStore);
+  protected readonly access = inject(AccessControlService);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
 

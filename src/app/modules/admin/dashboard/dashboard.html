@@ -17,9 +17,11 @@
         <i class="pi pi-calendar" aria-hidden="true"></i>
         Corte al {{ today }}
       </span>
-      <a pButton routerLink="/admin/analiticas" size="small" class="w-fit">
-        <i class="pi pi-chart-line mr-2" aria-hidden="true"></i>Ver análisis detallado
-      </a>
+      @if (access.can('analytics.view')) {
+        <a pButton routerLink="/admin/analiticas" size="small" class="w-fit">
+          <i class="pi pi-chart-line mr-2" aria-hidden="true"></i>Ver análisis detallado
+        </a>
+      }
     </div>
   </header>
 

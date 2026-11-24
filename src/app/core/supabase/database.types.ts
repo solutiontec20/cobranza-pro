@@ -902,6 +902,70 @@ export type Database = {
       };
     };
     Functions: {
+      admin_list_access_roles: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          role_id: string;
+          slug: string;
+          name: string;
+          description: string;
+          active: boolean;
+          is_system: boolean;
+          assigned_users: number;
+          permissions: string[];
+        }[];
+      };
+      admin_get_access_role: {
+        Args: { p_role_id: string };
+        Returns: Json;
+      };
+      admin_create_access_role: {
+        Args: {
+          p_name: string;
+          p_description: string;
+          p_permission_codes: string[];
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      admin_update_access_role: {
+        Args: {
+          p_role_id: string;
+          p_name: string;
+          p_description: string;
+          p_permission_codes: string[];
+          p_reason: string;
+        };
+        Returns: undefined;
+      };
+      admin_set_access_role_active: {
+        Args: { p_role_id: string; p_active: boolean; p_reason: string };
+        Returns: undefined;
+      };
+      admin_list_access_assignments: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          profile_id: string;
+          full_name: string;
+          dni: string;
+          base_role: Database['public']['Enums']['app_role'];
+          access_role_id: string | null;
+          access_role_slug: string | null;
+          access_role_name: string | null;
+        }[];
+      };
+      admin_assign_access_role: {
+        Args: { p_profile_id: string; p_role_id: string; p_reason: string };
+        Returns: undefined;
+      };
+      admin_get_collector_access_schedule: {
+        Args: Record<PropertyKey, never>;
+        Returns: { start_time: string; end_time: string; timezone: string }[];
+      };
+      admin_update_collector_access_schedule: {
+        Args: { p_start_time: string; p_end_time: string; p_reason: string };
+        Returns: undefined;
+      };
       admin_analytics_collectors: {
         Args: { p_end: string; p_start: string };
         Returns: {
@@ -1257,6 +1321,10 @@ export type Database = {
           role: Database['public']['Enums']['app_role'];
           server_now: string;
         }[];
+      };
+      current_access_context: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
       };
       list_correction_requests: {
         Args: {
