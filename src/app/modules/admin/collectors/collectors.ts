@@ -16,6 +16,7 @@ import { DigitsOnly } from '../../../shared/directives/digits-only';
 import { EsDate } from '../../../shared/pipes/es-date';
 import { AuthService } from '../../auth/auth.service';
 import { CollectorsStore } from './collectors.store';
+import { AccessControlService } from '../../../core/services/access-control.service';
 
 const EMPTY_CREATE_MODEL = { fullName: '', dni: '', phone: '', temporaryPin: '' };
 const EMPTY_RESET_MODEL = { reason: '' };
@@ -41,6 +42,7 @@ const EMPTY_EDIT_MODEL = { fullName: '', phone: '', reason: '' };
 })
 export default class Collectors {
   protected readonly store = inject(CollectorsStore);
+  protected readonly access = inject(AccessControlService);
   protected readonly authService = inject(AuthService);
   private readonly messageService = inject(MessageService);
   protected readonly loadingRows = [1, 2, 3];

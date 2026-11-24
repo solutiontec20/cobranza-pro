@@ -45,12 +45,16 @@
       </div>
 
       <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-        @if (detail.loan.status === 'active' && remainingBalance() > 0) {
+        @if (
+          detail.loan.status === 'active' &&
+          remainingBalance() > 0 &&
+          access.can('payments.register')
+        ) {
           <button pButton severity="success" class="w-full sm:w-auto" (click)="openPaymentDialog()">
             <i class="pi pi-money-bill"></i> Registrar pago
           </button>
         }
-        @if (canRenew()) {
+        @if (canRenew() && access.canAny(['loans.create', 'loans.update'])) {
           <button
             pButton
             severity="info"
@@ -61,7 +65,7 @@
             <i class="pi pi-refresh"></i> Renovar préstamo
           </button>
         }
-        @if (canEdit() && !editing()) {
+        @if (canEdit() && access.can('loans.update') && !editing()) {
           <button
             pButton
             severity="secondary"
@@ -764,7 +768,7 @@
                   </div>
                 }
               </dl>
-              @if (payment.status === 'posted') {
+              @if (payment.status === 'posted' && access.can('payments.void')) {
                 <button
                   pButton
                   type="button"
@@ -835,7 +839,7 @@
                   />
                 </td>
                 <td class="text-right">
-                  @if (payment.status === 'posted') {
+                  @if (payment.status === 'posted' && access.can('payments.void')) {
                     <button
                       pButton
                       type="button"

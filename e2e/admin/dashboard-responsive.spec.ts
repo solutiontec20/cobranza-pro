@@ -1,4 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
+import { ACCESS_PERMISSION_CODES } from '../../src/app/core/models/access-control.model';
 
 const viewports = [
   { name: 'Samsung S21', width: 360, height: 800 },
@@ -143,6 +144,20 @@ async function prepareDashboard(page: Page): Promise<void> {
           delayed_count: 0,
         },
       ]),
+    });
+  });
+
+  await page.route('**/rest/v1/rpc/current_access_context', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        baseRole: 'admin',
+        accessRole: 'system_administrator',
+        permissions: ACCESS_PERMISSION_CODES,
+        updatedAt: null,
+        operational: true,
+      }),
     });
   });
 

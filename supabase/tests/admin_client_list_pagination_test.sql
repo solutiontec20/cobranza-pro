@@ -77,7 +77,7 @@ set local request.jwt.claim.sub = 'b1000000-0000-0000-0000-000000000001';
 select throws_ok(
   $$ select * from public.admin_list_clients_page(0, 10, null, null) $$,
   '42501',
-  'Only administrators or supervisors may list clients',
+  'Required access permission is missing',
   'Collectors cannot list all clients'
 );
 

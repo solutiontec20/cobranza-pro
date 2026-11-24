@@ -8,9 +8,11 @@
       </p>
     </div>
 
+    @if (access.can('clients.create')) {
     <button pButton class="w-full sm:w-auto" [disabled]="store.loading() || store.collectors().length === 0" (click)="openCreateDialog()">
       <i class="pi pi-user-plus"></i> Nuevo cliente
     </button>
+    }
 
   </header>
 
@@ -90,9 +92,11 @@
             </dd>
           </div>
         </dl>
+        @if (canEditClients()) {
         <button pButton fluid severity="secondary" variant="outlined" size="small" (click)="openEditDialog(client)">
           <i class="pi pi-pencil"></i> Editar
         </button>
+        }
       </article>
       }
     </div>
@@ -130,9 +134,11 @@
             </td>
             <td class="text-center">
 
+              @if (canEditClients()) {
               <button pButton severity="secondary" variant="outlined" size="small" (click)="openEditDialog(client)">
                 <i class="pi pi-pencil"></i> Editar
               </button>
+              }
 
             </td>
           </tr>
@@ -192,11 +198,18 @@
       </div>
       <div>
         <label for="client-collector" class="mb-2 block text-sm font-medium text-color">Cobrador asignado</label>
+        @if (dialogMode() === 'create' || access.can('clients.reassign')) {
         <p-select inputId="client-collector" [formField]="clientForm.collectorId" [options]="store.collectors()"
           optionLabel="fullName" optionValue="id" placeholder="Seleccioná un cobrador" appendTo="body"
           styleClass="w-full" />
         @if (clientForm.collectorId().touched() && clientForm.collectorId().invalid()) {
         <small class="mt-1 block text-red-600">{{ clientForm.collectorId().errors()[0]?.message }}</small>
+        }
+        } @else {
+        <p id="client-collector" class="m-0 text-sm text-color">
+          {{ editingClient()?.collectorName }}
+          <span class="block text-xs text-muted-color">No tenés permiso para reasignar la cartera.</span>
+        </p>
         }
       </div>
     </div>
@@ -218,7 +231,7 @@
       }
     </div>
 
-    @if (dialogMode() === 'edit') {
+    @if (dialogMode() === 'edit' && access.can('clients.deactivate')) {
     <div class="rounded-xl border border-surface bg-surface-50 p-4 dark:bg-surface-800">
       <label class="flex items-center gap-3 text-sm font-medium text-color">
         <input type="checkbox" [formField]="clientForm.active" class="h-4 w-4 accent-primary" />

@@ -11,9 +11,11 @@
       </p>
     </div>
     @if (authService.isAdmin()) {
-      <button pButton class="w-full sm:w-auto" (click)="openCreateDialog()">
-        <i class="pi pi-user-plus"></i> Nuevo cobrador
-      </button>
+      @if (access.can('collectors.manage')) {
+        <button pButton class="w-full sm:w-auto" (click)="openCreateDialog()">
+          <i class="pi pi-user-plus"></i> Nuevo cobrador
+        </button>
+      }
     }
   </header>
 
@@ -147,57 +149,63 @@
             @if (authService.isAdmin()) {
               <div class="flex flex-col gap-2">
                 <div class="grid grid-cols-2 gap-2">
-                  <button
-                    pButton
-                    fluid
-                    size="small"
-                    severity="secondary"
-                    variant="outlined"
-                    [disabled]="store.editingCollectorId() === collector.id"
-                    (click)="openEditDialog(collector)"
-                  >
-                    @if (store.editingCollectorId() === collector.id) {
-                      <i class="pi pi-spin pi-spinner"></i>
-                    } @else {
-                      <i class="pi pi-pencil"></i>
-                    }
-                    Editar
-                  </button>
+                  @if (access.can('collectors.manage')) {
+                    <button
+                      pButton
+                      fluid
+                      size="small"
+                      severity="secondary"
+                      variant="outlined"
+                      [disabled]="store.editingCollectorId() === collector.id"
+                      (click)="openEditDialog(collector)"
+                    >
+                      @if (store.editingCollectorId() === collector.id) {
+                        <i class="pi pi-spin pi-spinner"></i>
+                      } @else {
+                        <i class="pi pi-pencil"></i>
+                      }
+                      Editar
+                    </button>
+                  }
 
-                  <button
-                    pButton
-                    fluid
-                    size="small"
-                    severity="secondary"
-                    variant="outlined"
-                    [disabled]="!collector.active"
-                    (click)="openResetDialog(collector)"
-                  >
-                    @if (store.resettingCollectorId() === collector.id) {
-                      <i class="pi pi-spin pi-spinner"></i>
-                    } @else {
-                      <i class="pi pi-key"></i>
-                    }
-                    <span class="min-w-0 truncate">Restablecer PIN</span>
-                  </button>
+                  @if (access.can('collectors.reset_pin')) {
+                    <button
+                      pButton
+                      fluid
+                      size="small"
+                      severity="secondary"
+                      variant="outlined"
+                      [disabled]="!collector.active"
+                      (click)="openResetDialog(collector)"
+                    >
+                      @if (store.resettingCollectorId() === collector.id) {
+                        <i class="pi pi-spin pi-spinner"></i>
+                      } @else {
+                        <i class="pi pi-key"></i>
+                      }
+                      <span class="min-w-0 truncate">Restablecer PIN</span>
+                    </button>
+                  }
                 </div>
 
-                <button
-                  pButton
-                  fluid
-                  size="small"
-                  [severity]="collector.active ? 'danger' : 'success'"
-                  variant="outlined"
-                  [disabled]="store.updatingCollectorId() === collector.id"
-                  (click)="openStatusDialog(collector)"
-                >
-                  @if (store.updatingCollectorId() === collector.id) {
-                    <i class="pi pi-spin pi-spinner"></i>
-                  } @else {
-                    <i [class]="collector.active ? 'pi pi-user-minus' : 'pi pi-user-plus'"></i>
-                  }
-                  {{ collector.active ? 'Desactivar' : 'Activar' }}
-                </button>
+                @if (access.can('collectors.manage')) {
+                  <button
+                    pButton
+                    fluid
+                    size="small"
+                    [severity]="collector.active ? 'danger' : 'success'"
+                    variant="outlined"
+                    [disabled]="store.updatingCollectorId() === collector.id"
+                    (click)="openStatusDialog(collector)"
+                  >
+                    @if (store.updatingCollectorId() === collector.id) {
+                      <i class="pi pi-spin pi-spinner"></i>
+                    } @else {
+                      <i [class]="collector.active ? 'pi pi-user-minus' : 'pi pi-user-plus'"></i>
+                    }
+                    {{ collector.active ? 'Desactivar' : 'Activar' }}
+                  </button>
+                }
               </div>
             }
           </article>
@@ -245,58 +253,64 @@
                 @if (authService.isAdmin()) {
                   <td class="px-5 py-4">
                     <div class="flex flex-wrap justify-end gap-2">
-                      <button
-                        pButton
-                        size="small"
-                        severity="secondary"
-                        variant="outlined"
-                        class="shrink-0 whitespace-nowrap"
-                        [disabled]="store.editingCollectorId() === collector.id"
-                        (click)="openEditDialog(collector)"
-                      >
-                        @if (store.editingCollectorId() === collector.id) {
-                          <i class="pi pi-spin pi-spinner"></i>
-                        } @else {
-                          <i class="pi pi-pencil"></i>
-                        }
-                        Editar
-                      </button>
+                      @if (access.can('collectors.manage')) {
+                        <button
+                          pButton
+                          size="small"
+                          severity="secondary"
+                          variant="outlined"
+                          class="shrink-0 whitespace-nowrap"
+                          [disabled]="store.editingCollectorId() === collector.id"
+                          (click)="openEditDialog(collector)"
+                        >
+                          @if (store.editingCollectorId() === collector.id) {
+                            <i class="pi pi-spin pi-spinner"></i>
+                          } @else {
+                            <i class="pi pi-pencil"></i>
+                          }
+                          Editar
+                        </button>
+                      }
 
-                      <button
-                        pButton
-                        size="small"
-                        severity="secondary"
-                        variant="outlined"
-                        class="shrink-0 whitespace-nowrap"
-                        [disabled]="!collector.active"
-                        (click)="openResetDialog(collector)"
-                      >
-                        @if (store.resettingCollectorId() === collector.id) {
-                          <i class="pi pi-spin pi-spinner"></i>
-                        } @else {
-                          <i class="pi pi-key"></i>
-                        }
-                        Restablecer PIN
-                      </button>
+                      @if (access.can('collectors.reset_pin')) {
+                        <button
+                          pButton
+                          size="small"
+                          severity="secondary"
+                          variant="outlined"
+                          class="shrink-0 whitespace-nowrap"
+                          [disabled]="!collector.active"
+                          (click)="openResetDialog(collector)"
+                        >
+                          @if (store.resettingCollectorId() === collector.id) {
+                            <i class="pi pi-spin pi-spinner"></i>
+                          } @else {
+                            <i class="pi pi-key"></i>
+                          }
+                          Restablecer PIN
+                        </button>
+                      }
 
-                      <button
-                        pButton
-                        size="small"
-                        [severity]="collector.active ? 'danger' : 'success'"
-                        variant="outlined"
-                        class="shrink-0 whitespace-nowrap"
-                        [disabled]="store.updatingCollectorId() === collector.id"
-                        (click)="openStatusDialog(collector)"
-                      >
-                        @if (store.updatingCollectorId() === collector.id) {
-                          <i class="pi pi-spin pi-spinner"></i>
-                        } @else {
-                          <i
-                            [class]="collector.active ? 'pi pi-user-minus' : 'pi pi-user-plus'"
-                          ></i>
-                        }
-                        {{ collector.active ? 'Desactivar' : 'Activar' }}
-                      </button>
+                      @if (access.can('collectors.manage')) {
+                        <button
+                          pButton
+                          size="small"
+                          [severity]="collector.active ? 'danger' : 'success'"
+                          variant="outlined"
+                          class="shrink-0 whitespace-nowrap"
+                          [disabled]="store.updatingCollectorId() === collector.id"
+                          (click)="openStatusDialog(collector)"
+                        >
+                          @if (store.updatingCollectorId() === collector.id) {
+                            <i class="pi pi-spin pi-spinner"></i>
+                          } @else {
+                            <i
+                              [class]="collector.active ? 'pi pi-user-minus' : 'pi pi-user-plus'"
+                            ></i>
+                          }
+                          {{ collector.active ? 'Desactivar' : 'Activar' }}
+                        </button>
+                      }
                     </div>
                   </td>
                 }

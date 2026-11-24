@@ -46,6 +46,7 @@ import {
 import { CorrectionRequestsStore } from '../../correction-requests/correction-requests.store';
 import { EsDate } from '../../../shared/pipes/es-date';
 import { PenCurrency } from '../../../shared/pipes/pen-currency';
+import { AccessControlService } from '../../../core/services/access-control.service';
 
 interface ResolutionModel {
   reasonCode: CorrectionRejectionReasonCode | VoidReasonCode | '';
@@ -284,40 +285,44 @@ interface ResolutionTarget {
                   <i class="pi pi-eye"></i> Ver préstamo
                 </a>
                 @if (request.status === 'pending') {
-                  <button
-                    pButton
-                    type="button"
-                    severity="secondary"
-                    variant="text"
-                    size="small"
-                    (click)="openResolution(request, 'reject')"
-                  >
-                    Rechazar
-                  </button>
-                  @if (request.requestType === 'edit_loan') {
-                    <button pButton type="button" size="small" (click)="openEdit(request)">
-                      <i class="pi pi-pencil"></i> Revisar edición
-                    </button>
-                  } @else if (request.requestType === 'void_loan') {
+                  @if (access.can('correction_requests.reject')) {
                     <button
                       pButton
                       type="button"
-                      severity="danger"
+                      severity="secondary"
+                      variant="text"
                       size="small"
-                      (click)="openResolution(request, 'void_loan')"
+                      (click)="openResolution(request, 'reject')"
                     >
-                      <i class="pi pi-ban"></i> Anular préstamo
+                      Rechazar
                     </button>
-                  } @else {
-                    <button
-                      pButton
-                      type="button"
-                      severity="danger"
-                      size="small"
-                      (click)="openResolution(request, 'void_payment')"
-                    >
-                      <i class="pi pi-ban"></i> Anular pago
-                    </button>
+                  }
+                  @if (access.can('correction_requests.resolve')) {
+                    @if (request.requestType === 'edit_loan') {
+                      <button pButton type="button" size="small" (click)="openEdit(request)">
+                        <i class="pi pi-pencil"></i> Revisar edición
+                      </button>
+                    } @else if (request.requestType === 'void_loan') {
+                      <button
+                        pButton
+                        type="button"
+                        severity="danger"
+                        size="small"
+                        (click)="openResolution(request, 'void_loan')"
+                      >
+                        <i class="pi pi-ban"></i> Anular préstamo
+                      </button>
+                    } @else {
+                      <button
+                        pButton
+                        type="button"
+                        severity="danger"
+                        size="small"
+                        (click)="openResolution(request, 'void_payment')"
+                      >
+                        <i class="pi pi-ban"></i> Anular pago
+                      </button>
+                    }
                   }
                 }
               </footer>
@@ -562,6 +567,7 @@ interface ResolutionTarget {
 })
 export default class CorrectionRequests implements OnInit {
   protected readonly store = inject(CorrectionRequestsStore);
+  protected readonly access = inject(AccessControlService);
   private readonly messageService = inject(MessageService);
 
   protected readonly statusFilter = signal<CorrectionRequestStatus | null>('pending');

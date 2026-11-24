@@ -105,15 +105,17 @@
               <p class="text-sm text-muted-color">Jornada del {{ store.businessDate() }}</p>
             </div>
             <div class="flex flex-wrap gap-2">
-              <button
-                pButton
-                size="small"
-                severity="secondary"
-                variant="outlined"
-                (click)="openOpeningDialog()"
-              >
-                <i class="pi pi-wallet"></i> Registrar apertura
-              </button>
+              @if (access.can('cash_closure.submit')) {
+                <button
+                  pButton
+                  size="small"
+                  severity="secondary"
+                  variant="outlined"
+                  (click)="openOpeningDialog()"
+                >
+                  <i class="pi pi-wallet"></i> Registrar apertura
+                </button>
+              }
             </div>
           </div>
 
@@ -211,9 +213,11 @@
                 </div>
               </dl>
               @if (day.closure.status === 'submitted') {
-                <button pButton class="mt-4 w-full sm:w-auto" (click)="openValidateDialog()">
-                  <i class="pi pi-check-circle"></i> Validar cierre
-                </button>
+                @if (access.can('cash_closure.validate')) {
+                  <button pButton class="mt-4 w-full sm:w-auto" (click)="openValidateDialog()">
+                    <i class="pi pi-check-circle"></i> Validar cierre
+                  </button>
+                }
               } @else if (day.closure.status === 'validated') {
                 <p class="mt-3 text-xs text-muted-color">
                   Validado el {{ day.closure.validatedAt | esDate: 'datetime' }}
@@ -267,24 +271,28 @@
                         [value]="expenseStatusLabel(request.status)"
                       />
                       @if (request.status === 'pending') {
-                        <button
-                          pButton
-                          size="small"
-                          severity="success"
-                          variant="outlined"
-                          (click)="approveAllowanceRequest(request)"
-                        >
-                          <i class="pi pi-check"></i> Aprobar
-                        </button>
-                        <button
-                          pButton
-                          size="small"
-                          severity="danger"
-                          variant="outlined"
-                          (click)="openAllowanceRejectDialog(request)"
-                        >
-                          <i class="pi pi-times"></i> Rechazar
-                        </button>
+                        @if (access.can('cash_closure.validate')) {
+                          <button
+                            pButton
+                            size="small"
+                            severity="success"
+                            variant="outlined"
+                            (click)="approveAllowanceRequest(request)"
+                          >
+                            <i class="pi pi-check"></i> Aprobar
+                          </button>
+                        }
+                        @if (access.can('cash_closure.validate')) {
+                          <button
+                            pButton
+                            size="small"
+                            severity="danger"
+                            variant="outlined"
+                            (click)="openAllowanceRejectDialog(request)"
+                          >
+                            <i class="pi pi-times"></i> Rechazar
+                          </button>
+                        }
                       }
                     </div>
                   </li>
@@ -323,24 +331,28 @@
                         [value]="expenseStatusLabel(expense.status)"
                       />
                       @if (expense.status === 'pending') {
-                        <button
-                          pButton
-                          size="small"
-                          severity="success"
-                          variant="outlined"
-                          (click)="approveExpense(expense)"
-                        >
-                          <i class="pi pi-check"></i> Aprobar
-                        </button>
-                        <button
-                          pButton
-                          size="small"
-                          severity="danger"
-                          variant="outlined"
-                          (click)="openRejectDialog(expense)"
-                        >
-                          <i class="pi pi-times"></i> Rechazar
-                        </button>
+                        @if (access.can('cash_closure.validate')) {
+                          <button
+                            pButton
+                            size="small"
+                            severity="success"
+                            variant="outlined"
+                            (click)="approveExpense(expense)"
+                          >
+                            <i class="pi pi-check"></i> Aprobar
+                          </button>
+                        }
+                        @if (access.can('cash_closure.validate')) {
+                          <button
+                            pButton
+                            size="small"
+                            severity="danger"
+                            variant="outlined"
+                            (click)="openRejectDialog(expense)"
+                          >
+                            <i class="pi pi-times"></i> Rechazar
+                          </button>
+                        }
                       }
                     </div>
                   </li>

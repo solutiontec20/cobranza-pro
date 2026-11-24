@@ -5,59 +5,90 @@ import { RouterOutlet } from '@angular/router';
   selector: 'auth-layout',
   imports: [RouterOutlet],
   template: `
-
-  <main class="auth-screen flex w-full overflow-x-hidden bg-surface-50 font-sans dark:bg-surface-900">
-  <section class="relative hidden overflow-hidden bg-primary-900 p-12 lg:flex lg:w-1/2 lg:flex-col lg:justify-between" aria-label="Presentación de CobranzaPro">
-    <div class="absolute -top-40 -right-40 w-96 h-96 bg-primary-600 rounded-full blur-3xl opacity-70"></div>
-    <div class="absolute top-40 -left-20 w-72 h-72 bg-blue-500 rounded-full blur-3xl opacity-70"></div>
-    <div class="absolute -bottom-40 left-20 w-96 h-96 bg-indigo-600 rounded-full blur-3xl opacity-70"></div>
-
-    <div class="relative z-10">
-      <div class="flex items-center gap-3 mb-16">
-        <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
-          <i class="pi pi-wallet text-2xl text-primary-600" aria-hidden="true"></i>
+    <main class="auth-screen flex w-full overflow-x-hidden bg-[#0b1220] font-sans">
+      <!-- PC: panel de marca (siempre navy) -->
+      <section
+        class="relative hidden overflow-hidden bg-[#0b1220] px-8 py-6 lg:flex lg:w-1/2 lg:flex-col xl:px-12 xl:py-8"
+        aria-label="Presentación de CobranzaPro"
+      >
+        <div class="relative z-10 shrink-0">
+          <img
+            src="/cobranzapro-quipu-horizontal-oscuro.svg"
+            alt="CobranzaPro"
+            class="mb-10 h-10 w-auto xl:mb-14 xl:h-12"
+          />
+          <p class="max-w-xl text-4xl font-bold leading-[1.1] tracking-tight text-white xl:text-5xl">
+            Cuentas claras, <br />
+            <span class="text-[#60a5fa]">cobranza al día.</span>
+          </p>
+          <p class="mt-4 max-w-md text-base leading-relaxed text-slate-300 xl:text-lg">
+            Clientes, préstamos y cobranzas en un solo lugar.
+          </p>
         </div>
-        <span class="text-3xl font-extrabold text-white tracking-tight">CobranzaPro</span>
-      </div>
-      <h1 class="text-5xl font-extrabold text-white leading-tight max-w-lg">
-        El control financiero <br />
-        <span class="text-primary-300">en tus manos.</span>
-      </h1>
-      <p class="text-lg text-primary-100 mt-6 max-w-md leading-relaxed">
-        Administra tus clientes, préstamos y cobranzas con la plataforma más rápida y segura del mercado.
-      </p>
-    </div>
 
-    <div class="relative z-10">
-      <div class="flex items-center gap-4 text-primary-200 text-sm font-medium">
-        <i class="pi pi-shield" aria-hidden="true"></i>
-        <span>Plataforma segura · Datos cifrados</span>
-      </div>
-    </div>
-  </section>
-
-  <section class="auth-panel relative flex w-full items-center justify-start overflow-y-auto bg-surface-0 lg:w-1/2 dark:bg-surface-800" aria-labelledby="login-title">
-
-    <div class="mx-auto my-auto w-full max-w-[420px]">
-      <div class="mb-8 flex items-center justify-center gap-3 lg:hidden">
-        <div class="w-12 h-12 bg-primary-500 rounded-xl flex items-center justify-center shadow-lg">
-          <i class="pi pi-wallet text-2xl text-white" aria-hidden="true"></i>
+        <!-- La ilustración ocupa el espacio que sobra entre el texto y el pie -->
+        <div class="relative -mx-8 mt-8 min-h-48 flex-1 xl:-mx-12" aria-hidden="true">
+          <div
+            class="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_75%,rgb(37_99_235/0.20),transparent_65%)]"
+          ></div>
+          <img
+            src="/cobranzapro-login-ilustracion-pc.svg"
+            alt=""
+            class="pointer-events-none absolute inset-0 h-full w-full object-cover object-top"
+          />
+          <div
+            class="absolute inset-x-0 bottom-0 h-28 bg-linear-to-t from-[#0b1220] to-transparent"
+          ></div>
         </div>
-        <span class="text-3xl font-extrabold text-surface-900 dark:text-surface-0 tracking-tight">CobranzaPro</span>
-      </div>
 
-      <h1 id="login-title" class="mb-2 text-center text-3xl font-bold text-surface-900 text-balance lg:text-left dark:text-surface-0">
-        Bienvenido
-      </h1>
-      <p class="mb-7 text-center text-surface-500 lg:text-left dark:text-surface-400">
-        Ingresá tus credenciales para continuar
-      </p>
-      <router-outlet />
+        <p class="relative z-10 flex shrink-0 items-center gap-2 pt-4 text-sm font-medium text-slate-400">
+          <i class="pi pi-shield" aria-hidden="true"></i>
+          <span>Plataforma segura · Datos cifrados</span>
+        </p>
+      </section>
+      
 
-    </div>
-  </section>
-</main>
+      <!-- Formulario -->
+      <section
+        class="auth-panel relative flex w-full flex-col overflow-y-auto bg-[#0b1220] px-7 lg:w-1/2 lg:border-l lg:border-(--cp-border) lg:bg-(--cp-panel) lg:px-0"
+        aria-labelledby="login-title"
+      >
+        <!-- Móvil: cabecera con el quipu -->
+        <div class="pointer-events-none absolute inset-x-0 top-0 h-52 overflow-hidden lg:hidden" aria-hidden="true">
+          <img
+            src="/cobranzapro-login-ilustracion-movil.svg"
+            alt=""
+            class="h-full w-full object-cover object-top"
+          />
+          <div class="absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-[#0b1220] to-transparent"></div>
+        </div>
 
+        <div class="relative z-10 mx-auto mt-48 mb-8 w-full max-w-[420px] lg:mt-auto lg:mb-auto lg:px-0">
+          <img
+            src="/cobranzapro-quipu-horizontal-oscuro.svg"
+            alt="CobranzaPro"
+            class="mb-8 h-10 w-auto lg:hidden"
+          />
+
+          <h1
+            id="login-title"
+            class="mb-2 text-left text-3xl font-bold tracking-tight text-white text-balance lg:text-(--cp-text)"
+          >
+            Bienvenido
+          </h1>
+          <p class="mb-7 text-left text-slate-400 lg:text-(--cp-muted)">
+            Ingresa tus credenciales para continuar
+          </p>
+
+          <router-outlet />
+        </div>
+
+        <!-- Móvil: pie anclado abajo -->
+        <p class="relative z-10 mt-auto pb-2 text-center text-xs font-medium text-slate-500 lg:hidden">
+          Plataforma segura · Datos cifrados
+        </p>
+      </section>
+    </main>
   `,
 })
-export default class AuthLayout { }
+export default class AuthLayout {}

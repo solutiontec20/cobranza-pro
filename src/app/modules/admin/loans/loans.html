@@ -7,14 +7,16 @@
         Consulta cada préstamo en una página completa con el cliente, el cronograma y sus pagos.
       </p>
     </div>
-    <button
-      pButton
-      class="w-full sm:w-auto"
-      [disabled]="store.loading()"
-      (click)="openCreateDialog()"
-    >
-      <i class="pi pi-plus"></i> Nuevo préstamo
-    </button>
+    @if (access.can('loans.create')) {
+      <button
+        pButton
+        class="w-full sm:w-auto"
+        [disabled]="store.loading()"
+        (click)="openCreateDialog()"
+      >
+        <i class="pi pi-plus"></i> Nuevo préstamo
+      </button>
+    }
   </header>
 
   @if (store.error()) {

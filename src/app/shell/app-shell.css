@@ -1,0 +1,191 @@
+/* CobranzaPro: solo tema y estados que Tailwind no resuelve bien. */
+.app-shell {
+  --cp-sidebar-width: 260px;
+  --cp-sidebar-collapsed: 76px;
+  --cp-sidebar-bg: #fff;
+  --cp-sidebar-border: #e2e8f0;
+  --cp-sidebar-text: #475569;
+  --cp-sidebar-heading: #64748b;
+  --cp-sidebar-hover: #f1f5f9;
+  --cp-sidebar-active: #eaf2ff;
+  --cp-sidebar-active-text: #1d4ed8;
+  --cp-sidebar-active-border: #2563eb;
+  --cp-workspace-bg: #f8fafc;
+  --cp-topbar-bg: #fff;
+  --cp-text: #0f172a;
+  --cp-outline: #2563eb;
+  color: var(--cp-text);
+  background: var(--cp-workspace-bg);
+}
+
+:host-context(.dark) .app-shell,
+:host-context(.app-dark) .app-shell,
+:host-context(.my-app-dark) .app-shell {
+  --cp-sidebar-bg: #111827;
+  --cp-sidebar-border: #273448;
+  --cp-sidebar-text: #cbd5e1;
+  --cp-sidebar-heading: #94a3b8;
+  --cp-sidebar-hover: #1e293b;
+  --cp-sidebar-active: #1e3554;
+  --cp-sidebar-active-text: #93c5fd;
+  --cp-sidebar-active-border: #60a5fa;
+  --cp-workspace-bg: #0b1220;
+  --cp-topbar-bg: #111827;
+  --cp-text: #f8fafc;
+  --cp-outline: #93c5fd;
+}
+
+.app-sidebar {
+  flex: 0 0 var(--cp-sidebar-width);
+  width: var(--cp-sidebar-width);
+  background: var(--cp-sidebar-bg);
+  border-color: var(--cp-sidebar-border);
+  transition: flex-basis 200ms ease, width 200ms ease, transform 200ms ease;
+}
+.app-sidebar-header,
+.app-sidebar-footer,
+.app-topbar { border-color: var(--cp-sidebar-border); }
+.app-sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--cp-sidebar-border) transparent;
+}
+.app-workspace { background: var(--cp-workspace-bg); }
+.app-topbar { background: var(--cp-topbar-bg); }
+
+/* Quipu: horizontal expandido, isotipo contraido. */
+.app-brand-horizontal { display: block; }
+.app-brand-icon,
+.app-brand-dark { display: none; }
+:host-context(.dark) .app-brand-light,
+:host-context(.app-dark) .app-brand-light,
+:host-context(.my-app-dark) .app-brand-light { display: none; }
+:host-context(.dark) .app-brand-horizontal.app-brand-dark,
+:host-context(.app-dark) .app-brand-horizontal.app-brand-dark,
+:host-context(.my-app-dark) .app-brand-horizontal.app-brand-dark { display: block; }
+
+.app-nav-section + .app-nav-section { margin-top: 22px; }
+.app-nav-heading { color: var(--cp-sidebar-heading); }
+.app-nav-notice { color: var(--cp-sidebar-text); }
+.app-nav-link {
+  color: var(--cp-sidebar-text);
+  border-left: 3px solid transparent;
+}
+.app-nav-link i {
+  flex: 0 0 auto;
+  width: 19px;
+  font-size: 17px;
+  text-align: center;
+}
+.app-nav-link:hover {
+  background: var(--cp-sidebar-hover);
+  color: var(--cp-text);
+}
+.app-nav-link.is-active {
+  background: var(--cp-sidebar-active);
+  color: var(--cp-sidebar-active-text);
+  border-left-color: var(--cp-sidebar-active-border);
+  font-weight: 700;
+}
+.app-nav-link:focus-visible,
+.app-icon-button:focus-visible {
+  outline-color: var(--cp-outline);
+}
+.app-user-avatar { background: linear-gradient(135deg, #2563eb, #059669); }
+.app-user-name { color: var(--cp-text); }
+.app-user-role { color: var(--cp-sidebar-heading); }
+.app-icon-button {
+  color: var(--cp-sidebar-text);
+  cursor: pointer;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.app-icon-button:hover {
+  background: var(--cp-sidebar-hover);
+  color: var(--cp-text);
+}
+.app-icon-button .pi { display: inline-block; font-size: 18px; line-height: 1; color: inherit; }
+.app-menu-button .pi { font-size: 19px; }
+.app-menu-button:active { transform: scale(.96); }
+.app-logout:hover { color: #dc2626; background: rgba(220, 38, 38, .08); }
+.app-sidebar-close { display: none; }
+
+/* Desktop: conserva el ancho y los logos originales. */
+@media (min-width: 1024px) {
+  .app-shell--collapsed .app-sidebar {
+    flex-basis: var(--cp-sidebar-collapsed);
+    width: var(--cp-sidebar-collapsed);
+  }
+  .app-shell--collapsed .app-sidebar-header { justify-content: center; padding-inline: 8px; }
+  .app-shell--collapsed .app-brand {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    justify-content: center;
+    overflow: visible;
+  }
+  .app-shell--collapsed .app-brand-horizontal { display: none !important; }
+  .app-shell--collapsed .app-brand-icon.app-brand-light { display: block; }
+  .app-shell--collapsed .app-brand-icon.app-brand-dark { display: none; }
+  :host-context(.dark) .app-shell--collapsed .app-brand-icon.app-brand-light,
+  :host-context(.app-dark) .app-shell--collapsed .app-brand-icon.app-brand-light,
+  :host-context(.my-app-dark) .app-shell--collapsed .app-brand-icon.app-brand-light { display: none; }
+  :host-context(.dark) .app-shell--collapsed .app-brand-icon.app-brand-dark,
+  :host-context(.app-dark) .app-shell--collapsed .app-brand-icon.app-brand-dark,
+  :host-context(.my-app-dark) .app-shell--collapsed .app-brand-icon.app-brand-dark { display: block; }
+  .app-shell--collapsed .app-sidebar-scroll { padding-inline: 10px; }
+  .app-shell--collapsed .app-nav-heading,
+  .app-shell--collapsed .app-nav-label,
+  .app-shell--collapsed .app-user-info { display: none; }
+  .app-shell--collapsed .app-nav-link { justify-content: center; gap: 0; padding-inline: 0; }
+  .app-shell--collapsed .app-nav-link i { width: auto; }
+  .app-shell--collapsed .app-nav-section + .app-nav-section {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--cp-sidebar-border);
+  }
+  .app-shell--collapsed .app-nav-badge {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    min-width: 16px;
+    min-height: 16px;
+    padding: 1px 4px;
+    margin: 0;
+    font-size: 9px;
+  }
+  .app-shell--collapsed .app-sidebar-footer {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+    padding-inline: 8px;
+  }
+}
+
+/* Tablet y movil: mismo drawer modal que el original. */
+@media (max-width: 1023px) {
+  .app-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 60;
+    flex-basis: auto;
+    width: min(286px, calc(100vw - 52px));
+    max-width: 100%;
+    transform: translateX(-105%);
+    visibility: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .15);
+  }
+  .app-shell--mobile-open .app-sidebar { transform: translateX(0); visibility: visible; }
+  .app-sidebar-close { display: inline-flex; }
+  .app-sidebar-header { padding-inline: 14px; }
+  .app-sidebar-footer { padding-bottom: max(14px, env(safe-area-inset-bottom)); }
+}
+@media (max-width: 480px) {
+  .app-sidebar { width: min(286px, calc(100vw - 36px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar,
+  .app-nav-link,
+  .app-icon-button { transition: none; }
+  .app-menu-button:active { transform: none; }
+}
