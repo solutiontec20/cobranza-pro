@@ -48,6 +48,7 @@ import {
 import { EsDate } from '../../../../shared/pipes/es-date';
 import { AccessControlService } from '../../../../core/services/access-control.service';
 import { PenCurrency } from '../../../../shared/pipes/pen-currency';
+import { LoanStatementActions } from '../../../../shared/ui/loan-statement-actions/loan-statement-actions';
 import {
   calculateLoanPaymentSummary,
   calculateLoanSummary,
@@ -128,6 +129,7 @@ const emptyRenewModel = (principal = 100): RenewFormModel => ({
     FormField,
     FormsModule,
     InputNumberModule,
+    LoanStatementActions,
     MessageModule,
     PaginatorModule,
     PenCurrency,

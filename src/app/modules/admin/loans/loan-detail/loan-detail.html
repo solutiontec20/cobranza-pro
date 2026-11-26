@@ -79,6 +79,14 @@
       </div>
     </header>
 
+    @if (detail.loan.status !== 'voided') {
+      <section
+        class="rounded-xl border border-surface bg-surface-0 p-4 shadow-sm dark:bg-surface-900 sm:p-5"
+      >
+        <app-loan-statement-actions [detail]="detail" />
+      </section>
+    }
+
     @if (!canRenew() && (detail.loan.status === 'active' || detail.loan.status === 'paid')) {
       <p-message severity="warn" styleClass="w-full">
         Este cliente es moroso (más de 5 días de atraso) y no puede renovar su préstamo.
