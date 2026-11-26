@@ -6,8 +6,8 @@
 |---|---|
 | Organización cliente | ______________________________ |
 | Versión del sistema | ______________________________ |
-| Versión del manual | 0.1 |
-| Fecha | 12 de noviembre de 2026 |
+| Versión del manual | 0.2 |
+| Fecha | 26 de noviembre de 2026 |
 | Elaborado por | Equipo TI |
 | Revisado por | ______________________________ |
 | Aprobado por | ______________________________ |
@@ -23,6 +23,7 @@
 | Versión | Fecha | Descripción | Responsable |
 |---|---|---|---|
 | 0.1 | 12/11/2026 | Primera versión del manual basada en las pantallas y operaciones implementadas | Equipo TI |
+| 0.2 | 26/11/2026 | Se incorporan Analíticas, Roles y permisos, horario configurable de cobradores, anulación de varios pagos y edición de préstamos tras anular sus pagos | Equipo TI |
 
 ### 1.2 Objetivo
 
@@ -39,6 +40,8 @@ Se documentan las funciones operativas disponibles en la aplicación actual:
 - gestión de cobradores, clientes, préstamos, pagos y renovaciones;
 - solicitudes de corrección y notificaciones;
 - control diario con exportación CSV, Excel y PDF;
+- analíticas por período y por cobrador;
+- roles y permisos de acceso, y horario de ingreso de los cobradores;
 - solicitudes de viático y gastos, envío y validación del cierre de caja;
 - cierre de sesión y prácticas de seguridad.
 
@@ -70,7 +73,7 @@ No se enseñan como disponibles la importación masiva desde Excel, las fotograf
 
 - Navegador actualizado con acceso a Internet.
 - Credenciales asignadas por la organización.
-- Para cobradores, acceso dentro del horario permitido: desde las **07:00 inclusive hasta antes de las 20:00**, hora de Lima.
+- Para cobradores, acceso dentro del horario permitido. Por defecto es desde las **07:00 inclusive hasta antes de las 20:00**, hora de Lima; el administrador del sistema puede modificarlo (ver **ADM-10**).
 - Permiso del navegador para descargar archivos cuando se utilicen exportaciones.
 - Uso de un dispositivo protegido con bloqueo de pantalla.
 
@@ -88,6 +91,9 @@ Los administradores y supervisores no tienen restricción horaria. La aplicació
 | Registrar pagos | Sí | Sí | Sí, en su cartera |
 | Revisar solicitudes de corrección | Sí | Sí | No |
 | Consultar y exportar control diario global | Sí | Sí | No |
+| Consultar Analíticas | Sí | Sí | No |
+| Anular uno o varios pagos de un préstamo | Sí | Sí | No; envía una solicitud |
+| Crear roles, asignarlos y cambiar el horario de cobradores | Solo con el rol de administrador del sistema | No; solo consulta | No |
 | Validar cierres de caja | Sí | Sí | No |
 | Enviar su propio cierre | No aplica | No aplica | Sí |
 
@@ -132,7 +138,7 @@ La barra superior contiene el cambio de tema claro/oscuro y la campana de notifi
 |---|---|
 | DNI o PIN con formato incorrecto | Verifique que contengan ocho y seis dígitos, respectivamente |
 | Credenciales inválidas | No repita intentos al azar; confirme el DNI y solicite ayuda al administrador |
-| Acceso del cobrador cerrado | Ingrese entre 07:00 y antes de las 20:00, hora de Lima |
+| Acceso del cobrador cerrado | Ingrese dentro del horario vigente (por defecto, entre 07:00 y antes de las 20:00, hora de Lima) |
 | Acceso rechazado después de varios intentos | Espere la pausa temporal de seguridad, confirme sus credenciales y evite reintentos consecutivos. Si persiste, comuníquese con un administrador |
 
 ### GEN-02 — Cambiar el PIN
@@ -250,13 +256,18 @@ El DNI no puede modificarse porque identifica el acceso. Un cobrador con cliente
 
 1. Para cobrar, seleccione **Registrar pago**, indique monto, medio de pago y observación, y confirme.
 2. Verifique el monto aplicado y el nuevo saldo mostrado por el sistema.
-3. Para corregir datos del préstamo, seleccione **Editar préstamo**, cambie los campos permitidos, elija una justificación y guarde. Algunas ediciones pueden estar impedidas cuando existe historial de pagos.
+3. Para corregir datos del préstamo, seleccione **Editar préstamo**, cambie los campos permitidos, elija una justificación y guarde. La edición solo se bloquea mientras exista al menos un pago vigente; si todos los pagos fueron anulados, el préstamo vuelve a ser editable (el historial anulado se conserva).
 4. Para anular un pago, ubíquelo en el historial, seleccione **Anular pago**, elija el motivo y confirme. La fila original se conserva con su estado.
-5. Para renovar, seleccione **Renovar préstamo**, complete las nuevas condiciones y revise el resumen antes de confirmar. El sistema incorpora el saldo pendiente cuando corresponde.
+5. Para anular varios pagos del mismo préstamo a la vez, marque la casilla de cada pago (o **Seleccionar todos los pagos vigentes**), revise el contador, el total y cuántos pagos quedarán vigentes, y seleccione **Anular seleccionados**. Escriba un motivo único y confirme. El máximo es de **100 pagos por operación** y la operación es atómica: se anulan todos o ninguno.
+6. Para renovar, seleccione **Renovar préstamo**, complete las nuevas condiciones y revise el resumen antes de confirmar. El sistema incorpora el saldo pendiente cuando corresponde.
 
-**Resultado esperado:** saldos, cronograma y estado se actualizan de manera trazable; ninguna corrección borra el historial financiero.
+**Resultado esperado:** saldos, cronograma y estado se actualizan de manera trazable; ninguna corrección borra el historial financiero. Si se anulan todos los pagos de un préstamo que estaba pagado, este vuelve a estar activo con su saldo completo.
 
 > **CAPTURA 8 — Detalle de préstamo.** Capturar el resumen, cronograma y acciones Registrar pago, Renovar y Editar. Archivo previsto: `docs/entrega/assets/manual/administrador/08-detalle-prestamo.png`.
+
+> **CAPTURA 19 — Selección múltiple de pagos.** Capturar el historial con varios pagos marcados y la barra con contador, total, pagos que quedarán vigentes y botón Anular seleccionados. Archivo previsto: `docs/entrega/assets/manual/administrador/19-seleccion-multiple-pagos.png`.
+
+> **CAPTURA 20 — Anulación de pagos seleccionados.** Capturar el diálogo con el campo de motivo y el botón Anular pagos seleccionados. Archivo previsto: `docs/entrega/assets/manual/administrador/20-anular-pagos-seleccionados.png`.
 
 ### ADM-06 — Resolver solicitudes de corrección
 
@@ -312,6 +323,60 @@ El DNI no puede modificarse porque identifica el acceso. Un cobrador con cliente
 
 > **CAPTURA 11 — Validación de cierre.** Capturar un cierre enviado, con esperado, entregado, diferencia y botón Validar cierre. Archivo previsto: `docs/entrega/assets/manual/administrador/11-validacion-cierre.png`.
 
+### ADM-09 — Consultar Analíticas
+
+**Rol:** Administrador y supervisor.  
+**Objetivo:** Conocer qué ocurrió exactamente en un período y cómo rindió cada cobrador.  
+**Prerrequisitos:** Permiso de consulta de Analíticas.
+
+1. Abra **Analíticas** desde el menú.
+2. En **Período**, elija **Día**, **Semana**, **Mes**, **Año** o **Rango**. Con Día, Semana, Mes o Año indique una fecha de referencia y use las flechas para ver el período anterior o siguiente. Con Rango, complete **Desde** y **Hasta** (máximo 10 años).
+3. Si desea ver a un solo cobrador, elíjalo en **Cobrador**; la opción por defecto es **Todos los cobradores**.
+4. Revise los totales del período: **Utilidad neta**, **Cobranza recibida**, **Intereses cobrados**, **Préstamos desembolsados** y **Gastos operativos**.
+5. Consulte los gráficos de evolución y la tabla **Detalle del período**, que muestra los mismos valores en soles. Si el período es un solo día, los gráficos de evolución no se muestran.
+6. En **Rendimiento por cobrador** compare pagos, clientes atendidos, cobranza, intereses, desembolsos, gastos y utilidad de todos los cobradores. Use **Ver solo** para filtrar a uno y **Ver todos** para quitar el filtro.
+7. Si hubo gastos aprobados, revise **Gastos por categoría**.
+
+**Cómo leer las cifras:** todas son movimientos dentro del período elegido. La utilidad neta es el interés cobrado menos los gastos aprobados. Los viáticos entregados no se cuentan como gasto. Los saldos pendientes y la morosidad actual no están en esta pantalla: se consultan en el **Dashboard**.
+
+**Resultado esperado:** la pantalla muestra exactamente el período seleccionado. Si no hubo movimientos, aparece un aviso para elegir otra fecha, otro tipo de período o quitar el filtro de cobrador.
+
+> **CAPTURA 21 — Analíticas con período y totales.** Capturar el selector de período, el filtro de cobrador y los cinco totales con datos ficticios. Archivo previsto: `docs/entrega/assets/manual/administrador/21-analiticas-totales.png`.
+
+> **CAPTURA 22 — Rendimiento por cobrador.** Capturar la tabla comparativa con el botón Ver solo visible. Archivo previsto: `docs/entrega/assets/manual/administrador/22-analiticas-cobradores.png`.
+
+### ADM-10 — Administrar roles, asignaciones y horario de cobradores
+
+**Rol:** Administrador con el rol de administrador del sistema (el supervisor solo consulta).  
+**Objetivo:** Definir qué puede hacer cada usuario administrativo y en qué horario pueden operar los cobradores.  
+**Prerrequisitos:** Rol de administrador del sistema para modificar; un motivo claro para cada cambio.
+
+**Conceptos:** los administradores y supervisores tienen exactamente **un rol de acceso** que determina los menús y acciones disponibles. Los cobradores no usan roles configurables. Existen dos roles reservados que no se editan: **Administrador del sistema** (todo) y **Supervisor por defecto** (equivale a lo que el supervisor ya podía hacer). Los roles personalizados no pueden incluir acciones restringidas.
+
+*Crear o editar un rol*
+
+1. Abra **Roles y permisos** y, en la sección **Roles**, seleccione **Crear rol** o edite un rol personalizado.
+2. Escriba el nombre y la descripción.
+3. Marque los permisos por módulo. Al elegir una acción, el sistema habilita también la consulta de ese módulo. Las acciones sensibles se identifican con una advertencia y las restringidas no se pueden asignar.
+4. Escriba el **Motivo del cambio** y seleccione **Guardar cambios**. El botón permanece deshabilitado si no hay cambios reales.
+
+*Asignar un rol*
+
+1. Abra la sección **Asignaciones** y busque al usuario por nombre o DNI.
+2. Elija el nuevo rol de acceso y confirme con un motivo. No es posible asignarse un rol a uno mismo.
+
+*Cambiar el horario de cobradores*
+
+1. Abra la sección **Horario de cobradores**.
+2. Indique la hora de **Inicio (incluyente)** y de **Fin (excluyente)**; el inicio debe ser anterior al fin. La zona horaria es siempre America/Lima.
+3. Escriba el motivo y seleccione **Guardar horario**.
+
+**Resultado esperado:** el cambio queda registrado con responsable, fecha y motivo. Los usuarios afectados deben **volver a iniciar sesión** para que el cambio se aplique. Si no tiene permiso para una acción, el sistema la oculta o lo redirige a **Sin acceso**.
+
+> **CAPTURA 23 — Roles y permisos.** Capturar la lista de roles y el formulario de permisos por módulo de un rol personalizado ficticio. Archivo previsto: `docs/entrega/assets/manual/administrador/23-roles-permisos.png`.
+
+> **CAPTURA 24 — Horario de cobradores.** Capturar la sección con inicio, fin, motivo y el horario actual. Archivo previsto: `docs/entrega/assets/manual/administrador/24-horario-cobradores.png`.
+
 ---
 
 ## 6. Procedimientos del supervisor
@@ -325,10 +390,10 @@ El supervisor comparte las pantallas operativas de administración, pero **no cr
 **Prerrequisitos:** Sesión de supervisor.
 
 1. Revise el **Dashboard** y abra una cartera desde **Ver cartera**.
-2. Consulte Clientes y Préstamos con sus filtros.
+2. Consulte Clientes y Préstamos con sus filtros, y la pantalla **Analíticas** siguiendo **ADM-09**.
 3. Registre clientes, préstamos o pagos solo cuando la operación haya sido autorizada por el negocio.
-4. Para una edición, anulación o renovación, siga el procedimiento **ADM-05** y registre siempre la justificación.
-5. No modifique la asignación de cartera ni gestione credenciales. Solicite esa acción a un administrador.
+4. Para una edición, anulación (individual o múltiple) o renovación, siga el procedimiento **ADM-05** y registre siempre la justificación.
+5. No modifique la asignación de cartera ni gestione credenciales. En **Roles y permisos** solo puede consultar; los cambios los realiza el administrador del sistema.
 
 **Resultado esperado:** la operación queda registrada con el usuario supervisor y la cartera conserva su asignación autorizada.
 
@@ -517,7 +582,7 @@ Ante una pantalla congelada, no presione varias veces el botón de confirmación
 ## 11. Preguntas frecuentes y soporte
 
 **¿Por qué el cobrador no puede ingresar en la noche?**  
-Su acceso operativo se limita de 07:00 hasta antes de las 20:00, hora de Lima. Administradores y supervisores mantienen acceso continuo.
+Su acceso operativo se limita al horario compartido configurado, que por defecto es de 07:00 hasta antes de las 20:00, hora de Lima. Administradores y supervisores mantienen acceso continuo.
 
 **¿Por qué no aparece un cliente?**  
 Revise los filtros. Para un cobrador, el cliente debe pertenecer a su cartera. Si la asignación es incorrecta, contacte al administrador.
@@ -567,6 +632,9 @@ Indique fecha y hora, rol, módulo, acción realizada, mensaje exacto y una capt
 | Viático | Efectivo autorizado para apoyar la operación del cobrador |
 | Gasto operativo | Salida declarada por el cobrador y sujeta a aprobación |
 | Fecha de corte | Día hasta el cual se calcula un reporte |
+| Rol de acceso | Conjunto de permisos asignado a un administrador o supervisor |
+| Utilidad neta | Interés cobrado menos gastos operativos aprobados en el período |
+| Anulación | Reversión trazable de un pago que conserva el registro original y su motivo |
 
 ---
 
@@ -585,15 +653,18 @@ Indique fecha y hora, rol, módulo, acción realizada, mensaje exacto y una capt
 - [ ] Consulta indicadores y abre la cartera de un cobrador.
 - [ ] Crea un cobrador y explica el manejo seguro del PIN temporal.
 - [ ] Registra un cliente y un préstamo.
-- [ ] Registra y anula un pago con motivo.
+- [ ] Registra y anula un pago con motivo, y anula varios pagos a la vez.
 - [ ] Resuelve una solicitud de corrección.
 - [ ] Exporta el Control diario con filtros.
+- [ ] Consulta Analíticas por período y por cobrador.
+- [ ] Crea un rol, lo asigna y cambia el horario de cobradores con motivo.
 - [ ] Revisa viáticos, gastos y valida un cierre.
 
 ### Supervisor
 
 - [ ] Distingue sus permisos de los del administrador.
 - [ ] Supervisa carteras sin gestionar accesos de usuarios.
+- [ ] Consulta Analíticas y revisa Roles y permisos sin modificarlos.
 - [ ] Resuelve solicitudes y valida cierres con una justificación suficiente.
 
 ### Cobrador
@@ -632,6 +703,12 @@ Todas las capturas deben usar datos ficticios, ocultar PIN y evitar nombres o do
 | 16 | Cobrador | Solicitud de corrección | 360 × 800 | `docs/entrega/assets/manual/cobrador/16-solicitud-correccion-mobile.png` |
 | 17 | Cobrador | Cierre personal antes de enviar | 360 × 800 | `docs/entrega/assets/manual/cobrador/17-cierre-caja-mobile.png` |
 | 18 | Todos | Campana abierta con estados ficticios | Según rol | `docs/entrega/assets/manual/general/18-notificaciones.png` |
+| 19 | Administrador | Historial de pagos con varios pagos marcados | 1440 × 900 | `docs/entrega/assets/manual/administrador/19-seleccion-multiple-pagos.png` |
+| 20 | Administrador | Diálogo Anular pagos seleccionados | 1440 × 900 | `docs/entrega/assets/manual/administrador/20-anular-pagos-seleccionados.png` |
+| 21 | Administrador | Analíticas con período y totales | 1440 × 900 | `docs/entrega/assets/manual/administrador/21-analiticas-totales.png` |
+| 22 | Administrador | Analíticas, rendimiento por cobrador | 1440 × 900 | `docs/entrega/assets/manual/administrador/22-analiticas-cobradores.png` |
+| 23 | Administrador | Roles y permisos, roles y formulario | 1440 × 900 | `docs/entrega/assets/manual/administrador/23-roles-permisos.png` |
+| 24 | Administrador | Horario de cobradores | 1440 × 900 | `docs/entrega/assets/manual/administrador/24-horario-cobradores.png` |
 
 ### Criterios de aceptación de las capturas
 
