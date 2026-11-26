@@ -6,7 +6,7 @@
 |---|---|
 | Organización cliente | ______________________________ |
 | Versión del sistema | ______________________________ |
-| Versión del manual | 0.2 |
+| Versión del manual | 0.3 |
 | Fecha | 26 de noviembre de 2026 |
 | Elaborado por | Equipo TI |
 | Revisado por | ______________________________ |
@@ -24,6 +24,7 @@
 |---|---|---|---|
 | 0.1 | 12/11/2026 | Primera versión del manual basada en las pantallas y operaciones implementadas | Equipo TI |
 | 0.2 | 26/11/2026 | Se incorporan Analíticas, Roles y permisos, horario configurable de cobradores, anulación de varios pagos y edición de préstamos tras anular sus pagos | Equipo TI |
+| 0.3 | 26/11/2026 | Se incorpora el estado de cuenta del préstamo en TXT para descargar o compartir por WhatsApp, correo o mensaje | Equipo TI |
 
 ### 1.2 Objetivo
 
@@ -41,6 +42,7 @@ Se documentan las funciones operativas disponibles en la aplicación actual:
 - solicitudes de corrección y notificaciones;
 - control diario con exportación CSV, Excel y PDF;
 - analíticas por período y por cobrador;
+- estado de cuenta del préstamo en TXT, para descargar o compartir con el cliente;
 - roles y permisos de acceso, y horario de ingreso de los cobradores;
 - solicitudes de viático y gastos, envío y validación del cierre de caja;
 - cierre de sesión y prácticas de seguridad.
@@ -172,6 +174,40 @@ El PIN no debe ser una secuencia fácil, una repetición de un mismo dígito ni 
 4. Compruebe que la pantalla de ingreso vuelva a mostrarse.
 
 **Resultado esperado:** el tema cambia sin afectar la información y, al cerrar sesión, ya no se puede acceder a las pantallas privadas usando el botón Atrás.
+
+### GEN-04 — Enviar o descargar el estado de cuenta de un préstamo
+
+**Rol:** Administrador, supervisor y cobrador (este último, solo de los clientes de su cartera).  
+**Objetivo:** Entregar al cliente un resumen con su cronograma, lo que ya pagó, lo que le falta y su historial de pagos.  
+**Prerrequisitos:** Abrir el detalle de un préstamo: en **Préstamos** (administrador y supervisor) o en **Mis clientes**, al seleccionar un cliente (cobrador). La opción no aparece en préstamos anulados.
+
+1. En el detalle, ubique el bloque **Estado de cuenta**.
+2. Elija una opción:
+   - **Compartir** (celulares y tabletas): abre el menú del dispositivo para enviar el texto por WhatsApp, correo, mensaje de texto u otra aplicación.
+   - **Enviar archivo .txt** (solo en dispositivos compatibles): comparte el estado de cuenta como archivo adjunto.
+   - **Descargar .txt**: guarda el archivo `estado-de-cuenta_<DNI>_<fecha>.txt` en el dispositivo.
+   - **Copiar texto**: copia el contenido para pegarlo en cualquier conversación.
+3. Si usó **Compartir**, seleccione la aplicación y el contacto, revise el mensaje y envíelo. Si cierra el menú sin enviar, no ocurre ningún cambio.
+
+**Qué contiene el estado de cuenta:** nombre completo y DNI del cliente; datos del préstamo (monto, interés, total, cuota, frecuencia y fechas); total pagado, saldo pendiente y cuotas pagadas; el cronograma de cuotas con su estado (pagada, pago parcial, pendiente o vencida) y el historial de pagos con fecha, monto y medio de pago.
+
+**Qué no contiene:** teléfono, dirección, notas internas, nombre del cobrador ni pagos anulados. Los pagos anulados siguen registrados en el sistema, pero no se muestran al cliente.
+
+**Resultado esperado:** el cliente recibe un texto claro, con la fecha y hora de emisión en horario de Lima. No se modifica ningún dato del préstamo.
+
+**Problemas frecuentes:**
+
+| Situación | Acción recomendada |
+|---|---|
+| No aparece el botón **Compartir** | El navegador o equipo no admite el menú de compartir (común en computadoras). Use **Descargar .txt** o **Copiar texto** |
+| El mensaje de WhatsApp o SMS se ve desalineado | Es normal en aplicaciones con letra proporcional; los datos son los mismos. Para una vista ordenada use el archivo **.txt** |
+| Aparece un aviso de error al compartir | Reintente o use otra opción. Si no está seguro de que el mensaje salió, revise la aplicación de destino antes de reenviar |
+
+Antes de enviarlo, confirme que el número o contacto de destino pertenece al cliente: el documento incluye su nombre y DNI.
+
+> **CAPTURA 25 — Estado de cuenta en el detalle del préstamo (administrador).** Capturar el bloque Estado de cuenta con sus botones en escritorio. Archivo previsto: `docs/entrega/assets/manual/general/25-estado-cuenta-admin.png`.
+
+> **CAPTURA 26 — Compartir el estado de cuenta desde el celular (cobrador).** Capturar en 360 × 800 el bloque Estado de cuenta y, en una segunda imagen, el menú del dispositivo con WhatsApp y correo visibles, sin contactos reales. Archivo previsto: `docs/entrega/assets/manual/general/26-estado-cuenta-cobrador-mobile.png`.
 
 ---
 
@@ -632,6 +668,7 @@ Indique fecha y hora, rol, módulo, acción realizada, mensaje exacto y una capt
 | Viático | Efectivo autorizado para apoyar la operación del cobrador |
 | Gasto operativo | Salida declarada por el cobrador y sujeta a aprobación |
 | Fecha de corte | Día hasta el cual se calcula un reporte |
+| Estado de cuenta | Resumen en texto del cronograma, pagos, pagado y saldo de un préstamo, para entregar al cliente |
 | Rol de acceso | Conjunto de permisos asignado a un administrador o supervisor |
 | Utilidad neta | Interés cobrado menos gastos operativos aprobados en el período |
 | Anulación | Reversión trazable de un pago que conserva el registro original y su motivo |
@@ -647,6 +684,7 @@ Indique fecha y hora, rol, módulo, acción realizada, mensaje exacto y una capt
 - [ ] Cambia el tema sin perder la pantalla actual.
 - [ ] Identifica la campana de notificaciones.
 - [ ] Cierra sesión correctamente.
+- [ ] Descarga o comparte el estado de cuenta de un préstamo y verifica qué datos incluye.
 
 ### Administrador
 
@@ -709,6 +747,8 @@ Todas las capturas deben usar datos ficticios, ocultar PIN y evitar nombres o do
 | 22 | Administrador | Analíticas, rendimiento por cobrador | 1440 × 900 | `docs/entrega/assets/manual/administrador/22-analiticas-cobradores.png` |
 | 23 | Administrador | Roles y permisos, roles y formulario | 1440 × 900 | `docs/entrega/assets/manual/administrador/23-roles-permisos.png` |
 | 24 | Administrador | Horario de cobradores | 1440 × 900 | `docs/entrega/assets/manual/administrador/24-horario-cobradores.png` |
+| 25 | Administrador | Estado de cuenta en el detalle del préstamo | 1440 × 900 | `docs/entrega/assets/manual/general/25-estado-cuenta-admin.png` |
+| 26 | Cobrador | Estado de cuenta y menú de compartir del dispositivo | 360 × 800 | `docs/entrega/assets/manual/general/26-estado-cuenta-cobrador-mobile.png` |
 
 ### Criterios de aceptación de las capturas
 

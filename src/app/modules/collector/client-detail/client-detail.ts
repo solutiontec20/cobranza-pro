@@ -63,6 +63,7 @@ import { CollectionRisk } from '../collection.model';
 import { CollectorLoanStore } from './collector-loan.store';
 import { EsDate } from '../../../shared/pipes/es-date';
 import { PenCurrency } from '../../../shared/pipes/pen-currency';
+import { LoanStatementActions } from '../../../shared/ui/loan-statement-actions/loan-statement-actions';
 import { CorrectionRequestsStore } from '../../correction-requests/correction-requests.store';
 
 interface PaymentFormModel {
@@ -130,6 +131,7 @@ type TagSeverity = 'success' | 'warn' | 'danger' | 'secondary' | 'info';
     FormField,
     FormsModule,
     InputNumberModule,
+    LoanStatementActions,
     MessageModule,
     PaginatorModule,
     PenCurrency,

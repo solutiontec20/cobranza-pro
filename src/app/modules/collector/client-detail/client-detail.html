@@ -176,6 +176,12 @@
           </div>
         }
 
+        @if (detail(); as statementDetail) {
+          <div class="border-t border-surface-200 p-5 dark:border-surface-700">
+            <app-loan-statement-actions [detail]="statementDetail" />
+          </div>
+        }
+
         @if (loan()!.status === 'active') {
           <section
             class="border-t border-surface-200 p-5 dark:border-surface-700"
