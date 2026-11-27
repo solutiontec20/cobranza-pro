@@ -406,18 +406,18 @@ export default class AppShell implements OnInit, OnDestroy {
       icon: 'pi pi-bell',
       permission: 'correction_requests.view'
     },
-    {
-      label: 'Auditoría',
-      path: '/admin/auditoria',
-      icon: 'pi pi-shield',
-      permission: 'audit.view'
-    },
-    {
-      label: 'Roles y permisos',
-      path: '/admin/roles',
-      icon: 'pi pi-key',
-      permission: 'roles.view'
-    }
+    // {
+    //   label: 'Auditoría',
+    //   path: '/admin/auditoria',
+    //   icon: 'pi pi-shield',
+    //   permission: 'audit.view'
+    // },
+    // {
+    //   label: 'Roles y permisos',
+    //   path: '/admin/roles',
+    //   icon: 'pi pi-key',
+    //   permission: 'roles.view'
+    // }
   ] as const;
 
   private readonly navigationButton =
